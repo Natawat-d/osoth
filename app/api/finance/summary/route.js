@@ -4,6 +4,7 @@ import StaffEarning from "@/models/StaffEarning";
 import Expense from "@/models/Expense";
 import CustomerCourse from "@/models/CustomerCourse";
 import { apiHandler, requireRole } from "@/lib/api";
+import { localDate } from "@/services/ids";
 
 // GET /api/finance/summary?branch_ID=..&from=YYYY-MM-DD&to=YYYY-MM-DD
 // กำไรคงเหลือ = รายรับ − COGS(ทุนจริงตาม lot) − ค่าแรงผันแปร − รายจ่ายอื่น
@@ -73,7 +74,7 @@ export const GET = apiHandler(async (req) => {
   const receivables = debtors.reduce((s, c) => s + c.balance_due, 0);
 
   // ---- time-series รายวัน (กราฟเส้น) ----
-  const dayKey = (d) => (typeof d === "string" ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10));
+  const dayKey = (d) => (typeof d === "string" ? d.slice(0, 10) : localDate(new Date(d)));
   const series = {};
   const bump = (day, field, v) => {
     series[day] = series[day] || { date: day, income: 0, cogs: 0, labor: 0, expense: 0 };

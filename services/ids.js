@@ -1,6 +1,12 @@
 import { nextSeq, pad } from "@/models/Counter";
 import SystemConfig from "@/models/SystemConfig";
 
+// วันที่ตามเวลาท้องถิ่นเครื่อง (YYYY-MM-DD) — ห้ามใช้ toISOString ที่เป็น UTC
+// เพราะจะทำให้วันที่เพี้ยน (off-by-one) เมื่อรันช่วงที่ UTC กับ local คนละวัน
+export function localDate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // รหัสรันทั่วไป เช่น genId("RS") → "RS-0001"
 export async function genId(prefix, digits = 4) {
   const seq = await nextSeq(prefix);

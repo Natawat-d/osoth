@@ -121,7 +121,7 @@ console.log("9) การเงิน + สิทธิ์");
 const fin = await call("admin", "GET", `/finance/summary?branch_ID=BR-001&from=${today}&to=${today}`);
 ok("รายรับวันนี้ = 5000 (งวดแรก) + 900 (add-on) + 10000 (งวดผ่อน) = 15900", fin.data?.income === 15900, `got ${fin.data?.income}`);
 ok("COGS = 700", fin.data?.cogs === 700);
-ok("ค่าแรง = 150+500 = 650", fin.data?.labor_cost === 650);
+ok("ค่าแรง = ค่ามือ 650 (150+500) + คอม 750 = 1400", fin.data?.labor_cost === 1400, `got ${fin.data?.labor_cost}`);
 const finAsDoctor = await call("doctor", "GET", `/finance/summary?branch_ID=BR-001`);
 ok("หมอเปิดหน้าการเงินรวม → 403", finAsDoctor.status === 403);
 const earnDoctor = await call("doctor", "GET", `/earnings?from=${today}&to=${today}`);

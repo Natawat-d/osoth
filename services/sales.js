@@ -6,7 +6,7 @@ import StaffEarning from "@/models/StaffEarning";
 import User from "@/models/User";
 import Opd from "@/models/Opd";
 import Product from "@/models/Product";
-import { genId } from "./ids";
+import { genId, localDate } from "./ids";
 
 // ขาย course: สร้าง customer_course (+snapshot) + บันทึกเงินงวดแรก + คอม sale
 export async function purchaseCourse({
@@ -104,7 +104,7 @@ export async function purchaseCourse({
       type: "commission",
       ref: { opd_ID: null, customer_course_ID: cc.customer_course_ID },
       amount: commission_amount,
-      date: now.toISOString().slice(0, 10),
+      date: localDate(now),
     });
   }
 

@@ -1,7 +1,7 @@
 import StockLot from "@/models/StockLot";
 import InventoryItem from "@/models/InventoryItem";
 import Product from "@/models/Product";
-import { genId } from "./ids";
+import { genId, localDate } from "./ids";
 
 // รับของเข้า: สร้าง lot 1 doc + สร้าง inventory_item ตามจำนวน unit ที่รับ
 export async function receiveStock({
@@ -28,7 +28,7 @@ export async function receiveStock({
     cost_price_per_unit,
     quantity_received,
     expiry_date,
-    received_at: new Date().toISOString().slice(0, 10),
+    received_at: localDate(),
     received_by,
   });
 
