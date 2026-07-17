@@ -1,0 +1,147 @@
+// Seed ข้อมูลตัวอย่าง — standalone (node scripts/seed.mjs)
+// ล้างและใส่ข้อมูลใหม่ทั้งหมด ใช้ตอนเริ่มระบบ/ทดสอบเท่านั้น
+import mongoose from "mongoose";
+
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/osoth";
+
+async function main() {
+  await mongoose.connect(MONGODB_URI);
+  const db = mongoose.connection.db;
+  console.log("connected:", MONGODB_URI);
+
+  const collections = [
+    "branches", "rooms", "users", "doctorschedules", "customers", "products",
+    "stocklots", "inventoryitems", "medicalprocedures", "courses", "promotions",
+    "customercourses", "reserves", "opds", "payments", "staffearnings",
+    "expenses", "counters", "systemconfigs", "leaverequests",
+  ];
+  for (const c of collections) await db.collection(c).deleteMany({});
+
+  const now = new Date();
+  const ts = { created_at: now, updated_at: now };
+
+  await db.collection("branches").insertMany([
+    { branch_ID: "BR-001", name: "โอสถ สาขาสยาม", address: "กรุงเทพฯ", phone: "02-000-0001", active: true, ...ts },
+    { branch_ID: "BR-002", name: "โอสถ สาขาทองหล่อ", address: "กรุงเทพฯ", phone: "02-000-0002", active: true, ...ts },
+  ]);
+
+  await db.collection("rooms").insertMany([
+    { room_ID: "RM-001", branch_ID: "BR-001", name: "ห้อง 1", order: 1, active: true, ...ts },
+    { room_ID: "RM-002", branch_ID: "BR-001", name: "ห้อง 2", order: 2, active: true, ...ts },
+    { room_ID: "RM-003", branch_ID: "BR-001", name: "ห้อง VIP", order: 3, active: true, ...ts },
+    { room_ID: "RM-004", branch_ID: "BR-002", name: "ห้อง 1", order: 1, active: true, ...ts },
+  ]);
+
+  await db.collection("users").insertMany([
+    { user_ID: "US-001", branch_ID: "BR-001", role: "super_admin", full_name: "เจ้าของร้าน", nick_name: "บอส", email: "boss@osoth.local", phone: "", commission_rate: 0, color: "#8f1f23", active: true, ...ts },
+    { user_ID: "US-002", branch_ID: "BR-001", role: "admin", full_name: "แอดมิน หน้าร้าน", nick_name: "มิน", email: "admin@osoth.local", phone: "", commission_rate: 0, color: "#b3282d", active: true, ...ts },
+    { user_ID: "US-003", branch_ID: "BR-001", role: "acception", full_name: "ฝ่ายต้อนรับ", nick_name: "ฟ้า", email: "recept@osoth.local", phone: "", commission_rate: 0, color: "#a8871f", active: true, ...ts },
+    { user_ID: "US-004", branch_ID: "BR-001", role: "sale", full_name: "เซลล์ คนเก่ง", nick_name: "เซล", email: "sale@osoth.local", phone: "", commission_rate: 5, color: "#1a4e8a", active: true, ...ts },
+    { user_ID: "US-005", branch_ID: "BR-001", role: "doctor", full_name: "นพ. มังกร ทองแดง", nick_name: "หมอมังกร", email: "dr.m@osoth.local", phone: "", commission_rate: 0, color: "#2e5d32", active: true, ...ts },
+    { user_ID: "US-006", branch_ID: "BR-001", role: "doctor", full_name: "พญ. หงส์ ทองคำ", nick_name: "หมอหงส์", email: "dr.h@osoth.local", phone: "", commission_rate: 0, color: "#6a3a8a", active: true, ...ts },
+    { user_ID: "US-007", branch_ID: "BR-001", role: "BT", full_name: "บิวตี้ เทอราปิสต์ หนึ่ง", nick_name: "บีที1", email: "bt1@osoth.local", phone: "", commission_rate: 0, color: "#555", active: true, ...ts },
+    { user_ID: "US-008", branch_ID: "BR-001", role: "BT", full_name: "บิวตี้ เทอราปิสต์ สอง", nick_name: "บีที2", email: "bt2@osoth.local", phone: "", commission_rate: 0, color: "#777", active: true, ...ts },
+  ]);
+
+  await db.collection("doctorschedules").insertMany([
+    {
+      branch_ID: "BR-001", doctor_ID: "US-005",
+      weekly: [1, 2, 3, 4, 5].map((d) => ({ day_of_week: d, room_ID: "RM-001", time_start: "10:00", time_end: "18:00" })),
+      overrides: [], ...ts,
+    },
+    {
+      branch_ID: "BR-001", doctor_ID: "US-006",
+      weekly: [3, 4, 5, 6].map((d) => ({ day_of_week: d, room_ID: "RM-002", time_start: "12:00", time_end: "20:00" })),
+      overrides: [], ...ts,
+    },
+  ]);
+
+  await db.collection("medicalprocedures").insertMany([
+    { medical_procedure_ID: "MP-001", name: "ฉีด Botox", type: "doctor", cost: 500, active: true, ...ts },
+    { medical_procedure_ID: "MP-002", name: "เตรียมผิว/แปะยาชา", type: "BT", cost: 150, active: true, ...ts },
+    { medical_procedure_ID: "MP-003", name: "ร้อยไหม", type: "doctor", cost: 800, active: true, ...ts },
+    { medical_procedure_ID: "MP-004", name: "ทรีตเมนต์ผิว", type: "BT", cost: 200, active: true, ...ts },
+  ]);
+
+  await db.collection("products").insertMany([
+    { product_ID: "PD-001", name: "Botox 100u (10cc)", type: "injection", unit: "ขวด", sub_unit: "cc", sub_unit_size: 10, default_uses_per_unit: 5, selling_price: 2500, reorder_point: 3, shelf_life_after_open_days: 30, active: true, ...ts },
+    { product_ID: "PD-002", name: "Filler 1cc", type: "injection", unit: "กล่อง", sub_unit: "cc", sub_unit_size: 1, default_uses_per_unit: 1, selling_price: 8000, reorder_point: 2, shelf_life_after_open_days: 0, active: true, ...ts },
+    { product_ID: "PD-003", name: "มาส์กหน้าทองคำ", type: "consumable", unit: "ชิ้น", sub_unit: "", sub_unit_size: 1, default_uses_per_unit: 1, selling_price: 900, reorder_point: 5, shelf_life_after_open_days: 0, active: true, ...ts },
+  ]);
+
+  await db.collection("courses").insertMany([
+    {
+      course_ID: "CS-001", name: "Botox หน้าเรียว 5 ครั้ง", quantity_used: 5, validity_days: 365, price: 15000,
+      products: [{ product_ID: "PD-001", sub_unit_per_use: 2 }],
+      BT_procedures: [{ medical_procedure_ID: "MP-002" }],
+      doctor_procedures: [{ medical_procedure_ID: "MP-001" }],
+      duration_minutes: 60, is_promotion_course: false, origin_course_ID: null, active: true, ...ts,
+    },
+    {
+      course_ID: "CS-002", name: "ทรีตเมนต์ผิวใส 10 ครั้ง", quantity_used: 10, validity_days: 365, price: 8000,
+      products: [{ product_ID: "PD-003", sub_unit_per_use: 1 }],
+      BT_procedures: [{ medical_procedure_ID: "MP-004" }],
+      doctor_procedures: [],
+      duration_minutes: 45, is_promotion_course: false, origin_course_ID: null, active: true, ...ts,
+    },
+    {
+      course_ID: "CS-003", name: "[โปร] Botox 5+1 ครั้ง", quantity_used: 6, validity_days: 365, price: 15000,
+      products: [{ product_ID: "PD-001", sub_unit_per_use: 2 }],
+      BT_procedures: [{ medical_procedure_ID: "MP-002" }],
+      doctor_procedures: [{ medical_procedure_ID: "MP-001" }],
+      duration_minutes: 60, is_promotion_course: true, origin_course_ID: "CS-001", active: true, ...ts,
+    },
+  ]);
+
+  const today = new Date();
+  const d = (n) => {
+    const x = new Date(today.getTime() + n * 86400000);
+    return x.toISOString().slice(0, 10);
+  };
+
+  await db.collection("promotions").insertMany([
+    { promotion_ID: "PM-001", name: "ลด 10% Botox หน้าเรียว", type: "discount", course_ID: "CS-001", discount_type: "percent", discount_value: 10, promo_course_ID: null, date_start: d(-30), date_end: d(60), banner_image: "", active: true, ...ts },
+    { promotion_ID: "PM-002", name: "โปร Botox 5+1", type: "new_course", course_ID: null, discount_type: null, discount_value: 0, promo_course_ID: "CS-003", date_start: d(-10), date_end: d(30), banner_image: "", active: true, ...ts },
+  ]);
+
+  // stock: 2 lot ราคาทุนต่างกัน (ทดสอบ FIFO + ต้นทุนจริงตาม lot)
+  await db.collection("stocklots").insertMany([
+    { lot_ID: "LOT-00001", branch_ID: "BR-001", product_ID: "PD-001", lot_number: "B2401", supplier: "MedSupply", cost_price_per_unit: 3500, quantity_received: 3, expiry_date: d(120), received_at: d(-20), received_by: "US-002", ...ts },
+    { lot_ID: "LOT-00002", branch_ID: "BR-001", product_ID: "PD-001", lot_number: "B2402", supplier: "MedSupply", cost_price_per_unit: 3800, quantity_received: 3, expiry_date: d(240), received_at: d(-5), received_by: "US-002", ...ts },
+    { lot_ID: "LOT-00003", branch_ID: "BR-001", product_ID: "PD-003", lot_number: "M001", supplier: "GoldMask", cost_price_per_unit: 300, quantity_received: 10, expiry_date: d(365), received_at: d(-5), received_by: "US-002", ...ts },
+  ]);
+
+  const items = [];
+  let iv = 1;
+  const mkItem = (product_ID, lot_ID, uses, cc) => ({
+    item_ID: `IV-${String(iv++).padStart(6, "0")}`,
+    branch_ID: "BR-001", product_ID, lot_ID, state: "unused",
+    opened_at: null, open_expiry_at: null,
+    uses_remaining: uses, cc_remaining: cc, usage_log: [], ...ts,
+  });
+  for (let i = 0; i < 3; i++) items.push(mkItem("PD-001", "LOT-00001", 5, 10));
+  for (let i = 0; i < 3; i++) items.push(mkItem("PD-001", "LOT-00002", 5, 10));
+  for (let i = 0; i < 10; i++) items.push(mkItem("PD-003", "LOT-00003", 1, 1));
+  await db.collection("inventoryitems").insertMany(items);
+
+  await db.collection("systemconfigs").insertOne({
+    branch_ID: null,
+    hn_format: { prefix: "HN", include_year: true, digits: 4, reset_yearly: true },
+    default_language: "th", currency: "THB", sick_cert_threshold_days: 2, ...ts,
+  });
+
+  // ตั้ง counter ให้เลยเลขที่ seed ไว้ กัน ID ชนกัน
+  await db.collection("counters").insertMany([
+    { key: "BR", seq: 10 }, { key: "RM", seq: 10 }, { key: "US", seq: 10 },
+    { key: "MP", seq: 10 }, { key: "PD", seq: 10 }, { key: "CS", seq: 10 },
+    { key: "PM", seq: 10 }, { key: "LOT", seq: 10 }, { key: "IV", seq: iv },
+    { key: "RS", seq: 0 }, { key: "OPD", seq: 0 }, { key: "CC", seq: 0 },
+    { key: "PAY", seq: 0 }, { key: "EN", seq: 0 }, { key: "EX", seq: 0 },
+    { key: "LV", seq: 0 },
+  ]);
+
+  console.log("seed เสร็จ ✓ — users 8 คน (mock login), courses 3, stock PD-001 6 ขวด");
+  await mongoose.disconnect();
+}
+
+main().catch((e) => { console.error(e); process.exit(1); });
