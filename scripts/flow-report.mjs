@@ -2,6 +2,7 @@
 // ต้อง: seed ใหม่ก่อน + dev server รันอยู่ (localhost:3000)
 import { chromium } from "playwright";
 import path from "path";
+import fs from "fs";
 const BASE = "http://localhost:3000";
 const OUT = path.resolve("..", "flow_report.pdf");
 
@@ -29,8 +30,20 @@ async function as(uid, branch, users) {
     localStorage.setItem("osoth_lang", "th");
   }, [u, branch || u.branch_ID]);
 }
-async function go(url) { await page.goto(BASE + url, { waitUntil: "networkidle" }); await page.waitForTimeout(500); }
-async function capture() { return (await page.screenshot({ fullPage: true })).toString("base64"); }
+async function go(url) {
+  await page.goto(BASE + url, { waitUntil: "domcontentloaded" });
+  // รอ Shell เรนเดอร์จริง (auth + hydrate เสร็จ) — ไม่งั้นจับได้หน้าเปล่า
+  await page.waitForSelector(".sidebar", { timeout: 15000 }).catch(() => {});
+  await page.waitForSelector(".content .card, .content .cal-wrap, .content table, .content .stats", { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(1300);
+}
+let shotN = 0;
+async function capture() {
+  await page.waitForTimeout(300);
+  const buf = await page.screenshot({ fullPage: true });
+  try { fs.writeFileSync(`test-artifacts/flow-${++shotN}.png`, buf); } catch {}
+  return buf.toString("base64");
+}
 function step(num, title, desc, test, ok, b64) { steps.push({ num, title, desc, test, ok: !!ok, b64 }); console.log(`${ok ? "✓" : "✗"} ${num}. ${title}`); }
 
 async function main() {
@@ -44,7 +57,9 @@ async function main() {
   const browser = await chromium.launch();
   ctx = await browser.newContext({ viewport: { width: 1440, height: 940 }, deviceScaleFactor: 1.3 });
   page = await ctx.newPage();
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  page.on("pageerror", (e) => console.log("  ⚠ pageerror:", e.message));
+  page.on("console", (m) => { if (m.type() === "error") console.log("  ⚠ console.error:", m.text().slice(0, 140)); });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
 
   // ===== STEP 1: ขายคอร์ส + ผ่อนชำระ =====
   const s1 = await call(AS.sale, "POST", "/customer-courses", { course_ID: "CS-001", reserve_contact: { nick_name: "มณี", phone: "0810000001" }, first_payment: { amount: 5000, method: "transfer" } });
