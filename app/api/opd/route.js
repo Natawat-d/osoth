@@ -30,18 +30,18 @@ export const POST = apiHandler(async (req) => {
       status: 400,
     });
 
-  const cc = await CustomerCourse.findOne({
-    customer_course_ID: body.customer_course_ID || rs.customer_course_ID,
-  });
-  if (!cc) throw Object.assign(new Error("คิวนี้ยังไม่ผูก course"), { status: 400 });
-  if (cc.status !== "active")
-    throw Object.assign(new Error(`course สถานะ ${cc.status} ใช้สิทธิ์ไม่ได้`), {
-      status: 409,
-    });
+  // course = optional ตอนเปิดเคส (เลือก/ขายในเคสได้ก่อนทำหัตถการ)
+  const ccId = body.customer_course_ID || rs.customer_course_ID;
+  let cc = null;
+  if (ccId) {
+    cc = await CustomerCourse.findOne({ customer_course_ID: ccId });
+    if (cc && cc.status !== "active")
+      throw Object.assign(new Error(`course สถานะ ${cc.status} ใช้สิทธิ์ไม่ได้`), { status: 409 });
+  }
 
-  // ผูก HN ย้อนหลังให้ทั้ง reserve และ customer_course (กรณีจอง/ซื้อก่อนมี HN)
+  // ผูก HN ย้อนหลังให้ reserve และ course (ถ้ามี)
   if (!rs.HN_number) rs.HN_number = HN_number;
-  if (!cc.HN_number) {
+  if (cc && !cc.HN_number) {
     cc.HN_number = HN_number;
     await cc.save();
   }
@@ -51,8 +51,8 @@ export const POST = apiHandler(async (req) => {
     branch_ID: rs.branch_ID,
     reserve_ID: rs.reserve_ID,
     HN_number,
-    customer_course_ID: cc.customer_course_ID,
-    session_no: cc.uses_total - cc.uses_remaining + 1,
+    customer_course_ID: cc?.customer_course_ID || null,
+    session_no: cc ? cc.uses_total - cc.uses_remaining + 1 : 0,
     date: rs.date,
     room_ID: rs.room_ID,
     time_start: rs.time_start,
@@ -61,7 +61,10 @@ export const POST = apiHandler(async (req) => {
     doctor_ID: rs.doctor_ID,
     status: "open",
   });
+  // เปิดเคสแล้ว = ลูกค้าเข้าห้อง พร้อมทำ → reserve.status = ready
   rs.opd_ID = opd.opd_ID;
+  rs.status = "ready";
+  rs.status_history.push({ status: "ready", at: new Date(), by: auth.user_ID });
   await rs.save();
   return opd;
 });

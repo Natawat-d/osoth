@@ -13,7 +13,8 @@ const STATUS_COLORS = {
   booked: "#7c8794",
   arrived: "#34618f",
   ready: "#a5842f",
-  in_progress: "#b23a33",
+  bt_stage: "#b8791f",
+  doctor_stage: "#b23a33",
   done: "#2f7d5b",
 };
 

@@ -8,6 +8,7 @@ import User from "@/models/User";
 import { pickItemsFIFO } from "./fifo";
 import { genId } from "./ids";
 import StaffEarning from "@/models/StaffEarning";
+import CommissionSetting from "@/models/CommissionSetting";
 
 // "ปิดเคส" — trigger เดียวทำ 5 อย่าง:
 // 1. ตัด inventory ตาม FIFO ตาม course_snapshot.products (+ add_on ที่ตัด stock)
@@ -61,6 +62,8 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
   if (!opd.opd_data?.measured_at)
     throw httpError(400, "ยังไม่ได้บันทึกการวัดตัว (OPD data) — บังคับวัดทุกครั้ง");
 
+  if (!opd.customer_course_ID)
+    throw httpError(400, "ต้องเลือก/ขายคอร์สให้เคสนี้ก่อนปิดเคส");
   const cc = await CustomerCourse.findOne(
     { customer_course_ID: opd.customer_course_ID },
     null,
@@ -70,18 +73,17 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
   if (cc.uses_remaining <= 0) throw httpError(409, "course นี้ใช้สิทธิ์ครบแล้ว");
   if (cc.expires_at && now > cc.expires_at)
     throw httpError(409, "course นี้หมดอายุแล้ว");
+  // Q4: ต้องรับชำระค่าคอร์สก่อนทำหัตถการ/ปิดเคส (UI รับเต็มจำนวน แยกช่องทางได้)
+  if ((cc.paid_amount || 0) <= 0)
+    throw httpError(400, "ต้องรับชำระค่าคอร์สก่อนปิดเคส");
 
-  // ---- 1+2. ตัด stock FIFO ตามสูตรของ course ----
+  // ---- 1+2. ตัด stock FIFO (ใช้กับทั้งสูตร course และ add-on ที่เป็นสินค้าคลัง) ----
   const stockUsed = [];
-  const products = cc.course_snapshot?.products || [];
-  for (const p of products) {
-    const productDoc = await Product.findOne({ product_ID: p.product_ID }, null, opt);
+  const cutStock = async (product_ID, cc_needed) => {
+    if (!cc_needed || cc_needed <= 0) return;
+    const productDoc = await Product.findOne({ product_ID }, null, opt);
     const subUnitSize = productDoc?.sub_unit_size || 1;
-    const picks = await pickItemsFIFO({
-      branch_ID: opd.branch_ID,
-      product_ID: p.product_ID,
-      cc_needed: p.sub_unit_per_use,
-    });
+    const picks = await pickItemsFIFO({ branch_ID: opd.branch_ID, product_ID, cc_needed });
     for (const { item, lot, cc_take } of picks) {
       const newCc = item.cc_remaining - cc_take;
       const newUses = Math.max(0, item.uses_remaining - 1);
@@ -96,31 +98,28 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
             uses_remaining: nowEmpty ? 0 : newUses,
             state: nowEmpty ? "empty" : "in_use",
             ...(openingNow
-              ? {
-                  opened_at: now,
-                  open_expiry_at: shelfDays
-                    ? new Date(now.getTime() + shelfDays * 86400000)
-                    : null,
-                }
+              ? { opened_at: now, open_expiry_at: shelfDays ? new Date(now.getTime() + shelfDays * 86400000) : null }
               : {}),
           },
-          $push: {
-            usage_log: { opd_ID, cc_used: cc_take, used_at: now, closed_by },
-          },
+          $push: { usage_log: { opd_ID, cc_used: cc_take, used_at: now, closed_by } },
         },
         opt
       );
-      // ต้นทุนจริงตามสัดส่วนของ lot ที่ตัด
-      const costOfGoods =
-        ((lot?.cost_price_per_unit || 0) * cc_take) / subUnitSize;
+      const costOfGoods = ((lot?.cost_price_per_unit || 0) * cc_take) / subUnitSize;
       stockUsed.push({
-        item_ID: item.item_ID,
-        lot_ID: item.lot_ID,
-        product_ID: p.product_ID,
-        cc_used: cc_take,
-        cost_of_goods: Math.round(costOfGoods * 100) / 100,
+        item_ID: item.item_ID, lot_ID: item.lot_ID, product_ID,
+        cc_used: cc_take, cost_of_goods: Math.round(costOfGoods * 100) / 100,
       });
     }
+  };
+  // สูตร course
+  for (const p of cc.course_snapshot?.products || []) await cutStock(p.product_ID, p.sub_unit_per_use);
+  // add-on (ทุกชิ้นเป็นสินค้าในคลัง) → ตัด addon_sub_unit_per_use × qty
+  for (const a of opd.add_ons || []) {
+    const pd = await Product.findOne({ product_ID: a.product_ID }, null, opt);
+    if (!pd) continue;
+    const per = pd.addon_sub_unit_per_use || pd.sub_unit_size || 1;
+    await cutStock(a.product_ID, per * (a.qty || 1));
   }
 
   // ---- 3. นับครั้ง course ----
@@ -157,6 +156,34 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
     earnings.push(earning);
   }
 
+  // ---- 4b. คอม add-on → คนแนะ (sale/หมอ) ตามตารางคอมของสาขา ----
+  const commSetting = await CommissionSetting.findOne({ branch_ID: opd.branch_ID }, null, opt);
+  for (const a of opd.add_ons || []) {
+    if (!a.recommended_by) continue;
+    const rate = (commSetting?.addon_rates || []).find((r) => r.product_ID === a.product_ID);
+    if (!rate) continue;
+    const performer = await User.findOne({ user_ID: a.recommended_by }, null, opt);
+    const isDoctor = performer?.role === "doctor";
+    const cType = isDoctor ? rate.doctor_type : rate.sale_type;
+    const cVal = isDoctor ? rate.doctor_value : rate.sale_value;
+    const amount = cType === "percent"
+      ? Math.round(((a.price || 0) * cVal) / 100)
+      : cVal * (a.qty || 1);
+    if (amount <= 0) continue;
+    const earning = {
+      earning_ID: await genId("EN", 6),
+      branch_ID: opd.branch_ID,
+      user_ID: a.recommended_by,
+      role: isDoctor ? "doctor" : "sale",
+      type: "addon_commission",
+      ref: { opd_ID, customer_course_ID: null },
+      amount,
+      date: opd.date,
+    };
+    await StaffEarning.create([earning], opt);
+    earnings.push(earning);
+  }
+
   // ---- 5. ปิด OPD + reserve → done ----
   await Opd.updateOne(
     { opd_ID },
@@ -164,6 +191,7 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
       $set: {
         stock_used: stockUsed,
         status: "closed",
+        outcome: "treated",
         closed_by,
         closed_at: now,
       },

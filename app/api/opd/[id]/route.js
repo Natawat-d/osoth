@@ -1,4 +1,5 @@
 import Opd from "@/models/Opd";
+import Reserve from "@/models/Reserve";
 import { apiHandler, requireRole, getAuth } from "@/lib/api";
 
 export const GET = apiHandler(async (req, { params }) => {
@@ -33,6 +34,7 @@ export const PUT = apiHandler(async (req, { params }) => {
   }
   if (body.BT_ID !== undefined) opd.BT_ID = body.BT_ID;
   if (body.doctor_ID !== undefined) opd.doctor_ID = body.doctor_ID;
+  if (body.sale_ID !== undefined) opd.sale_ID = body.sale_ID; // sale ดูแลเคส (คิดคอม)
   if (body.procedures_done) opd.procedures_done = body.procedures_done;
   if (body.status) {
     const order = ["open", "measuring", "bt_stage", "doctor_stage"];
@@ -43,5 +45,16 @@ export const PUT = apiHandler(async (req, { params }) => {
     opd.status = body.status;
   }
   await opd.save();
+
+  // ซิงก์สถานะคิว (reserve) ให้ตรงกับ stage เพื่อโชว์บนปฏิทิน (BT ทำ / หมอทำ)
+  if (body.status && ["bt_stage", "doctor_stage"].includes(body.status)) {
+    await Reserve.updateOne(
+      { reserve_ID: opd.reserve_ID },
+      {
+        $set: { status: body.status },
+        $push: { status_history: { status: body.status, at: new Date(), by: auth.user_ID } },
+      }
+    );
+  }
   return opd;
 });

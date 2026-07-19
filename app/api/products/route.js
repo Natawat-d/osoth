@@ -1,6 +1,6 @@
 import Product from "@/models/Product";
 import { makeCrud } from "@/lib/crud";
 
-const crud = makeCrud(Product, { idField: "product_ID", idPrefix: "PD" });
+const crud = makeCrud(Product, { idField: "product_ID", idPrefix: "PD", branchScoped: true });
 export const GET = crud.list;
 export const POST = crud.create;

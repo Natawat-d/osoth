@@ -16,6 +16,7 @@
 | เรื่อง | กติกา |
 |---|---|
 | จุดตัด stock | ตัดตอน **ทำหัตถการเสร็จ** — admin/acception กด "ปิดเคส" เป็น trigger เดียว |
+| เช็คสต๊อกก่อนทำ | **คำนวณสินค้าที่คอร์สจะใช้ก่อนลงมือ** (products[].sub_unit_per_use เทียบ stock คงเหลือ) — **เตือน + บล็อก** ทำหัตถการ/ปิดเคส ถ้าของไม่พอ |
 | ปิดเคส trigger | ตัด stock (FIFO) + นับครั้ง course (uses_remaining--) + สร้างรายการค่ามือหมอ/BT + คอมมิชชั่น sale |
 | เลือก lot | **FIFO อัตโนมัติ** (เข้าก่อน/หมดอายุก่อน ใช้ก่อน) |
 | ต้นทุน | ใช้ **ราคาทุนจริงของ lot ที่ถูกตัด** (ไม่ใช่ average) |
@@ -28,13 +29,13 @@
 | promotion | ได้ 2 แบบ: ส่วนลดทับ course เดิม หรือสร้าง course โปรใหม่แยกตัว |
 | อายุ course | มีวันหมดอายุ **ตั้งต่อ course** (validity_days นับจากวันซื้อ) — เตือนก่อนหมด |
 | ถือหลาย course | ลูกค้า 1 HN ถือ course ค้างพร้อมกันได้ **ไม่จำกัด** |
-| สถานะจอง | booked → arrived → ready → in_progress → done (+ cancelled, no_show, rescheduled) |
+| สถานะจอง | booked → arrived → ready → bt_stage → doctor_stage → done (+ cancelled, no_show, rescheduled) |
 | walk-in | รองรับ สร้างคิวหน้างานได้เลย |
 | จองซ้อน | **block เด็ดขาด** — ห้อง+ช่วงเวลาซ้อนไม่ได้ และหมอคนเดียวซ้อน 2 ห้องไม่ได้ |
 | จองก่อนมี HN | ได้ — จองด้วยชื่อ+เบอร์ สร้าง HN ตอนมา OPD ครั้งแรก แล้วผูกย้อนหลัง |
 | OPD_data | **วัดทุกครั้ง บังคับ** ก่อนเข้าหัตถการ |
 | format HN | **config ได้** (prefix + ปี + เลขรัน ฯลฯ ตั้งใน system_config) |
-| flow เคส | OPD(วัดตัว) → BT pre → หมอทำ → ปิดเคส — **ข้ามขั้น BT หรือหมอได้** ตามชนิดหัตถการใน course |
+| flow เคส | OPD(วัดตัว) → **ขั้น BT (bt_stage)** → **ขั้นแพทย์ (doctor_stage)** → ปิดเคส — แต่ละขั้นบันทึกแยก + เดินสถานะคิว, **ข้ามขั้น BT หรือแพทย์อัตโนมัติ** ตามหัตถการใน course |
 | login | **mock ก่อน** (เลือก user จากรายการ ไม่มี password จริง) — โครงสร้างรองรับ auth จริงภายหลัง |
 | สิทธิ์ role | super_admin: ทุกอย่าง / admin: คิว+ปิดเคส+stock / acception: OPD+คิว / sale: จอง+ขาย course / doctor+BT: คิวตัวเอง+บันทึกการทำ |
 | รายได้พนักงาน | หมอ/BT **ดูรายได้สะสมเฉพาะของตัวเอง** ได้ |
@@ -48,7 +49,7 @@
 
 - **advert/sale** — จอง course ให้ลูกค้า ลงเวลานัด, ขาย course, ดูคอมมิชชั่นตัวเอง
 - **OPD** — วัดความดัน/น้ำหนัก/ส่วนสูง (บังคับทุกครั้ง), ผูก/สร้าง HN, กำหนด BT ที่จะทำ pre-procedure
-- **booking** — admin เปลี่ยนสถานะคิว (arrived → ready → in_progress → done), ปิดเคส
+- **booking** — admin เปลี่ยนสถานะคิว (arrived → ready → bt_stage → doctor_stage → done), ปิดเคส
 - **promotion_course** — จัดการ course และ promotion
 - **stock** — รับของเข้า (lot), ดูขวดรายชิ้น, สถานะ, เตือนหมดอายุ
 - **medical_procedure** — ตั้งค่าประเภทหัตถการ + เรทค่ามือ BT และหมอ
@@ -314,7 +315,8 @@
   room_ID: "RM-001",
   doctor_ID: "US-005",            // null ได้ถ้า course ไม่มีขั้นหมอ
   BT_ID: null,                    // acception กำหนดตอน OPD ได้
-  status: "booked" | "arrived" | "ready" | "in_progress" | "done"
+  // ทำหัตถการแยกเป็น 2 ขั้น: bt_stage (BT ทำ pre-procedure) → doctor_stage (แพทย์ทำ)
+  status: "booked" | "arrived" | "ready" | "bt_stage" | "doctor_stage" | "done"
         | "cancelled" | "no_show",
   is_walk_in: false,
   reschedule_history: [           // เลื่อนนัด — เก็บของเดิมไว้
@@ -331,7 +333,7 @@
 // กติกาจองซ้อน (บังคับที่ API ก่อน insert/update ทุกครั้ง):
 // 1) ห้องเดียวกัน + วันเดียวกัน + ช่วงเวลา overlap → reject
 // 2) หมอคนเดียวกัน + วันเดียวกัน + ช่วงเวลา overlap (คนละห้องก็ตาม) → reject
-// (นับเฉพาะ status ที่ยังมีผล: booked/arrived/ready/in_progress)
+// (นับเฉพาะ status ที่ยังมีผล: booked/arrived/ready/bt_stage/doctor_stage)
 ```
 
 ## opd (1 doc = การมา 1 ครั้ง / 1 session) — โครงใหม่ แก้ปัญหา array ขนาน
@@ -481,7 +483,7 @@
 
 ```
 inventory_item : unused → in_use → empty        (+ discarded ได้จากทุก state)
-reserve        : booked → arrived → ready → in_progress → done
+reserve        : booked → arrived → ready → bt_stage → doctor_stage → done
                  booked → cancelled | no_show
                  (เลื่อนนัด = แก้ วัน/เวลา/ห้อง + push reschedule_history, status คงเดิม)
 opd            : open → measuring → bt_stage → doctor_stage → closed

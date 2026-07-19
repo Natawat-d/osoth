@@ -9,7 +9,7 @@ const StaffEarningSchema = new mongoose.Schema(
     role: { type: String, enum: ["doctor", "BT", "sale"], required: true },
     type: {
       type: String,
-      enum: ["procedure_fee", "commission"],
+      enum: ["procedure_fee", "commission", "addon_commission", "tier_commission"],
       required: true,
     },
     ref: {

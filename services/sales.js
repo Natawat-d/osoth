@@ -8,7 +8,8 @@ import Opd from "@/models/Opd";
 import Product from "@/models/Product";
 import { genId, localDate } from "./ids";
 
-// ขาย course: สร้าง customer_course (+snapshot) + บันทึกเงินงวดแรก + คอม sale
+// ขาย course: สร้าง customer_course (+snapshot) + บันทึกเงิน + คอม sale
+// การชำระเงิน: จ่ายเต็มจำนวน แต่แยกได้หลายช่องทาง (สด/โอน/บัตร) ผ่าน payments[]
 export async function purchaseCourse({
   branch_ID,
   HN_number = null,
@@ -16,7 +17,10 @@ export async function purchaseCourse({
   course_ID,
   promotion_ID = null,
   sale_ID = null,
-  first_payment = null, // { amount, method } — null = ยังไม่จ่าย (ผ่อน/ค้าง)
+  first_payment = null, // { amount, method } — รับก้อนเดียว (ยังรองรับ smoke/legacy)
+  payments = null,      // [{ amount, method }] — แยกจ่ายหลายช่องทาง (จ่ายเต็ม)
+  requireFull = false,  // true = ยอดรวมต้องเท่าราคาเต็มเท่านั้น (ไม่มีมัดจำ/ผ่อน)
+  price_override = null, // ราคาปรับหน้างาน (admin ต่อรอง/ลด) — ทับราคา course/โปร
   received_by = "",
 }) {
   const course = await Course.findOne({ course_ID, active: true }).lean();
@@ -36,6 +40,8 @@ export async function purchaseCourse({
           : course.price - promo.discount_value;
     }
   }
+  // ราคาปรับหน้างาน (admin) ทับทุกอย่าง
+  if (price_override != null && Number(price_override) >= 0) total = Number(price_override);
 
   const now = new Date();
   const expires_at = course.validity_days
@@ -49,7 +55,16 @@ export async function purchaseCourse({
   }
   const commission_amount = Math.round(total * (commission_rate / 100));
 
-  const paidNow = first_payment?.amount || 0;
+  // รวมช่องทางจ่าย: ใช้ payments[] ถ้ามี ไม่งั้น fallback เป็น first_payment ก้อนเดียว
+  const payLines = (payments && payments.length
+    ? payments
+    : first_payment && first_payment.amount ? [first_payment] : []
+  ).map((p) => ({ amount: Number(p.amount) || 0, method: p.method || "cash" }))
+    .filter((p) => p.amount > 0);
+  const paidNow = payLines.reduce((s, p) => s + p.amount, 0);
+  if (requireFull && paidNow !== total)
+    throw httpError(400, `ต้องชำระค่าคอร์สเต็มจำนวน ${total}฿ (รับมา ${paidNow}฿)`);
+
   const cc = await CustomerCourse.create({
     customer_course_ID: await genId("CC", 6),
     branch_ID,
@@ -80,35 +95,28 @@ export async function purchaseCourse({
     commission_amount,
   });
 
-  let payment = null;
-  if (paidNow > 0) {
-    payment = await Payment.create({
+  // บันทึก payment แยกตามช่องทาง (จ่ายเต็มแต่คนละบัตร/สด/โอนได้)
+  const createdPayments = [];
+  for (const line of payLines) {
+    const pay = await Payment.create({
       payment_ID: await genId("PAY", 6),
       branch_ID,
       HN_number,
       type: "course_purchase",
       ref: { customer_course_ID: cc.customer_course_ID, opd_ID: null },
-      amount: paidNow,
-      method: first_payment.method || "cash",
+      amount: line.amount,
+      method: line.method,
       paid_at: now,
       received_by,
     });
+    createdPayments.push(pay);
   }
+  const payment = createdPayments[0] || null; // backward compat
 
-  if (sale_ID && commission_amount > 0) {
-    await StaffEarning.create({
-      earning_ID: await genId("EN", 6),
-      branch_ID,
-      user_ID: sale_ID,
-      role: "sale",
-      type: "commission",
-      ref: { opd_ID: null, customer_course_ID: cc.customer_course_ID },
-      amount: commission_amount,
-      date: localDate(now),
-    });
-  }
+  // คอม sale ไม่คิดแบบ flat ต่อคอร์สแล้ว — ใช้ "ขั้นบันไดจากยอดขายรวม/เดือน" (หน้า /commission)
+  // + คอม add-on (คิดตอนปิดเคส) · cc.sale_ID เก็บไว้ให้รายงาน tier รวมยอด
 
-  return { customer_course: cc, payment };
+  return { customer_course: cc, payment, payments: createdPayments };
 }
 
 // จ่ายงวดผ่อน
@@ -152,12 +160,15 @@ export async function payInstallment({
   return { payment, balance_due: due };
 }
 
-// add_on: ทำเพิ่มหน้างาน — เก็บเงินทันที แยกบิล ผูกกับ OPD ครั้งนั้น
+// add_on: ทำเพิ่มหน้างาน — สินค้าในคลัง (ตัด stock ตอนปิดเคส)
+// ครั้งแรกของคอร์ส (session 1): รวมเป็นบิลเดียวกับคอร์ส (นับเข้าฐานคอม sale)
+// ครั้งต่อไป: แยกบิล · recommended_by = คนแนะ (sale/หมอ) เอาไปคิดคอม
 export async function addAddOn({
   opd_ID,
   product_ID,
   qty = 1,
   method,
+  recommended_by = null,
   received_by = "",
 }) {
   const opd = await Opd.findOne({ opd_ID });
@@ -167,18 +178,32 @@ export async function addAddOn({
   if (!product) throw httpError(404, "ไม่พบสินค้า");
 
   const price = (product.selling_price || 0) * qty;
+  const firstVisit = opd.session_no === 1; // ครั้งแรกของคอร์ส → รวมบิลคอร์ส
   const now = new Date();
-  const payment = await Payment.create({
-    payment_ID: await genId("PAY", 6),
-    branch_ID: opd.branch_ID,
-    HN_number: opd.HN_number,
-    type: "add_on",
-    ref: { customer_course_ID: null, opd_ID },
-    amount: price,
-    method,
-    paid_at: now,
-    received_by,
-  });
+
+  // ครั้งแรก: รวมเป็น "payment เดียวจริงๆ" กับคอร์ส — เพิ่มยอดใน payment course_purchase เดิม
+  let payment;
+  const coursePay = firstVisit && opd.customer_course_ID
+    ? await Payment.findOne({ type: "course_purchase", "ref.customer_course_ID": opd.customer_course_ID }).sort({ paid_at: -1 })
+    : null;
+  if (coursePay) {
+    coursePay.amount += price;       // รวมยอด add-on เข้าบิลคอร์สก้อนเดียว
+    await coursePay.save();
+    payment = coursePay;
+  } else {
+    // ครั้งต่อไป (หรือยังไม่มี payment คอร์ส) = add_on แยกบิล
+    payment = await Payment.create({
+      payment_ID: await genId("PAY", 6),
+      branch_ID: opd.branch_ID,
+      HN_number: opd.HN_number,
+      type: firstVisit ? "course_purchase" : "add_on",
+      ref: { customer_course_ID: firstVisit ? opd.customer_course_ID : null, opd_ID },
+      amount: price,
+      method,
+      paid_at: now,
+      received_by,
+    });
+  }
 
   await Opd.updateOne(
     { opd_ID },
@@ -190,6 +215,8 @@ export async function addAddOn({
           qty,
           cc_used: 0,
           price,
+          recommended_by: recommended_by || null,
+          first_visit: firstVisit,
           payment_ID: payment.payment_ID,
         },
       },

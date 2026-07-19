@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { api } from "@/lib/client";
 import { useT } from "@/i18n/messages";
-import { money } from "@/components/ui";
+import { money, AsyncButton, useToast, fmtThaiDate } from "@/components/ui";
 
 export default function StockPage() {
   const branch_ID = useSelector((s) => s.auth.branch_ID);
   const t = useT();
+  const toast = useToast();
   const [summary, setSummary] = useState([]);
   const [products, setProducts] = useState([]);
   const [items, setItems] = useState(null); // ขวดรายชิ้นของ product ที่เลือก
@@ -27,20 +28,16 @@ export default function StockPage() {
   useEffect(load, [load]);
 
   const receive = async () => {
-    setError("");
-    try {
-      await api("/stock/receive", {
-        method: "POST",
-        body: {
-          ...form,
-          branch_ID,
-          cost_price_per_unit: +form.cost_price_per_unit,
-          quantity_received: +form.quantity_received,
-        },
-      });
-      setForm({ product_ID: "", lot_number: "", supplier: "", cost_price_per_unit: "", quantity_received: 1, expiry_date: "" });
-      load();
-    } catch (e) { setError(e.message); }
+    const p = products.find((x) => x.product_ID === form.product_ID);
+    // หน้ายืนยันก่อนรับเข้า (กันคีย์ผิด เช่น 15→30)
+    if (!window.confirm(`ยืนยันรับของเข้า: ${p?.name} จำนวน ${form.quantity_received} ${p?.unit || "หน่วย"} · ทุน/หน่วย ${money(+form.cost_price_per_unit || 0)}฿ ?`)) return;
+    await api("/stock/receive", {
+      method: "POST",
+      body: { ...form, branch_ID, cost_price_per_unit: +form.cost_price_per_unit, quantity_received: +form.quantity_received },
+    });
+    setForm({ product_ID: "", lot_number: "", supplier: "", cost_price_per_unit: "", quantity_received: 1, expiry_date: "" });
+    toast.success("รับของเข้าคลังแล้ว");
+    load();
   };
 
   const showItems = async (product_ID) => {
@@ -78,9 +75,9 @@ export default function StockPage() {
             <input type="number" min={1} value={form.quantity_received} onChange={(e) => setForm((f) => ({ ...f, quantity_received: e.target.value }))} /></div>
           <div className="field"><label>หมดอายุ</label>
             <input type="date" value={form.expiry_date} onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))} /></div>
-          <button className="btn primary" disabled={!form.product_ID || !form.cost_price_per_unit} onClick={receive}>
+          <AsyncButton className="btn primary" disabled={!form.product_ID || !form.cost_price_per_unit} onClick={receive}>
             {t("receive_stock")}
-          </button>
+          </AsyncButton>
         </div>
       </div>
 

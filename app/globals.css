@@ -148,7 +148,7 @@ h1, h2, h3, .display {
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .topbar {
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 24px; min-height: 60px;
+  padding: 9px 16px; min-height: 52px;
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: saturate(1.4) blur(6px);
   border-bottom: 1px solid var(--line);
@@ -159,7 +159,7 @@ h1, h2, h3, .display {
   font-size: 19px; font-weight: 600; color: var(--ink);
 }
 .topbar .spacer { flex: 1; }
-.content { padding: 24px; flex: 1; max-width: 1500px; width: 100%; }
+.content { padding: 16px; flex: 1; max-width: 1500px; width: 100%; }
 
 /* user chip */
 .user-chip {
@@ -176,7 +176,7 @@ h1, h2, h3, .display {
    ============================================================ */
 .card {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 18px 20px;
+  border-radius: var(--radius); padding: 13px 16px;
   box-shadow: var(--shadow-sm); position: relative;
 }
 /* เส้นทองบางๆ ด้านบนการ์ด — ประดับแบบจีน อ่านง่าย */
@@ -185,10 +185,10 @@ h1, h2, h3, .display {
   background: linear-gradient(90deg, transparent, var(--gold-line) 30%, var(--gold-line) 70%, transparent);
   opacity: .7; border-radius: 2px;
 }
-.card + .card { margin-top: 16px; }
+.card + .card { margin-top: 11px; }
 .card h2 {
   font-family: var(--font-display), sans-serif;
-  font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--ink);
+  font-size: 16px; font-weight: 600; margin-bottom: 10px; color: var(--ink);
   padding-bottom: 10px; border-bottom: 1px solid var(--line);
   display: flex; align-items: center; gap: 8px;
 }
@@ -235,7 +235,7 @@ label {
   font-size: 11.5px; color: var(--ink-2); font-weight: 500;
   display: block; margin-bottom: 5px; letter-spacing: .01em;
 }
-.field { margin-bottom: 12px; }
+.field { margin-bottom: 8px; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
 .row .field { flex: 1; min-width: 140px; margin-bottom: 0; }
 
@@ -244,12 +244,12 @@ label {
    ============================================================ */
 table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tbl th {
-  text-align: left; padding: 10px 12px; color: var(--ink-2);
+  text-align: left; padding: 7px 10px; color: var(--ink-2);
   border-bottom: 1px solid var(--line-2); font-size: 11.5px; font-weight: 600;
   white-space: nowrap; letter-spacing: .02em; text-transform: uppercase;
   background: var(--surface-2);
 }
-.tbl td { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 7px 10px; border-bottom: 1px solid var(--line); }
 .tbl tr:last-child td { border-bottom: none; }
 .tbl tbody tr { transition: background .1s; }
 .tbl tbody tr:hover td { background: var(--surface-2); }
@@ -274,6 +274,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .badge.red    { background: var(--seal-tint); color: var(--seal); }
 .badge.green  { background: var(--jade-tint); color: var(--jade); }
 .badge.orange { background: var(--amber-tint); color: var(--amber); }
+.badge.purple { background: #efe9f6; color: #6a3a8a; }
 
 /* ============================================================
    STEPPER — สถานะการทำงาน (คิว / เคสหัตถการ)
@@ -316,6 +317,66 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .cal-wrap { display: flex; gap: 18px; align-items: flex-start; }
 .cal-main { flex: 1; min-width: 0; }
 .cal-side { width: 480px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
+
+/* ---- ปฏิทิน (รับลูกค้า) ---- */
+.recep-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.recep-stat {
+  text-align: center; padding: 12px 6px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.recep-stat-n { font-family: var(--font-display); font-size: 26px; font-weight: 700; line-height: 1.1; }
+.recep-stat-n.amber { color: var(--amber); }
+.recep-stat-n.blue  { color: var(--info); }
+.recep-stat-n.jade  { color: var(--jade); }
+.recep-panel { border-top: 3px solid var(--seal); }
+.recep-info {
+  display: flex; flex-direction: column; gap: 6px; font-size: 14px;
+  padding: 12px 14px; border-radius: 10px; background: var(--surface-2);
+  border: 1px solid var(--line); margin-bottom: 4px;
+}
+.recep-info .muted { margin-right: 4px; }
+
+/* ---- OPD หน้าห้อง: panel ซ้าย(คิว) / ขวา(เคส) ---- */
+.opd-split { display: flex; gap: 16px; align-items: flex-start; }
+.opd-queue { width: 340px; flex-shrink: 0; }
+.opd-case { flex: 1; min-width: 0; }
+.opd-filter {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;
+}
+.opd-chip {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 7px 4px; border-radius: 9px; font-size: 12px; white-space: nowrap;
+  border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2); cursor: pointer;
+  transition: background .1s, border-color .1s;
+}
+.opd-chip:hover { border-color: var(--gold); }
+.opd-chip.on { background: var(--seal); border-color: var(--seal); color: #fff; }
+.opd-chip-n {
+  min-width: 20px; padding: 1px 6px; border-radius: 10px; font-weight: 700; font-size: 11px;
+  background: var(--slate-tint); color: var(--slate); line-height: 1.5;
+}
+.opd-chip.on .opd-chip-n { background: rgba(255, 255, 255, 0.28); color: #fff; }
+.opd-list { max-height: calc(100vh - 210px); overflow-y: auto; margin: 0 -4px; }
+.opd-tbl { width: 100%; }
+.opd-tbl thead th {
+  position: sticky; top: 0; z-index: 1; background: var(--surface-2);
+  font-size: 11px; padding: 6px 8px;
+}
+.opd-tbl td { padding: 7px 8px; vertical-align: top; }
+.opd-tbl tbody tr { transition: background .1s; }
+.opd-tbl tbody tr.clickable { cursor: pointer; }
+.opd-tbl tbody tr.clickable:hover { background: var(--surface-2); }
+.opd-tbl tbody tr.sel { background: var(--gold-tint); }
+.opd-tbl tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--seal); }
+.opd-td-time { font-weight: 700; font-size: 13px; width: 44px; white-space: nowrap; }
+.opd-row-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.opd-td-act { text-align: right; width: 1%; white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .opd-split { flex-direction: column; }
+  .opd-queue { width: 100%; }
+  .opd-list { max-height: none; }
+}
 
 /* ---- promo carousel (หน้าร้าน) ---- */
 .promo-carousel {
@@ -573,3 +634,96 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
   display: flex; align-items: center; justify-content: center; font-weight: 700;
   flex-shrink: 0; font-size: 14px;
 }
+
+/* ============================================================
+   HCI improvements — toast, async button, status icon, legend, guard, search
+   ============================================================ */
+/* toast */
+.toaster {
+  position: fixed; top: 16px; right: 16px; z-index: 100;
+  display: flex; flex-direction: column; gap: 8px; max-width: 360px;
+}
+.toast {
+  display: flex; align-items: center; gap: 9px; cursor: pointer;
+  padding: 11px 14px; border-radius: 10px; font-size: 13px; color: #fff;
+  box-shadow: 0 6px 20px rgba(0,0,0,.22); animation: toast-in .2s ease;
+  border-left: 4px solid rgba(255,255,255,.6);
+}
+.toast.success { background: #2f7d5b; }
+.toast.error { background: #b23a33; }
+.toast.info { background: #4a463f; }
+.toast-ico { font-weight: bold; }
+@keyframes toast-in { from { opacity: 0; transform: translateX(20px); } }
+
+/* spinner (async button) */
+.spinner {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+  display: inline-block; animation: spin .7s linear infinite;
+}
+.btn:not(.primary):not(.gold) .spinner { border-color: rgba(0,0,0,.2); border-top-color: var(--ink); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* status icon inside badge (non-color indicator) */
+.badge-ico { font-size: 10px; line-height: 1; }
+.badge:has(.badge-ico)::before { display: none; }
+
+/* status legend row */
+.legend-row {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); margin-bottom: 12px;
+}
+
+/* no-access page (route guard) */
+.no-access {
+  max-width: 460px; margin: 60px auto; text-align: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 40px 28px; box-shadow: var(--shadow-sm);
+}
+.no-access .na-ico { font-size: 48px; }
+.no-access h2 { font-family: var(--font-display), sans-serif; color: var(--red-dark); margin: 10px 0 6px; border: none; }
+
+/* global search in topbar */
+.gsearch { position: relative; }
+.gsearch input { width: 220px; }
+.gsearch-results {
+  position: absolute; top: 108%; left: 0; right: 0; z-index: 40;
+  background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow); overflow: hidden; max-height: 320px; overflow-y: auto;
+}
+.gsearch-results a {
+  display: block; padding: 9px 12px; font-size: 13px; border-bottom: 1px solid var(--line);
+}
+.gsearch-results a:hover { background: var(--surface-2); }
+
+/* thai date hint next to native inputs */
+.date-hint { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+
+/* hamburger (mobile) */
+.hamburger { display: none; }
+
+/* ============================================================
+   Responsive (Charter G10) — desktop-first + mobile fallback
+   ============================================================ */
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed; left: 0; top: 0; z-index: 60; height: 100vh;
+    transform: translateX(-100%); transition: transform .2s ease; width: 230px;
+  }
+  .sidebar.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,.4); }
+  .hamburger {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line-2);
+    background: var(--surface); font-size: 18px; cursor: pointer;
+  }
+  .content { padding: 14px; }
+  .cal-wrap { flex-direction: column; }
+  .cal-side { width: 100%; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .stat { min-width: 130px; }
+  .scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 55;
+  }
+}
+@media (min-width: 901px) { .scrim { display: none; } }

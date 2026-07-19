@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/client";
 import { useT } from "@/i18n/messages";
-import { money, todayStr } from "@/components/ui";
+import { money, todayStr, fmtThaiDate } from "@/components/ui";
+import { exportCsv } from "@/lib/exportCsv";
 
 export default function MyEarningsPage() {
   const t = useT();
@@ -21,11 +22,22 @@ export default function MyEarningsPage() {
   return (
     <div>
       {error && <div className="err">{error}</div>}
-      <div className="row" style={{ marginBottom: 14 }}>
-        <div className="field"><label>จาก</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-        <div className="field"><label>ถึง</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+      <div className="toolbar">
+        <div className="field" style={{ margin: 0 }}><label>จาก</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <span className="date-hint">{fmtThaiDate(from)}</span></div>
+        <div className="field" style={{ margin: 0 }}><label>ถึง</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <span className="date-hint">{fmtThaiDate(to)}</span></div>
+        <div className="grow" />
+        {data?.rows?.length > 0 && (
+          <button className="btn small" onClick={() => exportCsv(`รายได้ของฉัน_${from}_${to}`, [
+            { label: "วันที่", value: (r) => fmtThaiDate(r.date) },
+            { label: "ชนิด", value: (r) => (r.type === "commission" ? "คอมมิชชั่น" : "ค่ามือ") },
+            { label: "อ้างอิง", value: (r) => r.ref?.opd_ID || r.ref?.customer_course_ID || "" },
+            { label: "จำนวน(บาท)", key: "amount" },
+          ], data.rows)}>⬇ ส่งออก CSV</button>
+        )}
       </div>
       {data && (
         <>
@@ -40,7 +52,7 @@ export default function MyEarningsPage() {
               <tbody>
                 {data.rows.map((r) => (
                   <tr key={r.earning_ID}>
-                    <td>{r.date}</td>
+                    <td>{fmtThaiDate(r.date)}</td>
                     <td>{r.type === "commission" ? "คอมมิชชั่น" : "ค่ามือ"}</td>
                     <td className="muted">{r.ref?.opd_ID || r.ref?.customer_course_ID}</td>
                     <td>{money(r.amount)}฿</td>

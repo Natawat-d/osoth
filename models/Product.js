@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 const ProductSchema = new mongoose.Schema(
   {
     product_ID: { type: String, required: true, unique: true },
+    branch_ID: { type: String, required: true, index: true }, // catalog แยกต่อสาขา
     name: { type: String, required: true },
     type: {
       type: String,
@@ -15,6 +16,8 @@ const ProductSchema = new mongoose.Schema(
     sub_unit_size: { type: Number, default: 1 }, // 1 unit = กี่ sub_unit (1 = แบ่งไม่ได้)
     default_uses_per_unit: { type: Number, default: 1 }, // 1 unit ใช้ได้กี่ครั้ง
     selling_price: { type: Number, default: 0 }, // ราคาขายตอนเป็น add_on
+    // add-on ตัด stock: กี่ sub_unit ต่อ 1 หน่วย add-on (× qty ตอนปิดเคส)
+    addon_sub_unit_per_use: { type: Number, default: 0 }, // 0 = ตัดเต็ม 1 unit ต่อ qty
     reorder_point: { type: Number, default: 0 },
     shelf_life_after_open_days: { type: Number, default: 0 }, // 0 = ไม่เตือน
     active: { type: Boolean, default: true },

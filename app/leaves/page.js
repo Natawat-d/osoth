@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { api } from "@/lib/client";
 import ImageInput from "@/components/ImageInput";
-import { todayStr } from "@/components/ui";
+import { todayStr, AsyncButton } from "@/components/ui";
 
 const TYPE_LABEL = { personal: "ลากิจ", sick: "ลาป่วย" };
 const ST = {
@@ -57,12 +57,9 @@ function MyLeaves({ auth }) {
   const certRequired = form.type === "sick" && days > threshold;
 
   const submit = async () => {
-    setError("");
-    try {
-      await api("/leaves", { method: "POST", body: { ...form, branch_ID: auth.branch_ID } });
-      setForm({ type: "personal", date_from: todayStr(), date_to: todayStr(), reason: "", medical_cert: "" });
-      load();
-    } catch (e) { setError(e.message); }
+    await api("/leaves", { method: "POST", body: { ...form, branch_ID: auth.branch_ID } });
+    setForm({ type: "personal", date_from: todayStr(), date_to: todayStr(), reason: "", medical_cert: "" });
+    load();
   };
 
   return (
@@ -104,11 +101,11 @@ function MyLeaves({ auth }) {
             />
           </>
         )}
-        <button className="btn primary" style={{ marginTop: 8 }}
+        <AsyncButton className="btn primary" style={{ marginTop: 8 }}
           disabled={days < 1 || (certRequired && !form.medical_cert)}
-          onClick={submit}>
+          ok="ส่งคำขอลาแล้ว" onClick={submit}>
           ส่งคำขอ
-        </button>
+        </AsyncButton>
         {certRequired && !form.medical_cert && (
           <span className="muted" style={{ marginLeft: 10 }}>ต้องแนบใบรับรองแพทย์ก่อนส่ง</span>
         )}
@@ -134,9 +131,8 @@ function PendingApprovals({ auth }) {
   useEffect(load, [load]);
 
   const review = async (id, status) => {
-    setError("");
-    try { await api(`/leaves/${id}`, { method: "PUT", body: { status } }); load(); }
-    catch (e) { setError(e.message); }
+    await api(`/leaves/${id}`, { method: "PUT", body: { status } });
+    load();
   };
 
   return (
@@ -154,8 +150,8 @@ function PendingApprovals({ auth }) {
           </div>
           {r.reason && <div className="muted" style={{ margin: "6px 0" }}>เหตุผล: {r.reason}</div>}
           <div className="row" style={{ marginTop: 6 }}>
-            <button className="btn small primary" onClick={() => review(r.leave_ID, "approved")}>อนุมัติ</button>
-            <button className="btn small ghost" onClick={() => review(r.leave_ID, "rejected")}>ไม่อนุมัติ</button>
+            <AsyncButton className="btn small primary" ok="อนุมัติแล้ว" onClick={() => review(r.leave_ID, "approved")}>อนุมัติ</AsyncButton>
+            <AsyncButton className="btn small ghost" ok="ปฏิเสธคำขอแล้ว" onClick={() => review(r.leave_ID, "rejected")}>ไม่อนุมัติ</AsyncButton>
           </div>
         </div>
       ))}
@@ -202,13 +198,18 @@ function LeaveKPI({ auth }) {
   const first = todayStr().slice(0, 8) + "01";
   const [from, setFrom] = useState(first);
   const [to, setTo] = useState(todayStr());
+  const [branch, setBranch] = useState(auth.branch_ID || "");
+  const [branches, setBranches] = useState([]);
   const [rows, setRows] = useState([]);
   const [users, setUsers] = useState({});
+  const isOwner = auth.user?.role === "super_admin";
 
+  useEffect(() => { api("/branches").then(setBranches).catch(() => {}); }, []);
   useEffect(() => {
-    api(`/leaves?branch_ID=${auth.branch_ID}&status=approved&from=${from}&to=${to}`).then(setRows);
+    const bq = branch ? `&branch_ID=${branch}` : "";
+    api(`/leaves?status=approved&from=${from}&to=${to}${bq}`).then(setRows);
     api("/users?active=all").then((u) => setUsers(Object.fromEntries(u.map((x) => [x.user_ID, x]))));
-  }, [auth.branch_ID, from, to]);
+  }, [branch, from, to]);
 
   const kpi = {};
   for (const r of rows) {
@@ -223,6 +224,12 @@ function LeaveKPI({ auth }) {
       <div className="toolbar">
         <div className="field" style={{ margin: 0 }}><label>จาก</label><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="field" style={{ margin: 0 }}><label>ถึง</label><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+        <div className="field" style={{ margin: 0 }}><label>สาขา</label>
+          <select value={branch} onChange={(e) => setBranch(e.target.value)} disabled={!isOwner}>
+            {isOwner && <option value="">ทุกสาขา</option>}
+            {branches.map((b) => <option key={b.branch_ID} value={b.branch_ID}>{b.name}</option>)}
+          </select>
+        </div>
       </div>
       <h2><span className="h2-ico">📊</span> สรุปการลาต่อคน (KPI)</h2>
       <table className="tbl">

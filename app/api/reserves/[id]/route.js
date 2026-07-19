@@ -3,10 +3,11 @@ import { apiHandler, requireRole } from "@/lib/api";
 import { findOverlap, toUnix } from "@/services/overlap";
 
 const STATUS_FLOW = {
-  booked: ["arrived", "cancelled", "no_show"],
-  arrived: ["ready", "cancelled"],
-  ready: ["in_progress", "cancelled"],
-  in_progress: ["done"],
+  booked: ["arrived", "ready", "cancelled", "no_show"],
+  arrived: ["ready", "cancelled", "no_show"],
+  ready: ["bt_stage", "doctor_stage", "cancelled"],
+  bt_stage: ["doctor_stage", "done"],
+  doctor_stage: ["done"],
   done: [],
   cancelled: [],
   no_show: [],

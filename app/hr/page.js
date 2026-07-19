@@ -5,7 +5,8 @@ import { useSelector } from "react-redux";
 import CrudPage from "@/components/CrudPage";
 import { api } from "@/lib/client";
 import { useT } from "@/i18n/messages";
-import { money, todayStr } from "@/components/ui";
+import { money, todayStr, AsyncButton, ROLE_LABEL, fmtThaiDate } from "@/components/ui";
+import { exportCsv } from "@/lib/exportCsv";
 
 const DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
 
@@ -26,15 +27,16 @@ export default function HrPage() {
           { key: "full_name", label: "ชื่อ-สกุล" },
           { key: "nick_name", label: "ชื่อเล่น" },
           {
-            key: "role", label: "role", type: "select",
+            key: "role", label: "ตำแหน่ง", type: "select",
             options: [
-              { value: "super_admin", label: "super_admin" },
-              { value: "admin", label: "admin" },
-              { value: "acception", label: "acception" },
-              { value: "sale", label: "sale" },
-              { value: "BT", label: "BT" },
-              { value: "doctor", label: "หมอ" },
+              { value: "super_admin", label: "ผู้ดูแลระบบ (super_admin)" },
+              { value: "admin", label: "แอดมิน (admin)" },
+              { value: "acception", label: "แผนกต้อนรับ (reception)" },
+              { value: "sale", label: "ฝ่ายขาย (sale)" },
+              { value: "BT", label: "บิวตี้เทอราปิสต์ (BT)" },
+              { value: "doctor", label: "แพทย์ (doctor)" },
             ],
+            render: (v) => ROLE_LABEL[v] || v,
           },
           { key: "branch_ID", label: "สาขา", type: "select", options: () => branchOptions },
           { key: "email", label: "email", show: false },
@@ -81,15 +83,23 @@ function ThroughputReport() {
         )}
         <div className="grow" />
         {data && <span className="badge gray nodot">รวม {data.total_cases} เคส</span>}
+        {data && data.rows.length > 0 && (
+          <button className="btn small" onClick={() => exportCsv(`อัตราทำเคส_${from}_${to}`, [
+            { label: "พนักงาน", key: "name" }, { label: "ตำแหน่ง", value: (r) => ROLE_LABEL[r.role] || r.role },
+            { label: "จำนวนเคส", key: "cases" },
+            { label: "หัตถการ", value: (r) => r.procedures.map((p) => `${p.name} x${p.count}`).join("; ") },
+            { label: "รายได้รวม", key: "total" },
+          ], data.rows)}>⬇ ส่งออก CSV</button>
+        )}
       </div>
       <table className="tbl">
-        <thead><tr><th>พนักงาน</th><th>role</th><th>จำนวนเคส</th><th>หัตถการที่ทำ</th><th>รายได้รวม</th></tr></thead>
+        <thead><tr><th>พนักงาน</th><th>ตำแหน่ง</th><th>จำนวนเคส</th><th>หัตถการที่ทำ</th><th>รายได้รวม</th></tr></thead>
         <tbody>
           {(!data || data.rows.length === 0) && <tr><td colSpan={5} className="muted">ไม่มีข้อมูลในช่วงนี้</td></tr>}
           {data?.rows.map((r) => (
             <tr key={r.user_ID}>
               <td><b>{r.name}</b></td>
-              <td><span className="badge gray nodot">{r.role}</span></td>
+              <td><span className="badge gray nodot">{ROLE_LABEL[r.role] || r.role}</span></td>
               <td><b>{r.cases}</b></td>
               <td className="muted">
                 {r.procedures.length
@@ -130,14 +140,7 @@ function ScheduleEditor({ branches }) {
   }, [branch_ID]);
 
   const save = async () => {
-    setError("");
-    try {
-      await api("/schedules", {
-        method: "PUT",
-        body: { branch_ID, doctor_ID, weekly, overrides },
-      });
-      alert("บันทึกตารางแล้ว ✓");
-    } catch (e) { setError(e.message); }
+    await api("/schedules", { method: "PUT", body: { branch_ID, doctor_ID, weekly, overrides } });
   };
 
   return (
@@ -214,7 +217,7 @@ function ScheduleEditor({ branches }) {
             + override
           </button>
           <div style={{ marginTop: 12 }}>
-            <button className="btn primary" onClick={save}>{t("save")}</button>
+            <AsyncButton className="btn primary" ok="บันทึกตารางแล้ว" onClick={save}>{t("save")}</AsyncButton>
           </div>
         </>
       )}

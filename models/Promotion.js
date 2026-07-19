@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const PromotionSchema = new mongoose.Schema(
   {
     promotion_ID: { type: String, required: true, unique: true },
+    branch_ID: { type: String, required: true, index: true }, // แยกต่อสาขา
     name: { type: String, required: true },
     type: { type: String, enum: ["discount", "new_course"], required: true },
     // type=discount: ลดทับ course เดิม

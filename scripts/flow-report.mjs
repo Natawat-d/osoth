@@ -249,8 +249,8 @@ async function main() {
     db: ["อ่านอย่างเดียว (payment + opd.stock_used + staff_earning + expense + customer_course)"],
     checks: [
       chk("รายรับ (งวดแรก + add-on)", fin.data?.income === 5900, "5,900฿", `${fin.data?.income}฿`),
-      chk("ต้นทุนสินค้า (จริงตาม lot)", fin.data?.cogs === 700, "700฿", `${fin.data?.cogs}฿`),
-      chk("ค่ามือ + คอม", fin.data?.labor_cost === 1400, "1,400฿ (650+750)", `${fin.data?.labor_cost}฿`),
+      chk("ต้นทุนสินค้า (คอร์ส 700 + add-on 300)", fin.data?.cogs === 1000, "1000฿", `${fin.data?.cogs}฿`),
+      chk("ค่ามือหัตถการ", fin.data?.labor_cost === 650, "650฿ (BT150+หมอ500)", `${fin.data?.labor_cost}฿`),
       chk("มี time-series (กราฟเส้น)", Array.isArray(fin.data?.series) && fin.data.series.length > 0, "มีข้อมูล", `${fin.data?.series?.length} วัน`),
       chk("ยอดขายแยกคอร์ส (กราฟวง)", (fin.data?.sales_by_course || []).length >= 1, "≥1 คอร์ส", `${(fin.data?.sales_by_course || []).length} คอร์ส`),
       chk("เคสที่ปิด", fin.data?.cases_closed === 1, "1 เคส", `${fin.data?.cases_closed} เคส`),

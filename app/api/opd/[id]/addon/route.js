@@ -11,6 +11,7 @@ export const POST = apiHandler(async (req, { params }) => {
     product_ID: body.product_ID,
     qty: body.qty || 1,
     method: body.method || "cash",
+    recommended_by: body.recommended_by || null,
     received_by: auth.user_ID,
   });
 });

@@ -129,8 +129,8 @@ async function populate() {
 
   // การเงิน
   const fin = await call(AS.admin, "GET", `/finance/summary?branch_ID=BR-001&from=${today}&to=${today}`);
-  // ค่าแรง = ค่ามือหมอ/BT (650) + คอม CS-001 (750) + คอม CS-002 (400) = 1800
-  tc("การเงิน: COGS=700, ค่าแรง=1800 (ค่ามือ+คอม), มี time-series", fin.data?.cogs === 700 && fin.data?.labor_cost === 1800 && Array.isArray(fin.data?.series), JSON.stringify({ cogs: fin.data?.cogs, labor: fin.data?.labor_cost }));
+  // ค่าแรง = ค่ามือหมอ/BT (650) เท่านั้น — คอม sale ขั้นบันไดคิดรายเดือน (หน้า /commission)
+  tc("การเงิน: COGS=1000 (คอร์ส+add-on), ค่าแรง=650 (ค่ามือ), มี time-series", fin.data?.cogs === 1000 && fin.data?.labor_cost === 650 && Array.isArray(fin.data?.series), JSON.stringify({ cogs: fin.data?.cogs, labor: fin.data?.labor_cost }));
   const finAll = await call(AS.super, "GET", `/finance/summary?branch_ID=all&from=${today}&to=${today}`);
   tc("การเงินแยกสาขา vs รวมทุกสาขา (super_admin)", finAll.ok && finAll.data?.income >= fin.data?.income);
   const finDoc = await call(AS.doc, "GET", `/finance/summary?branch_ID=BR-001`);

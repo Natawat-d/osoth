@@ -2,6 +2,7 @@ import Reserve from "@/models/Reserve";
 import { apiHandler, requireRole } from "@/lib/api";
 import { findOverlap, toUnix } from "@/services/overlap";
 import { genId } from "@/services/ids";
+import { notifyBooking } from "@/services/notify";
 
 // GET /api/reserves?branch_ID=..&date=YYYY-MM-DD
 export const GET = apiHandler(async (req) => {
@@ -43,9 +44,11 @@ export const POST = apiHandler(async (req) => {
     );
 
   const now = new Date();
-  return Reserve.create({
+  // ไม่มีมัดจำ — จองไม่ต้องจ่าย (ค่าคอร์สจ่ายเต็มจำนวนก่อนทำหัตถการที่ OPD)
+  const reserve = await Reserve.create({
     ...body,
     branch_ID,
+    deposit: 0,
     reserve_ID: await genId("RS", 6),
     unix_start,
     unix_end,
@@ -53,4 +56,8 @@ export const POST = apiHandler(async (req) => {
     status_history: [{ status: "booked", at: now, by: auth.user_ID }],
     created_by: auth.user_ID,
   });
+
+  // แจ้งเตือนจอง (GAP-02: LINE) — ผ่าน adapter (stub จนกว่าจะต่อ LINE จริง)
+  notifyBooking(reserve).catch(() => {});
+  return reserve;
 });

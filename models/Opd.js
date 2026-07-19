@@ -7,8 +7,16 @@ const OpdSchema = new mongoose.Schema(
     branch_ID: { type: String, required: true, index: true },
     reserve_ID: { type: String, required: true },
     HN_number: { type: String, required: true, index: true },
-    customer_course_ID: { type: String, required: true, index: true },
-    session_no: { type: Number, required: true },
+    // course เลือกได้ตอนเปิดเคส หรือเลือก/ขายภายในเคสก็ได้ (จ่าย/มัดจำก่อนทำหัตถการ)
+    customer_course_ID: { type: String, default: null, index: true },
+    session_no: { type: Number, default: 0 },
+    // sale ที่ดูแลเคส (คุย/ขาย) — เอาไปคิดคอม (เลือกตอนวัดตัว)
+    sale_ID: { type: String, default: null },
+    consulted: { type: Boolean, default: false }, // ผ่านปรึกษาหมอก่อนซื้อแล้ว
+    consult_doctor_ID: { type: String, default: null },
+    // ผลของเคส: treated = ทำจริง | consult_no_sale = ปรึกษาแล้วไม่ซื้อ
+    outcome: { type: String, enum: ["treated", "consult_no_sale", null], default: null },
+    price_override: { type: Number, default: null }, // ราคาคอร์สที่ปรับหน้างาน (admin)
     date: { type: String, required: true, index: true },
     room_ID: { type: String, required: true },
     time_start: { type: String, default: "" },
@@ -63,6 +71,8 @@ const OpdSchema = new mongoose.Schema(
           qty: Number,
           cc_used: Number,
           price: Number,
+          recommended_by: { type: String, default: null }, // คนแนะ (sale/หมอ) → คิดคอม
+          first_visit: { type: Boolean, default: false },   // ครั้งแรก = รวมบิลคอร์ส
           payment_ID: String,
           _id: false,
         },
@@ -71,7 +81,7 @@ const OpdSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["open", "measuring", "bt_stage", "doctor_stage", "closed"],
+      enum: ["open", "consulting", "measuring", "bt_stage", "doctor_stage", "closed"],
       default: "open",
       index: true,
     },

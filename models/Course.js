@@ -16,6 +16,7 @@ const CourseProcedureSchema = new mongoose.Schema(
 const CourseSchema = new mongoose.Schema(
   {
     course_ID: { type: String, required: true, unique: true },
+    branch_ID: { type: String, required: true, index: true }, // catalog แยกต่อสาขา
     name: { type: String, required: true },
     quantity_used: { type: Number, required: true }, // จำนวนครั้งทั้งหมด
     validity_days: { type: Number, default: 0 }, // 0 = ไม่หมดอายุ

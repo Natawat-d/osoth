@@ -7,12 +7,13 @@ const PaymentSchema = new mongoose.Schema(
     HN_number: { type: String, default: null, index: true },
     type: {
       type: String,
-      enum: ["course_purchase", "installment", "add_on"],
+      enum: ["course_purchase", "installment", "add_on", "deposit"],
       required: true,
     },
     ref: {
       customer_course_ID: { type: String, default: null },
       opd_ID: { type: String, default: null },
+      reserve_ID: { type: String, default: null },
     },
     amount: { type: Number, required: true },
     method: {

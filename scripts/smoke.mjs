@@ -120,8 +120,10 @@ ok("จ่ายครบ balance = 0", paid.ok && paid.data.balance_due === 0);
 console.log("9) การเงิน + สิทธิ์");
 const fin = await call("admin", "GET", `/finance/summary?branch_ID=BR-001&from=${today}&to=${today}`);
 ok("รายรับวันนี้ = 5000 (งวดแรก) + 900 (add-on) + 10000 (งวดผ่อน) = 15900", fin.data?.income === 15900, `got ${fin.data?.income}`);
-ok("COGS = 700", fin.data?.cogs === 700);
-ok("ค่าแรง = ค่ามือ 650 (150+500) + คอม 750 = 1400", fin.data?.labor_cost === 1400, `got ${fin.data?.labor_cost}`);
+// COGS = 700 (คอร์ส 2cc) + 300 (add-on มาส์ก PD-003 ตัด stock ตอนปิดเคส) = 1000
+ok("COGS = 1000 (คอร์ส 700 + add-on 300)", fin.data?.cogs === 1000, `got ${fin.data?.cogs}`);
+// ค่าแรง = ค่ามือหัตถการ 650 (BT150+หมอ500) เท่านั้น — คอม sale เป็นขั้นบันไดรายเดือน (หน้า /commission) ไม่ลง daily
+ok("ค่าแรง = ค่ามือ 650 (150+500)", fin.data?.labor_cost === 650, `got ${fin.data?.labor_cost}`);
 const finAsDoctor = await call("doctor", "GET", `/finance/summary?branch_ID=BR-001`);
 ok("หมอเปิดหน้าการเงินรวม → 403", finAsDoctor.status === 403);
 const earnDoctor = await call("doctor", "GET", `/earnings?from=${today}&to=${today}`);

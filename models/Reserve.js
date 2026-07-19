@@ -4,7 +4,9 @@ export const RESERVE_ACTIVE_STATUSES = [
   "booked",
   "arrived",
   "ready",
-  "in_progress",
+  "consulting",
+  "bt_stage",
+  "doctor_stage",
 ];
 
 const ReserveSchema = new mongoose.Schema(
@@ -26,14 +28,19 @@ const ReserveSchema = new mongoose.Schema(
     room_ID: { type: String, required: true },
     doctor_ID: { type: String, default: null },
     BT_ID: { type: String, default: null },
+    deposit: { type: Number, default: 0 }, // มัดจำตอนจอง (เช่น 199) — สร้าง payment แยก
+
     status: {
       type: String,
       enum: [
         "booked",
         "arrived",
         "ready",
-        "in_progress",
+        "consulting",
+        "bt_stage",
+        "doctor_stage",
         "done",
+        "consult_no_sale",
         "cancelled",
         "no_show",
       ],
