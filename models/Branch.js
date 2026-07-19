@@ -7,6 +7,9 @@ const BranchSchema = new mongoose.Schema(
     address: { type: String, default: "" },
     phone: { type: String, default: "" },
     active: { type: Boolean, default: true },
+    // ---- หน้าร้าน (ฝั่งลูกค้า) ----
+    storefront_enabled: { type: Boolean, default: false }, // เปิดให้ลูกค้าเห็นสาขานี้
+    line_id: { type: String, default: "" },                // LINE สำหรับติดต่อจอง
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSelector, useDispatch } from "react-redux";
-import { login, logout, setBranch } from "@/store/authSlice";
+import { login, logout, setBranch, clearMustChange, setReady } from "@/store/authSlice";
 import { setLang } from "@/store/uiSlice";
 import { useT } from "@/i18n/messages";
 import { ROLE_LABEL } from "@/components/ui";
@@ -11,8 +11,8 @@ import Toaster from "@/components/Toaster";
 import { api } from "@/lib/client";
 
 const ROLE_COLORS = {
-  super_admin: "#8f2b25",
-  admin: "#b23a33",
+  super_admin: "#7e2f43",
+  admin: "#a8455c",
   acception: "#a5842f",
   sale: "#34618f",
   doctor: "#2f7d5b",
@@ -58,10 +58,12 @@ export default function Shell({ children }) {
 
   useEffect(() => {
     setHydrated(true);
-    const saved = JSON.parse(localStorage.getItem("osoth_auth") || "null");
-    if (saved?.user) dispatch(login(saved));
     const savedLang = localStorage.getItem("osoth_lang");
     if (savedLang) dispatch(setLang(savedLang));
+    // คืน session จาก cookie
+    api("/auth/me")
+      .then((d) => dispatch(login(d)))
+      .catch(() => dispatch(setReady()));
   }, [dispatch]);
 
   useEffect(() => {
@@ -70,8 +72,12 @@ export default function Shell({ children }) {
 
   useEffect(() => { setDrawer(false); }, [pathname]);
 
-  if (!hydrated) return null;
-  if (!auth.user) return (<><Toaster /><LoginScreen /></>);
+  // หน้าลูกค้า (สาธารณะ) — ไม่ต้อง login และไม่มี Shell/เมนู
+  if (pathname === "/store" || pathname.startsWith("/store/")) return <>{children}</>;
+
+  if (!hydrated || !auth.ready) return null;
+  if (!auth.user) return (<><Toaster /><Landing /></>);
+  if (auth.must_change_password) return (<><Toaster /><ChangePasswordScreen /></>);
 
   const visible = (item) =>
     item.roles === "*" || item.roles.includes(auth.user.role);
@@ -136,7 +142,13 @@ export default function Shell({ children }) {
               <div className="u-role">{ROLE_LABEL[auth.user.role] || auth.user.role}</div>
             </span>
           </div>
-          <button className="btn small ghost" onClick={() => dispatch(logout())}>
+          <button
+            className="btn small ghost"
+            onClick={async () => {
+              try { await api("/auth/logout", { method: "POST" }); } catch {}
+              dispatch(logout());
+            }}
+          >
             {t("logout")}
           </button>
         </header>
@@ -199,43 +211,133 @@ function GlobalSearch() {
   );
 }
 
-function LoginScreen() {
-  const dispatch = useDispatch();
-  const [users, setUsers] = useState(null);
-  const [error, setError] = useState("");
+// หน้าแรก: เลือกว่าเป็นลูกค้า หรือ พนักงาน
+function Landing() {
+  const router = useRouter();
+  const [mode, setMode] = useState("home"); // home | staff
 
-  useEffect(() => {
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((j) => setUsers(j.ok ? j.data : []))
-      .catch(() => setError("เชื่อมต่อ server ไม่ได้ — ตรวจสอบ MongoDB"));
-  }, []);
+  if (mode === "staff") return <StaffLogin onBack={() => setMode("home")} />;
 
   return (
     <div className="login-bg">
-      <div className="login-card corner-cn">
+      <div className="landing-card corner-cn">
         <div className="login-brand">
           <div className="login-mark">☯</div>
           <div className="login-title">โอสถ</div>
-          <div className="login-sub">เลือกผู้ใช้งานเพื่อเข้าระบบ</div>
+          <div className="login-sub">OSOTH · คลินิกความงาม</div>
+        </div>
+        <div className="landing-grid">
+          <button className="landing-tile customer" onClick={() => router.push("/store")}>
+            <span className="landing-ico">🌸</span>
+            <b>ลูกค้า</b>
+            <span className="muted">ดูคิวว่าง · จองคิว · ติดต่อสาขา</span>
+          </button>
+          <button className="landing-tile staff" onClick={() => setMode("staff")}>
+            <span className="landing-ico">🔑</span>
+            <b>พนักงาน</b>
+            <span className="muted">เข้าสู่ระบบด้วยบัญชีพนักงาน</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ฟอร์ม login พนักงาน (username + password → JWT cookie)
+function StaffLogin({ onBack }) {
+  const dispatch = useDispatch();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      const data = await api("/auth/login", { method: "POST", body: { username, password } });
+      dispatch(login(data)); // { user, must_change_password }
+    } catch (err) {
+      setError(err.message || "เข้าสู่ระบบไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="login-bg">
+      <form className="login-card corner-cn" onSubmit={submit}>
+        <div className="login-brand">
+          <div className="login-mark">🔑</div>
+          <div className="login-title">เข้าสู่ระบบพนักงาน</div>
+          <div className="login-sub">Staff Login</div>
         </div>
         {error && <div className="err">{error}</div>}
-        {users === null && <div className="muted" style={{ textAlign: "center" }}>กำลังโหลด...</div>}
-        {users?.length === 0 && (
-          <div className="hint-box">ยังไม่มีผู้ใช้ — รัน <code>npm run seed</code> ก่อน</div>
-        )}
-        {users?.map((u) => (
-          <button key={u.user_ID} className="user-pick" onClick={() => dispatch(login({ user: u }))}>
-            <span className="avatar" style={{ background: ROLE_COLORS[u.role] || "#64615a" }}>
-              {(u.nick_name || u.full_name).slice(0, 2)}
-            </span>
-            <span>
-              <b>{u.full_name}</b>
-              <div className="muted">{ROLE_LABEL[u.role] || u.role} · {u.branch_ID}</div>
-            </span>
-          </button>
-        ))}
-      </div>
+        <label className="fld">
+          <span>ชื่อผู้ใช้</span>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus autoComplete="username" placeholder="username" />
+        </label>
+        <label className="fld">
+          <span>รหัสผ่าน</span>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="••••••" />
+        </label>
+        <button type="submit" className="btn primary lg" disabled={busy || !username || !password}>
+          {busy ? "กำลังเข้าสู่ระบบ…" : "เข้าสู่ระบบ"}
+        </button>
+        <button type="button" className="btn ghost" onClick={onBack}>← ย้อนกลับ</button>
+      </form>
+    </div>
+  );
+}
+
+// บังคับเปลี่ยนรหัสผ่านครั้งแรก
+function ChangePasswordScreen() {
+  const dispatch = useDispatch();
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (busy) return;
+    setError("");
+    if (pw.length < 4) return setError("รหัสผ่านต้องอย่างน้อย 4 ตัว");
+    if (pw !== pw2) return setError("รหัสผ่านไม่ตรงกัน");
+    setBusy(true);
+    try {
+      await api("/auth/change-password", { method: "POST", body: { new_password: pw } });
+      dispatch(clearMustChange());
+    } catch (err) {
+      setError(err.message || "เปลี่ยนรหัสผ่านไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="login-bg">
+      <form className="login-card corner-cn" onSubmit={submit}>
+        <div className="login-brand">
+          <div className="login-mark">🔐</div>
+          <div className="login-title">ตั้งรหัสผ่านใหม่</div>
+          <div className="login-sub">เข้าใช้งานครั้งแรก — กรุณาตั้งรหัสผ่านของคุณเอง</div>
+        </div>
+        {error && <div className="err">{error}</div>}
+        <label className="fld">
+          <span>รหัสผ่านใหม่</span>
+          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus autoComplete="new-password" />
+        </label>
+        <label className="fld">
+          <span>ยืนยันรหัสผ่าน</span>
+          <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" />
+        </label>
+        <button type="submit" className="btn primary lg" disabled={busy || !pw || !pw2}>
+          {busy ? "กำลังบันทึก…" : "บันทึกรหัสผ่าน"}
+        </button>
+      </form>
     </div>
   );
 }

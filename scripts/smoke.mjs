@@ -1,11 +1,13 @@
 // Smoke test: ยิง API ทดสอบ business flow ครบวงจร (ต้อง seed ก่อน + dev server รันอยู่)
+import { loginToken } from "./_auth.mjs";
 const BASE = process.env.BASE_URL || "http://localhost:3000/api";
 
-const AUTH = {
-  sale: { "x-user-id": "US-004", "x-user-role": "sale", "x-branch-id": "BR-001" },
-  admin: { "x-user-id": "US-002", "x-user-role": "admin", "x-branch-id": "BR-001" },
-  acception: { "x-user-id": "US-003", "x-user-role": "acception", "x-branch-id": "BR-001" },
-  doctor: { "x-user-id": "US-005", "x-user-role": "doctor", "x-branch-id": "BR-001" },
+// auth จริง: login แลก JWT (Bearer) — role ล็อกที่สาขาตัวเองผ่าน token
+const TOKENS = {
+  sale: await loginToken("sale"),
+  admin: await loginToken("admin"),
+  acception: await loginToken("reception"),
+  doctor: await loginToken("dr.mangkorn"),
 };
 
 let pass = 0, fail = 0;
@@ -17,7 +19,7 @@ function ok(name, cond, extra = "") {
 async function call(as, method, path, body) {
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: { "Content-Type": "application/json", ...AUTH[as] },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKENS[as]}` },
     body: body ? JSON.stringify(body) : undefined,
   });
   const json = await res.json();

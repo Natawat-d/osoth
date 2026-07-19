@@ -8,10 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "node scripts/seed.mjs",
-    "seed:demo": "node scripts/seed-demo.mjs"
+    "seed:demo": "node scripts/seed-demo.mjs",
+    "gen:banners": "node scripts/gen-banners.mjs",
+    "gen:photos": "node scripts/gen-photos.mjs"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.4",
     "next": "16.2.10",
     "next-intl": "^4.13.2",

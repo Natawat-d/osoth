@@ -13,13 +13,15 @@ export default function SettingsPage() {
   return (
     <div>
       <CrudPage
-        title="สาขา"
+        title="สาขา (เปิดหน้าร้าน = ให้ลูกค้าเห็นในหน้าจองออนไลน์)"
         endpoint="/branches"
         idField="branch_ID"
         fields={[
           { key: "name", label: "ชื่อสาขา" },
           { key: "address", label: "ที่อยู่" },
           { key: "phone", label: "โทร" },
+          { key: "line_id", label: "LINE ID (ติดต่อจอง)" },
+          { key: "storefront_enabled", label: "เปิดหน้าร้านลูกค้า", type: "checkbox", render: (v) => (v ? "เปิด 🌸" : "ปิด") },
         ]}
       />
       <CrudPage

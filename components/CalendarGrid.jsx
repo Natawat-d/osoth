@@ -14,7 +14,7 @@ const STATUS_COLORS = {
   arrived: "#34618f",
   ready: "#a5842f",
   bt_stage: "#b8791f",
-  doctor_stage: "#b23a33",
+  doctor_stage: "#a8455c",
   done: "#2f7d5b",
 };
 

@@ -100,7 +100,7 @@ export default function FinancePage() {
               <h2><span className="h2-ico">📈</span> แนวโน้มรายวัน</h2>
               <LineChart data={series} series={[
                 { key: "income", label: "รายรับ", color: "#2f7d5b" },
-                { key: "expense_total", label: "รายจ่ายรวม", color: "#b23a33" },
+                { key: "expense_total", label: "รายจ่ายรวม", color: "#a8455c" },
                 { key: "net", label: "กำไร", color: "#a5842f" },
               ]} />
             </div>

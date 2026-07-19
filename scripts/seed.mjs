@@ -2,8 +2,18 @@
 // ล้างและใส่ข้อมูลฐาน (สาขา/staff/catalog/stock) — ใช้เป็น baseline ของเทสต์
 // ข้อมูล demo เยอะๆ (เคสหลายสถานะ) อยู่ที่ scripts/seed-demo.mjs
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/osoth";
+
+// รหัสผ่านเริ่มต้นของทุกบัญชี seed = "1234" (must_change_password=false → login ได้ทันที)
+const DEFAULT_PW_HASH = bcrypt.hashSync("1234", 10);
+// map user_ID → username สำหรับ login
+const SEED_USERNAMES = {
+  "US-001": "owner", "US-002": "admin", "US-003": "reception", "US-004": "sale",
+  "US-005": "dr.mangkorn", "US-006": "dr.hong", "US-007": "bt1", "US-008": "bt2",
+  "US-009": "admin2", "US-010": "sale2", "US-011": "dr.suea", "US-012": "bt3",
+};
 
 // ใส่ข้อมูลฐานทั้งหมด (export ให้ seed-demo เรียกต่อได้)
 export async function seedBase(db) {
@@ -20,8 +30,8 @@ export async function seedBase(db) {
   const ts = { created_at: now, updated_at: now };
 
   await db.collection("branches").insertMany([
-    { branch_ID: "BR-001", name: "โอสถ สาขาสยาม", address: "กรุงเทพฯ", phone: "02-000-0001", active: true, ...ts },
-    { branch_ID: "BR-002", name: "โอสถ สาขาทองหล่อ", address: "กรุงเทพฯ", phone: "02-000-0002", active: true, ...ts },
+    { branch_ID: "BR-001", name: "โอสถ สาขาสยาม", address: "อาคารสยามพารากอน ชั้น 4 กรุงเทพฯ", phone: "02-000-0001", line_id: "@osoth-siam", storefront_enabled: true, active: true, ...ts },
+    { branch_ID: "BR-002", name: "โอสถ สาขาทองหล่อ", address: "ซอยทองหล่อ 10 กรุงเทพฯ", phone: "02-000-0002", line_id: "@osoth-thonglor", storefront_enabled: true, active: true, ...ts },
   ]);
 
   await db.collection("rooms").insertMany([
@@ -47,6 +57,14 @@ export async function seedBase(db) {
     { user_ID: "US-011", branch_ID: "BR-002", role: "doctor", full_name: "นพ. เสือ ทองแท้", nick_name: "หมอเสือ", email: "dr.t@osoth.local", phone: "", commission_rate: 0, color: "#2e5d32", active: true, ...ts },
     { user_ID: "US-012", branch_ID: "BR-002", role: "BT", full_name: "บิวตี้ ทองหล่อ", nick_name: "บีทีล", email: "bt3@osoth.local", phone: "", commission_rate: 0, color: "#555", active: true, ...ts },
   ]);
+
+  // ให้ทุกบัญชี seed มี login (username + รหัส "1234", ใช้ได้ทันที)
+  for (const [uid, uname] of Object.entries(SEED_USERNAMES)) {
+    await db.collection("users").updateOne(
+      { user_ID: uid },
+      { $set: { username: uname, password_hash: DEFAULT_PW_HASH, must_change_password: false, login_active: true, failed_attempts: 0, locked_until: null } }
+    );
+  }
 
   await db.collection("doctorschedules").insertMany([
     {
@@ -158,9 +176,14 @@ export async function seedBase(db) {
   };
 
   await db.collection("promotions").insertMany([
-    { promotion_ID: "PM-001", branch_ID: "BR-001", name: "ลด 10% Botox หน้าเรียว", type: "discount", course_ID: "CS-001", discount_type: "percent", discount_value: 10, promo_course_ID: null, date_start: d(-30), date_end: d(60), banner_image: "", active: true, ...ts },
-    { promotion_ID: "PM-002", branch_ID: "BR-001", name: "โปร Botox 5+1", type: "new_course", course_ID: null, discount_type: null, discount_value: 0, promo_course_ID: "CS-003", date_start: d(-10), date_end: d(30), banner_image: "", active: true, ...ts },
+    { promotion_ID: "PM-001", branch_ID: "BR-001", name: "ลด 10% Botox หน้าเรียว", type: "discount", course_ID: "CS-001", discount_type: "percent", discount_value: 10, promo_course_ID: null, date_start: d(-30), date_end: d(60), banner_image: "/courses/botox.jpg", active: true, ...ts },
+    { promotion_ID: "PM-002", branch_ID: "BR-001", name: "โปร Botox 5+1", type: "new_course", course_ID: null, discount_type: null, discount_value: 0, promo_course_ID: "CS-003", date_start: d(-10), date_end: d(30), banner_image: "/courses/promo.jpg", active: true, ...ts },
   ]);
+
+  // รูป banner ต่อคอร์ส (AI photo ที่ public/courses/*.jpg — สร้างด้วย scripts/gen-photos.mjs)
+  // อยากใช้ vector แทน เปลี่ยน .jpg → .svg (มีทั้งคู่ใน public/courses/)
+  const IMG = { "CS-001": "botox", "CS-002": "skincare", "CS-003": "promo", "CS-004": "filler", "CS-005": "thread", "CS-006": "skincare", "CS-007": "combo", "CS-008": "gold", "CS-101": "botox", "CS-102": "gold" };
+  for (const [id, n] of Object.entries(IMG)) await db.collection("courses").updateOne({ course_ID: id }, { $set: { image: `/courses/${n}.jpg` } });
 
   // ตั้งค่าคอมมิชชั่นต่อสาขา: tier ยอดขาย sale + ตารางคอม add-on (sale/หมอ)
   await db.collection("commissionsettings").insertMany([

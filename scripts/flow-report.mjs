@@ -4,14 +4,16 @@
 import { chromium } from "playwright";
 import path from "path";
 import fs from "fs";
+import { loginAllTokens, USERNAMES } from "./_auth.mjs";
 const BASE = "http://localhost:3000";
 const OUT = path.resolve("..", "flow_report.pdf");
+const TOKENS = await loginAllTokens();
 
 const d = new Date();
 const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const plus = (n) => { const x = new Date(d.getTime() + n * 86400000); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
 
-const H = (role, uid, branch = "BR-001") => ({ "Content-Type": "application/json", "x-user-id": uid, "x-user-role": role, "x-branch-id": branch });
+const H = (role, uid, branch = "BR-001") => ({ "Content-Type": "application/json", Authorization: `Bearer ${TOKENS[uid]}`, "x-branch-id": branch });
 const AS = { super: H("super_admin", "US-001"), admin: H("admin", "US-002"), recept: H("acception", "US-003"), sale: H("sale", "US-004"), doc: H("doctor", "US-005") };
 async function call(headers, method, p, body) {
   const r = await fetch(BASE + "/api" + p, { method, headers, body: body ? JSON.stringify(body) : undefined });
@@ -28,8 +30,13 @@ function chk(label, ok, expected, actual) { return { label, ok: !!ok, expected: 
 const steps = [];
 let ctx, page, shotN = 0;
 async function as(uid, users, branch) {
-  const u = users[uid];
-  await page.evaluate(([user, b]) => { localStorage.setItem("osoth_auth", JSON.stringify({ user, branch_ID: b })); localStorage.setItem("osoth_lang", "th"); }, [u, branch || u.branch_ID]);
+  // login จริง → เซ็ต httpOnly cookie ในเบราว์เซอร์
+  const username = USERNAMES[uid];
+  await page.evaluate(async ([uname, b]) => {
+    await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: uname, password: "1234" }) });
+    localStorage.setItem("osoth_lang", "th");
+    if (b) localStorage.setItem("osoth_branch", b); else localStorage.removeItem("osoth_branch");
+  }, [username, branch || null]);
 }
 async function go(url) {
   await page.goto(BASE + url, { waitUntil: "domcontentloaded" });

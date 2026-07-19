@@ -18,6 +18,7 @@ export default function HrPage() {
   return (
     <div>
       <ThroughputReport />
+      <LoginManager />
       <CrudPage
         title="พนักงาน (แก้ 'สาขา' = ย้ายสาขา · ประวัติเงินเดิมยังอยู่)"
         endpoint="/users?active=all"
@@ -46,6 +47,98 @@ export default function HrPage() {
         ]}
       />
       <ScheduleEditor branches={branches} />
+    </div>
+  );
+}
+
+// เจ้าของระบบจัดการบัญชี login ของพนักงาน (ตั้ง username/รหัสเริ่มต้น · รีเซ็ต · เปิด/ปิด)
+function LoginManager() {
+  const auth = useSelector((s) => s.auth);
+  const [users, setUsers] = useState([]);
+  const [edit, setEdit] = useState(null); // { user, username, password }
+  const [msg, setMsg] = useState("");
+
+  const load = useCallback(() => {
+    api("/users?active=all").then(setUsers).catch(() => {});
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (auth.user?.role !== "super_admin") return null;
+
+  const openSet = (u) => { setMsg(""); setEdit({ user: u, username: u.username || "", password: "" }); };
+
+  const saveLogin = async () => {
+    setMsg("");
+    try {
+      await api(`/users/${edit.user.user_ID}/login`, {
+        method: "POST",
+        body: { username: edit.username.trim(), password: edit.password },
+      });
+      setEdit(null); load();
+      setMsg(`ตั้ง login ให้ ${edit.user.full_name} แล้ว (พนักงานต้องเปลี่ยนรหัสครั้งแรก)`);
+    } catch (e) { setMsg("❌ " + e.message); }
+  };
+
+  const resetPw = async (u) => {
+    const pw = prompt(`รีเซ็ตรหัสผ่านของ ${u.full_name}\nตั้งรหัสชั่วคราวใหม่ (พนักงานต้องเปลี่ยนเองครั้งแรก):`, "1234");
+    if (pw == null) return;
+    try { await api(`/users/${u.user_ID}/reset-password`, { method: "POST", body: { password: pw } }); load(); setMsg(`รีเซ็ตรหัส ${u.full_name} แล้ว`); }
+    catch (e) { setMsg("❌ " + e.message); }
+  };
+
+  const toggle = async (u) => {
+    try {
+      if (u.login_active) await api(`/users/${u.user_ID}/login`, { method: "DELETE" });
+      else await api(`/users/${u.user_ID}`, { method: "PUT", body: { login_active: true } });
+      load();
+    } catch (e) { setMsg("❌ " + e.message); }
+  };
+
+  return (
+    <div className="card">
+      <h2><span className="h2-ico">🔐</span> บัญชีเข้าระบบพนักงาน (เจ้าของจัดการ)</h2>
+      {msg && <div className="hint-box" style={{ marginBottom: 10 }}>{msg}</div>}
+      <table className="tbl">
+        <thead><tr><th>พนักงาน</th><th>ตำแหน่ง</th><th>สาขา</th><th>username</th><th>สถานะ</th><th style={{ textAlign: "right" }}>จัดการ</th></tr></thead>
+        <tbody>
+          {users.filter((u) => u.active).map((u) => (
+            <tr key={u.user_ID}>
+              <td><b>{u.full_name}</b> <span className="muted">{u.nick_name}</span></td>
+              <td><span className="badge gray nodot">{ROLE_LABEL[u.role] || u.role}</span></td>
+              <td className="muted">{u.branch_ID}</td>
+              <td>{u.username ? <code>{u.username}</code> : <span className="muted">— ยังไม่ตั้ง —</span>}</td>
+              <td>
+                {!u.username ? <span className="badge gray nodot">ไม่มี login</span>
+                  : !u.login_active ? <span className="badge red">ปิดใช้งาน</span>
+                  : u.must_change_password ? <span className="badge gold nodot">ต้องเปลี่ยนรหัส</span>
+                  : <span className="badge green">ใช้งานได้</span>}
+              </td>
+              <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                <button className="btn small" onClick={() => openSet(u)}>{u.username ? "แก้ login" : "ตั้ง login"}</button>
+                {u.username && <button className="btn small" onClick={() => resetPw(u)}>รีเซ็ตรหัส</button>}
+                {u.username && <button className="btn small ghost" onClick={() => toggle(u)}>{u.login_active ? "ปิด" : "เปิด"}</button>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {edit && (
+        <div className="login-edit">
+          <h2 style={{ marginTop: 4 }}>ตั้ง login — {edit.user.full_name}</h2>
+          <div className="row">
+            <div className="field"><label>username</label>
+              <input value={edit.username} onChange={(e) => setEdit({ ...edit, username: e.target.value })} placeholder="เช่น somchai" autoComplete="off" /></div>
+            <div className="field"><label>รหัสผ่านเริ่มต้น</label>
+              <input type="text" value={edit.password} onChange={(e) => setEdit({ ...edit, password: e.target.value })} placeholder="เช่น 1234" autoComplete="off" /></div>
+          </div>
+          <div className="muted" style={{ fontSize: 12, margin: "4px 0 10px" }}>* พนักงานจะถูกบังคับเปลี่ยนรหัสเองเมื่อเข้าครั้งแรก</div>
+          <div className="row">
+            <button className="btn primary" onClick={saveLogin} disabled={edit.username.trim().length < 3 || edit.password.length < 4}>บันทึก login</button>
+            <button className="btn ghost" onClick={() => setEdit(null)}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

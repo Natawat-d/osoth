@@ -1,39 +1,41 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-// mock auth: เก็บ user ที่เลือก + สาขาปัจจุบัน ลง localStorage
-const saved =
-  typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem("osoth_auth") || "null")
-    : null;
+// auth จริง: user มาจาก JWT cookie (เช็คผ่าน /api/auth/me) — เก็บใน redux เท่านั้น
+// เก็บ localStorage แค่ "สาขาที่เลือก" (owner สลับสาขา) ไม่เก็บ user
+const savedBranch = typeof window !== "undefined" ? localStorage.getItem("osoth_branch") : null;
 
 const authSlice = createSlice({
   name: "auth",
-  initialState: saved || { user: null, branch_ID: null },
+  initialState: { user: null, branch_ID: savedBranch, ready: false, must_change_password: false },
   reducers: {
     login(state, action) {
       state.user = action.payload.user;
-      state.branch_ID = action.payload.branch_ID || action.payload.user.branch_ID;
-      persist(state);
+      // owner (super_admin) คงสาขาที่เคยเลือกไว้; role อื่นล็อกที่สาขาตัวเอง
+      const saved = typeof window !== "undefined" ? localStorage.getItem("osoth_branch") : null;
+      state.branch_ID =
+        action.payload.user.role === "super_admin" && saved !== null
+          ? saved
+          : action.payload.user.branch_ID;
+      state.must_change_password = !!action.payload.must_change_password;
+      state.ready = true;
+      persistBranch(state.branch_ID);
     },
     logout(state) {
       state.user = null;
-      state.branch_ID = null;
-      persist(state);
+      state.must_change_password = false;
+      state.ready = true;
     },
-    setBranch(state, action) {
-      state.branch_ID = action.payload;
-      persist(state);
-    },
+    setBranch(state, action) { state.branch_ID = action.payload; persistBranch(action.payload); },
+    clearMustChange(state) { state.must_change_password = false; },
+    setReady(state) { state.ready = true; },
   },
 });
 
-function persist(state) {
-  if (typeof window !== "undefined")
-    localStorage.setItem(
-      "osoth_auth",
-      JSON.stringify({ user: state.user, branch_ID: state.branch_ID })
-    );
+function persistBranch(b) {
+  if (typeof window === "undefined") return;
+  if (b == null) localStorage.removeItem("osoth_branch");
+  else localStorage.setItem("osoth_branch", b);
 }
 
-export const { login, logout, setBranch } = authSlice.actions;
+export const { login, logout, setBranch, clearMustChange, setReady } = authSlice.actions;
 export default authSlice.reducer;

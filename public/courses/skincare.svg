@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" width="880" height="400">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c06b74"/><stop offset="1" stop-color="#5e2733"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.78" cy="0.28" r="0.6">
+      <stop offset="0" stop-color="#f0b3ab" stop-opacity="0.55"/><stop offset="1" stop-color="#f0b3ab" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gGloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff8e6"/><stop offset="0.5" stop-color="#d9be7e"/><stop offset="1" stop-color="#a5842f"/>
+    </linearGradient>
+    <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="1.3" fill="#fff" opacity="0.05"/>
+    </pattern>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+
+  <rect width="880" height="400" fill="url(#bg)"/>
+  <rect width="880" height="400" fill="url(#dots)"/>
+  <rect width="880" height="400" fill="url(#glow)"/>
+
+  <!-- coin / fret motif (祥云) มุมขวาบน -->
+  <g transform="translate(700 96)" opacity="0.5">
+    <circle r="120" fill="none" stroke="#d9be7e" stroke-width="2"/>
+    <circle r="120" fill="none" stroke="#d9be7e" stroke-width="10" stroke-dasharray="3 9" opacity="0.6"/>
+    <circle r="86" fill="none" stroke="#d9be7e" stroke-width="1.5" opacity="0.7"/>
+    <rect x="-22" y="-22" width="44" height="44" fill="none" stroke="#d9be7e" stroke-width="2"/>
+  </g>
+  <!-- คลื่นเมฆด้านล่าง -->
+  <g fill="none" stroke="#d9be7e" stroke-width="2" opacity="0.28">
+    <path d="M-20 360 q 60 -46 120 0 t 120 0 t 120 0 t 120 0 t 120 0 t 120 0 t 120 0"/>
+    <path d="M-20 386 q 60 -46 120 0 t 120 0 t 120 0 t 120 0 t 120 0 t 120 0 t 120 0" opacity="0.6"/>
+  </g>
+
+  <!-- emblem กลางซ้าย -->
+  
+    <g transform="translate(250 190)">
+      <circle r="92" fill="none" stroke="#d9be7e" stroke-width="2" opacity="0.85"/><circle r="68.08" fill="none" stroke="#d9be7e" stroke-width="1.6" opacity="0.63"/><circle r="44.16" fill="none" stroke="#d9be7e" stroke-width="1.2" opacity="0.41"/>
+      <circle r="25.76" fill="url(#gGloss)"/>
+      <line x1="50.6" y1="0" x2="110" y2="0" stroke="#d9be7e" stroke-width="2" opacity="0.7"/><line x1="35.779603128039305" y1="35.779603128039305" x2="77.78174593052023" y2="77.78174593052022" stroke="#d9be7e" stroke-width="2" opacity="0.7"/><line x1="3.0983564018428035e-15" y1="50.6" x2="6.735557395310443e-15" y2="110" stroke="#d9be7e" stroke-width="2" opacity="0.7"/><line x1="-35.779603128039305" y1="35.779603128039305" x2="-77.78174593052022" y2="77.78174593052023" stroke="#d9be7e" stroke-width="2" opacity="0.7"/><line x1="-50.6" y1="6.196712803685607e-15" x2="-110" y2="1.3471114790620885e-14" stroke="#d9be7e" stroke-width="2" opacity="0.7"/><line x1="-35.77960312803931" y1="-35.779603128039305" x2="-77.78174593052024" y2="-77.78174593052022" stroke="#d9be7e" stroke-width="2" opacity="0.7"/><line x1="-9.29506920552841e-15" y1="-50.6" x2="-2.0206672185931328e-14" y2="-110" stroke="#d9be7e" stroke-width="2" opacity="0.7"/><line x1="35.7796031280393" y1="-35.77960312803931" x2="77.7817459305202" y2="-77.78174593052024" stroke="#d9be7e" stroke-width="2" opacity="0.7"/>
+    </g>
+
+  <!-- กรอบทอง + มุม L -->
+  <rect x="14" y="14" width="852" height="372" rx="16" fill="none" stroke="#d9be7e" stroke-width="1.5" opacity="0.55"/>
+  <path d="M 26 50 L 26 26 L 50 26" fill="none" stroke="#d9be7e" stroke-width="3"/><path d="M 854 50 L 854 26 L 830 26" fill="none" stroke="#d9be7e" stroke-width="3"/><path d="M 26 350 L 26 374 L 50 374" fill="none" stroke="#d9be7e" stroke-width="3"/><path d="M 854 350 L 854 374 L 830 374" fill="none" stroke="#d9be7e" stroke-width="3"/>
+  <!-- ตราโอสถมุมล่างซ้าย (จาง) -->
+  <text x="40" y="370" font-family="serif" font-size="26" font-weight="700" fill="#d9be7e" opacity="0.5">โอสถ 龍</text>
+</svg>

@@ -3,8 +3,10 @@
 import { chromium } from "playwright";
 import fs from "fs";
 import path from "path";
+import { loginAllTokens, USERNAMES } from "./_auth.mjs";
 
 const BASE = "http://localhost:3000";
+const TOKENS = await loginAllTokens();
 const ART = path.resolve("test-artifacts");
 const OUT = path.resolve("..", "test_function.pdf");
 fs.mkdirSync(ART, { recursive: true });
@@ -18,7 +20,8 @@ const plus = (n) => {
 
 const H = (role, uid, branch = "BR-001") => ({
   "Content-Type": "application/json",
-  "x-user-id": uid, "x-user-role": role, "x-branch-id": branch,
+  Authorization: `Bearer ${TOKENS[uid]}`, // ตัวตน/role มาจาก JWT
+  "x-branch-id": branch,                  // owner ใช้สลับสาขา (role อื่นถูกล็อกที่ token)
 });
 const AS = {
   super: H("super_admin", "US-001"),
@@ -355,22 +358,29 @@ async function run() {
   const page = await ctx.newPage();
 
   async function as(uid, branch) {
-    const u = USERS[uid];
-    await page.evaluate(([user, b]) => {
-      localStorage.setItem("osoth_auth", JSON.stringify({ user, branch_ID: b }));
+    // login จริง → เซ็ต httpOnly cookie ในเบราว์เซอร์
+    const username = USERNAMES[uid];
+    await page.evaluate(async ([uname, b]) => {
+      await fetch("/api/auth/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: uname, password: "1234" }),
+      });
       localStorage.setItem("osoth_lang", "th");
-    }, [u, branch || u.branch_ID]);
+      if (b) localStorage.setItem("osoth_branch", b);
+      else localStorage.removeItem("osoth_branch");
+    }, [username, branch || null]);
   }
   async function go(url) {
     await page.goto(BASE + url, { waitUntil: "networkidle" });
     await page.waitForTimeout(600);
   }
 
-  // 0) login
+  // 0) login — หน้าแรก (ลูกค้า/พนักงาน) ตอนยังไม่ล็อกอิน
+  await ctx.clearCookies();
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.evaluate(() => localStorage.clear());
   await page.goto(BASE, { waitUntil: "networkidle" });
-  await shot(page, "01-login", "หน้าเข้าระบบ — เลือกผู้ใช้ (mock login) มีครบทุก role");
+  await shot(page, "01-login", "หน้าแรก — เลือก ‘ลูกค้า’ (ดูคิว/จอง) หรือ ‘พนักงาน’ (login จริง JWT)");
 
   // 1) customer calendar (privacy + carousel + roster)
   await page.goto(BASE, { waitUntil: "networkidle" });
@@ -539,7 +549,7 @@ async function buildPDF() {
         <tr><th>Framework</th><td><b>Next.js 16.2</b> (App Router · fullstack: frontend + API routes · Turbopack)</td></tr>
         <tr><th>UI</th><td><b>React 19.2</b></td></tr>
         <tr><th>Database</th><td><b>MongoDB</b> + <b>Mongoose 9.7</b> (ODM)</td></tr>
-        <tr><th>Client state</th><td><b>Redux Toolkit 2.12</b> + react-redux 9.3 (auth mock + ภาษา)</td></tr>
+        <tr><th>Client state</th><td><b>Redux Toolkit 2.12</b> + react-redux 9.3 (auth จาก JWT + ภาษา)</td></tr>
         <tr><th>ภาษาโปรแกรม</th><td>JavaScript (ไม่ใช้ TypeScript)</td></tr>
         <tr><th>สถาปัตยกรรม</th><td><b>MVC</b> — models/ (schema) · services/ (business logic: closeCase, FIFO, กันจองซ้อน) · app/api/ (controller + role guard) · app/*/page.js (view)</td></tr>
         <tr><th>ฟอนต์</th><td>Kanit + IBM Plex Sans Thai (next/font/google)</td></tr>
@@ -547,7 +557,7 @@ async function buildPDF() {
         <tr><th>กราฟ</th><td>SVG เขียนเอง (ไม่พึ่ง chart library)</td></tr>
         <tr><th>PDF (ในแอป)</th><td>window.print() + @media print CSS</td></tr>
         <tr><th>i18n</th><td>dictionary ไทย/อังกฤษ (custom hook useT)</td></tr>
-        <tr><th>Auth</th><td>mock (localStorage + header x-user-id/role/branch) — โครงสร้างเผื่อ NextAuth</td></tr>
+        <tr><th>Auth</th><td>login จริง (username + bcrypt) → <b>JWT</b> ใน httpOnly cookie · role/สาขา encode ใน token · owner สลับสาขาผ่าน x-branch-id</td></tr>
         <tr><th>Deploy</th><td><b>Docker</b> + docker-compose (app + mongo · node:22-alpine)</td></tr>
         <tr><th>เครื่องมือทดสอบ</th><td><b>Playwright</b> (Chromium) — E2E screenshot + สร้าง PDF · ESLint 9</td></tr>
       </table>
