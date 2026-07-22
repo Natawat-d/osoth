@@ -13,7 +13,8 @@ export const GET = apiHandler(async (req) => {
   return CustomerCourse.find(filter).sort({ purchased_at: -1 }).lean();
 });
 
-// POST — ขาย course (สร้าง customer_course + เงินงวดแรก + คอม sale)
+// POST — ขาย/ผูก course (สร้าง customer_course) — จ่ายได้ "เต็มจำนวน" หรือ "ยังไม่จ่าย" เท่านั้น
+// ไม่มีผ่อน (จ่ายบางส่วนไม่ได้) · ปกติจองไม่ต้องจ่าย → ไปจ่ายเต็มที่ OPD · ผ่อนเป็นเรื่องของบัตร/EDC
 export const POST = apiHandler(async (req) => {
   const auth = requireRole(req, ["sell_course", "booking"]);
   const body = await req.json();

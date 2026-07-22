@@ -1,7 +1,7 @@
 import Opd from "@/models/Opd";
 import CustomerCourse from "@/models/CustomerCourse";
 import { apiHandler, requireRole } from "@/lib/api";
-import { purchaseCourse, payInstallment } from "@/services/sales";
+import { purchaseCourse, payCourseFull } from "@/services/sales";
 
 // POST /api/opd/[id]/course — เลือก/ขายคอร์สให้เคสนี้ + รับเงิน "เต็มจำนวน"
 // ไม่มีมัดจำ/ผ่อน — จ่ายเต็มราคา แต่แยกได้หลายช่องทาง (สด/โอน/บัตร)
@@ -34,23 +34,22 @@ export const POST = apiHandler(async (req, { params }) => {
     if (!cc) throw err(404, "ไม่พบคอร์สของลูกค้า");
     if (cc.status !== "active") throw err(409, `คอร์สสถานะ ${cc.status} ใช้ไม่ได้`);
     if (!cc.HN_number) { cc.HN_number = opd.HN_number; await cc.save(); }
-    if (cc.balance_due > 0) {
-      if (paidSum !== cc.balance_due)
-        throw err(400, `ต้องชำระค่าคอร์สเต็มจำนวน ${cc.balance_due}฿ (รับมา ${paidSum}฿)`);
-      for (const p of payments)
-        await payInstallment({ customer_course_ID: cc.customer_course_ID, amount: p.amount, method: p.method, received_by: auth.user_ID });
+    if (cc.balance_due > 0 && paidSum > 0) {
+      // จ่ายต้องเต็มยอดค้าง (ไม่มีผ่อน) — payCourseFull ตรวจให้
+      await payCourseFull({ customer_course_ID: cc.customer_course_ID, payments, received_by: auth.user_ID });
       cc = await CustomerCourse.findOne({ customer_course_ID: cc.customer_course_ID });
     }
   } else {
     // ขายคอร์สใหม่ + รับเงินเต็มจำนวน (แยกช่องทางได้)
     // คอมของ course → sale ที่ "ดูแลเคส" (opd.sale_ID) ไม่ใช่คน login
+    // จ่ายมา = ต้องเต็มจำนวน · ไม่จ่าย = แนบคอร์สไว้ก่อน (unpaid) แล้วไปเพิ่ม add-on/ชำระรวมทีหลัง
     const res = await purchaseCourse({
       branch_ID: opd.branch_ID,
       HN_number: opd.HN_number,
       course_ID: body.course_ID,
       sale_ID: opd.sale_ID || auth.user_ID,
       payments,
-      requireFull: true,
+      requireFull: paidSum > 0,
       price_override: priceOverride,
       received_by: auth.user_ID,
     });

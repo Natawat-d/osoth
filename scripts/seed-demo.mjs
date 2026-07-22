@@ -12,6 +12,7 @@ const now = new Date();
 const ts = { created_at: now, updated_at: now };
 const p = (n, w = 6) => String(n).padStart(w, "0");
 const T = `${now.getFullYear()}-${p(now.getMonth() + 1, 2)}-${p(now.getDate(), 2)}`; // วันนี้ (local)
+const yearBE = now.getFullYear() + 543; // ปี พ.ศ. — ต้องตรงกับ genHN (key counter HN:branch:ปี)
 const toUnix = (date, time) => Math.floor(new Date(`${date}T${time}:00`).getTime() / 1000);
 const addMin = (t, m) => { const [h, mm] = t.split(":").map(Number); const d = h * 60 + mm + m; return `${p(Math.floor(d / 60), 2)}:${p(d % 60, 2)}`; };
 
@@ -33,7 +34,7 @@ const customers = [], reserves = [], opds = [], ccs = [], payments = [], earning
 const stockCuts = {}; // item_ID → cc ที่ตัด
 
 const mkCustomer = (i) => {
-  const HN = `HN-2569-${p(hn++, 4)}`;
+  const HN = `HN-${yearBE}-${p(hn++, 4)}`;
   customers.push({ HN_number: HN, branch_ID: "BR-001", nick_name: nicks[i % nicks.length], full_name: `คุณ${nicks[i % nicks.length]} ทดสอบ`, sure_name: "", phone: `0810${p(1000 + i, 4)}`, drug_allergies: [], chronic_diseases: [], created_at: now, updated_at: now });
   return HN;
 };
@@ -92,10 +93,12 @@ function addCase({ status, courseID, withOpd, opdStatus, procedures = [], addons
     // add-on (แนะโดย sale/หมอ) — payment + คอม
     const addonDocs = [];
     for (const a of addons) {
-      const price = a.price, pid = `PAY-${p(pay++)}`;
-      payments.push({ payment_ID: pid, branch_ID: "BR-001", HN_number: HN, type: "add_on", ref: { customer_course_ID: null, opd_ID: opdID }, amount: price, method: "cash", paid_at: now, received_by: "US-002", created_at: now, updated_at: now });
-      addonDocs.push({ product_ID: a.product, name: a.name, qty: 1, cc_used: 0, price, recommended_by: a.by, first_visit: false, payment_ID: pid });
+      const price = a.price || 0, pid = price > 0 ? `PAY-${p(pay++)}` : null;
+      if (price > 0) payments.push({ payment_ID: pid, branch_ID: "BR-001", HN_number: HN, type: "add_on", ref: { customer_course_ID: null, opd_ID: opdID }, amount: price, method: "cash", paid_at: now, received_by: "US-002", created_at: now, updated_at: now });
+      addonDocs.push({ product_ID: a.product || null, name: a.name, qty: 1, cc_used: 0, price, recommended_by: a.by, first_visit: false, medical_procedure_ID: a.proc || null, proc_name: a.procName || "", proc_type: a.procType || null, proc_cost: a.procCost || 0, payment_ID: pid });
       if (opdStatus === "closed" && a.comm) earnings.push({ earning_ID: `EN-${p(en++)}`, branch_ID: "BR-001", user_ID: a.by, role: a.byRole, type: "addon_commission", ref: { opd_ID: opdID, customer_course_ID: null }, amount: a.comm, date: T, created_at: now, updated_at: now });
+      // ค่ามือหัตถการที่แนบมากับ add-on → BT/หมอ ของเคส
+      if (opdStatus === "closed" && a.proc) { const perf = a.procType === "doctor" ? doctor : bt; earnings.push({ earning_ID: `EN-${p(en++)}`, branch_ID: "BR-001", user_ID: perf, role: a.procType === "doctor" ? "doctor" : "BT", type: "procedure_fee", ref: { opd_ID: opdID, customer_course_ID: null }, medical_procedure_ID: a.proc, amount: a.procCost || 0, date: T, created_at: now, updated_at: now }); }
     }
     opds.push({
       opd_ID: opdID, branch_ID: "BR-001", reserve_ID: rsID, HN_number: HN, customer_course_ID: ccID, session_no: courseID ? 1 : 0,
@@ -134,7 +137,7 @@ addCase({ status: "doctor_stage", courseID: "CS-005", withOpd: true, opdStatus: 
 // เสร็จ (ปิดเคส) ×4 — มี finance + คอม
 addCase({ status: "done", courseID: "CS-001", withOpd: true, opdStatus: "closed", outcome: "treated", measured: true, procedures: [...procBT("CS-001"), ...procDr("CS-001")], addons: [{ product: "PD-001", name: "Botox 100u (10cc)", price: 2500, by: sale, byRole: "sale", comm: 250 }] });
 addCase({ status: "done", courseID: "CS-006", withOpd: true, opdStatus: "closed", outcome: "treated", measured: true, procedures: procBT("CS-006") });
-addCase({ status: "done", courseID: "CS-001", withOpd: true, opdStatus: "closed", outcome: "treated", measured: true, procedures: [...procBT("CS-001"), ...procDr("CS-001")], addons: [{ product: "PD-002", name: "Filler 1cc", price: 8000, by: "US-005", byRole: "doctor", comm: 300 }] });
+addCase({ status: "done", courseID: "CS-001", withOpd: true, opdStatus: "closed", outcome: "treated", measured: true, procedures: [...procBT("CS-001"), ...procDr("CS-001")], addons: [{ product: "PD-002", name: "Filler 1cc", price: 8000, by: "US-005", byRole: "doctor", comm: 300, proc: "MP-001", procName: "ฉีด Botox", procType: "doctor", procCost: 500 }] });
 addCase({ status: "done", courseID: "CS-006", withOpd: true, opdStatus: "closed", outcome: "treated", measured: true, procedures: procBT("CS-006") });
 // ปรึกษา-ไม่ซื้อ ×1
 addCase({ status: "consult_no_sale", courseID: null, withOpd: true, opdStatus: "closed", outcome: "consult_no_sale", paid: null });
@@ -171,7 +174,8 @@ await db.collection("expenses").insertMany([
 
 // ---- bump counters กัน ID ชนกับที่ genId จะสร้าง ----
 const setC = (key, seq) => db.collection("counters").updateOne({ key }, { $set: { seq } }, { upsert: true });
-await Promise.all([setC("RS", rs), setC("OPD", opd), setC("CC", cc), setC("PAY", pay), setC("EN", en), setC("EX", 10), setC("HN", hn)]);
+// HN counter ต้องใช้ key ที่ genHN ใช้จริง = `HN:${branch}:${ปีพ.ศ.}` (reset_yearly) — ตั้งให้เท่าจำนวนลูกค้าที่ seed
+await Promise.all([setC("RS", rs), setC("OPD", opd), setC("CC", cc), setC("PAY", pay), setC("EN", en), setC("EX", 10), setC(`HN:BR-001:${yearBE}`, customers.length)]);
 // HN counter — ปรับ hn_seq ใน systemconfig ถ้ามี (gen HN ใช้ config) — ข้ามเพราะ genHN นับจาก customers ที่มีอยู่
 
 console.log(`seed-demo เสร็จ ✓ — วันที่ ${T}`);

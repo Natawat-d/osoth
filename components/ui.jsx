@@ -155,6 +155,6 @@ export const PAY_METHODS = [
 ];
 export const METHOD_LABEL = Object.fromEntries(PAY_METHODS.map((m) => [m.value, m.label]));
 export const PAYTYPE_LABEL = {
-  course_purchase: "ซื้อคอร์ส", installment: "ผ่อนงวด", add_on: "Add-on", deposit: "มัดจำ",
+  course_purchase: "ซื้อคอร์ส", installment: "ชำระคอร์ส", add_on: "Add-on", deposit: "มัดจำ",
 };
 export const label = (map, key) => map[key] || key;

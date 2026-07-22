@@ -65,7 +65,7 @@ export const GET = apiHandler(async (req) => {
   }).lean();
   const otherExpense = expenses.reduce((s, e) => s + e.amount, 0);
 
-  // ลูกหนี้ค้างผ่อน (ณ ปัจจุบัน ไม่ขึ้นกับช่วงเวลา)
+  // คอร์สค้างชำระ (unpaid · ไม่มีผ่อน) — ณ ปัจจุบัน ไม่ขึ้นกับช่วงเวลา
   const debtors = await CustomerCourse.find({
     ...bFilter,
     payment_status: { $ne: "paid" },

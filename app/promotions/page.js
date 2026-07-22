@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import CrudPage from "@/components/CrudPage";
 import { api } from "@/lib/client";
+import { useBranches } from "@/components/useBranches";
 
 export default function PromotionsPage() {
+  const { branchOptions, branchName } = useBranches();
   const [courses, setCourses] = useState([]);
   useEffect(() => {
     api("/courses").then((c) => setCourses(c.filter((x) => x.active)));
@@ -13,11 +15,12 @@ export default function PromotionsPage() {
 
   return (
     <CrudPage
-      title="โปรโมชั่น"
+      title="โปรโมชั่น (แยกสาขา)"
       endpoint="/promotions"
       idField="promotion_ID"
       transform={(s) => ({ ...s, discount_value: +s.discount_value || 0 })}
       fields={[
+        { key: "branch_ID", label: "สาขา", type: "select", options: () => branchOptions, render: (v) => branchName(v) },
         { key: "name", label: "ชื่อโปร" },
         {
           key: "type", label: "ชนิด", type: "select",

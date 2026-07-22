@@ -73,9 +73,9 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
   if (cc.uses_remaining <= 0) throw httpError(409, "course นี้ใช้สิทธิ์ครบแล้ว");
   if (cc.expires_at && now > cc.expires_at)
     throw httpError(409, "course นี้หมดอายุแล้ว");
-  // Q4: ต้องรับชำระค่าคอร์สก่อนทำหัตถการ/ปิดเคส (UI รับเต็มจำนวน แยกช่องทางได้)
-  if ((cc.paid_amount || 0) <= 0)
-    throw httpError(400, "ต้องรับชำระค่าคอร์สก่อนปิดเคส");
+  // ต้องชำระค่าคอร์ส (รวม add-on ครั้งแรก) ให้ครบก่อนปิดเคส — ไม่มีผ่อน จ่ายเต็มจำนวน
+  if ((cc.balance_due || 0) > 0)
+    throw httpError(400, "ต้องชำระค่าคอร์ส (รวม add-on) ให้ครบก่อนปิดเคส");
 
   // ---- 1+2. ตัด stock FIFO (ใช้กับทั้งสูตร course และ add-on ที่เป็นสินค้าคลัง) ----
   const stockUsed = [];
@@ -114,8 +114,9 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
   };
   // สูตร course
   for (const p of cc.course_snapshot?.products || []) await cutStock(p.product_ID, p.sub_unit_per_use);
-  // add-on (ทุกชิ้นเป็นสินค้าในคลัง) → ตัด addon_sub_unit_per_use × qty
+  // add-on ที่เป็นสินค้าคลัง → ตัด addon_sub_unit_per_use × qty (add-on หัตถการล้วนข้าม)
   for (const a of opd.add_ons || []) {
+    if (!a.product_ID) continue;
     const pd = await Product.findOne({ product_ID: a.product_ID }, null, opt);
     if (!pd) continue;
     const per = pd.addon_sub_unit_per_use || pd.sub_unit_size || 1;
@@ -156,9 +157,32 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
     earnings.push(earning);
   }
 
+  // ---- 4a. ค่ามือหัตถการที่แนบมากับ add-on → BT/หมอ ของเคสนี้ ----
+  for (const a of opd.add_ons || []) {
+    if (!a.medical_procedure_ID) continue;
+    const performer = a.proc_type === "doctor" ? opd.doctor_ID : opd.BT_ID;
+    if (!performer) continue;
+    const u = await User.findOne({ user_ID: performer }, null, opt);
+    const earning = {
+      earning_ID: await genId("EN", 6),
+      branch_ID: opd.branch_ID,
+      user_ID: performer,
+      role: u?.role === "doctor" ? "doctor" : "BT",
+      type: "procedure_fee",
+      ref: { opd_ID, customer_course_ID: null },
+      medical_procedure_ID: a.medical_procedure_ID,
+      amount: a.proc_cost || 0,
+      date: opd.date,
+    };
+    await StaffEarning.create([earning], opt);
+    earnings.push(earning);
+  }
+
   // ---- 4b. คอม add-on → คนแนะ (sale/หมอ) ตามตารางคอมของสาขา ----
+  // ครั้งแรก = รวมเข้าฐานคอมคอร์ส (report) แล้ว → ไม่คิดคอม add-on ซ้ำ
   const commSetting = await CommissionSetting.findOne({ branch_ID: opd.branch_ID }, null, opt);
   for (const a of opd.add_ons || []) {
+    if (a.first_visit) continue;
     if (!a.recommended_by) continue;
     const rate = (commSetting?.addon_rates || []).find((r) => r.product_ID === a.product_ID);
     if (!rate) continue;

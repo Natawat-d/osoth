@@ -61,21 +61,19 @@ function svgURI(title, sub, c1, c2) {
 async function populate() {
   console.log("\n=== เตรียมข้อมูลทดสอบ (API) ===");
 
-  // TC: ขายคอร์ส + ผ่อนชำระ
+  // TC: ขายคอร์ส (สร้างไว้ ยังไม่จ่าย · จ่ายเต็มที่ OPD · ไม่มีผ่อน)
   const s1 = await call(AS.sale, "POST", "/customer-courses", {
     course_ID: "CS-001", reserve_contact: { nick_name: "มณี", phone: "0810000001" },
-    first_payment: { amount: 5000, method: "transfer" },
   });
   const cc1 = s1.data?.customer_course;
-  tc("ขายคอร์ส Botox + ผ่อนงวดแรก 5,000฿ (ค้าง 10,000฿)", s1.ok && cc1?.balance_due === 10000, JSON.stringify(s1).slice(0, 120));
+  tc("ขายคอร์ส Botox 15,000฿ (ยังไม่จ่าย · จ่ายเต็มที่ OPD)", s1.ok && cc1?.balance_due === 15000 && cc1?.payment_status === "unpaid", JSON.stringify(s1).slice(0, 120));
   tc("คำนวณคอมมิชชั่น sale 5% = 750฿", cc1?.commission_amount === 750, `got ${cc1?.commission_amount}`);
 
   const s2 = await call(AS.sale, "POST", "/customer-courses", {
     course_ID: "CS-002", reserve_contact: { nick_name: "สมชาย", phone: "0810000002" },
-    first_payment: { amount: 8000, method: "cash" },
   });
   const cc2 = s2.data?.customer_course;
-  tc("ขายคอร์สทรีตเมนต์ จ่ายเต็ม 8,000฿", s2.ok && cc2?.payment_status === "paid", JSON.stringify(s2).slice(0, 120));
+  tc("ขายคอร์สทรีตเมนต์ 8,000฿ (ยังไม่จ่าย)", s2.ok && cc2?.payment_status === "unpaid", JSON.stringify(s2).slice(0, 120));
 
   // จองคิวหลายรายการวันนี้
   const mk = (b) => call(AS.sale, "POST", "/reserves", { date: today, ...b });
@@ -107,7 +105,14 @@ async function populate() {
     ],
   });
   const addon = await call(AS.recept, "POST", `/opd/${opd1.data.opd_ID}/addon`, { product_ID: "PD-003", qty: 1, method: "cash" });
-  tc("Add-on มาส์กทองคำ 900฿ แยกบิล", addon.ok && addon.data?.price === 900);
+  tc("Add-on มาส์กทองคำ 900฿ (ครั้งแรก = บวกเข้ายอดคอร์ส)", addon.ok && addon.data?.price === 900 && addon.data?.first_visit === true);
+
+  // ชำระเต็มจำนวน (คอร์ส 15,000 + add-on 900 = 15,900) ก่อนปิดเคส — ไม่มีผ่อน
+  const pay = await call(AS.admin, "POST", `/customer-courses/${cc1.customer_course_ID}/pay`, { amount: 15900, method: "cash" });
+  tc("ชำระเต็มจำนวน 15,900฿ (คอร์ส+add-on ครั้งแรก) → ยอดค้าง = 0", pay.ok && pay.data?.balance_due === 0);
+  const payAgain = await call(AS.admin, "POST", `/customer-courses/${cc1.customer_course_ID}/pay`, { amount: 100, method: "cash" });
+  tc("จ่ายซ้ำ/บางส่วน → 409 (ไม่มีผ่อน)", payAgain.status === 409, `status ${payAgain.status}`);
+
   const closed = await call(AS.admin, "POST", `/opd/${opd1.data.opd_ID}/close`);
   tc("ปิดเคส: ตัด stock FIFO (lot แรก 3,500฿/10cc → 2cc=700฿)", closed.ok && closed.data?.stock_used?.[0]?.lot_ID === "LOT-00001" && closed.data?.stock_used?.[0]?.cost_of_goods === 700, JSON.stringify(closed.data?.stock_used?.[0] || {}));
   tc("ปิดเคส: นับครั้งคอร์สเหลือ 4 + สร้างค่ามือ 2 รายการ", closed.data?.uses_remaining === 4 && closed.data?.earnings_created === 2);
@@ -115,10 +120,6 @@ async function populate() {
   const items = await call(AS.admin, "GET", "/stock/items?branch_ID=BR-001&product_ID=PD-001");
   const inUse = (items.data || []).find((i) => i.state === "in_use");
   tc("Stock: ขวดที่เปิด in_use เหลือ 8cc/4ครั้ง + มีวันหมดอายุหลังเปิด", inUse?.cc_remaining === 8 && inUse?.uses_remaining === 4 && !!inUse?.open_expiry_at);
-
-  // จ่ายงวดผ่อนครบ
-  const pay = await call(AS.admin, "POST", `/customer-courses/${cc1.customer_course_ID}/pay`, { amount: 10000, method: "cash" });
-  tc("จ่ายงวดผ่อน 10,000฿ → ยอดค้าง = 0", pay.ok && pay.data?.balance_due === 0);
 
   // --- เคส rs3: เปิดค้างไว้ (โชว์ stepper กลางทาง) ---
   await call(AS.admin, "PUT", `/reserves/${r3.data.reserve_ID}`, { status: "arrived" });
@@ -294,11 +295,11 @@ async function extraTests() {
   tc("[คอร์ส] เปิดเคสจากคอร์สที่ใช้ครบแล้ว → 409", o1u2.status === 409, `status ${o1u2.status}`);
 
   // ---------- [การเงิน] ----------
-  const ccPay = await call(AS.sale, "POST", "/customer-courses", { course_ID: "CS-001", reserve_contact: { nick_name: "ผ่อน" }, first_payment: { amount: 3000, method: "cash" } });
+  const ccPay = await call(AS.sale, "POST", "/customer-courses", { course_ID: "CS-001", reserve_contact: { nick_name: "จ่ายเต็ม" } });
   const overpay = await call(AS.admin, "POST", `/customer-courses/${ccPay.data.customer_course.customer_course_ID}/pay`, { amount: 999999, method: "cash" });
-  tc("[การเงิน] จ่ายงวดเกินยอดค้าง → 400", overpay.status === 400, `status ${overpay.status}`);
+  tc("[การเงิน] จ่ายไม่เท่ายอดเต็ม (เกิน) → 400 (ไม่มีผ่อน)", overpay.status === 400, `status ${overpay.status}`);
   const zeroPay = await call(AS.admin, "POST", `/customer-courses/${ccPay.data.customer_course.customer_course_ID}/pay`, { amount: 0, method: "cash" });
-  tc("[การเงิน] จ่ายงวด = 0 → 400", zeroPay.status === 400, `status ${zeroPay.status}`);
+  tc("[การเงิน] จ่าย = 0 → 400", zeroPay.status === 400, `status ${zeroPay.status}`);
   const exp2 = await call(AS.admin, "POST", "/expenses", { category: "utility", description: "ค่าไฟ", amount: 3200, date: today, branch_ID: "BR-001" });
   tc("[การเงิน] บันทึกรายจ่ายหมวดน้ำ/ไฟ", exp2.ok);
 

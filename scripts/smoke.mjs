@@ -29,15 +29,14 @@ async function call(as, method, path, body) {
 const _d = new Date();
 const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, "0")}-${String(_d.getDate()).padStart(2, "0")}`;
 
-console.log("1) ขาย course (sale, จ่ายงวดแรก 5,000 = ผ่อน)");
+console.log("1) ขาย course (sale — สร้างคอร์ส ยังไม่จ่าย · จ่ายเต็มที่ OPD · ไม่มีผ่อน)");
 const sold = await call("sale", "POST", "/customer-courses", {
   course_ID: "CS-001",
   reserve_contact: { nick_name: "คุณสมใจ", phone: "0812345678" },
-  first_payment: { amount: 5000, method: "transfer" },
 });
 ok("ขายสำเร็จ", sold.ok, JSON.stringify(sold));
 const cc = sold.data?.customer_course;
-ok("ราคาเต็ม 15000 จ่าย 5000 ค้าง 10000", cc?.balance_due === 10000 && cc?.payment_status === "partial");
+ok("ราคาเต็ม 15000 · ยังไม่จ่าย (unpaid)", cc?.balance_due === 15000 && cc?.payment_status === "unpaid");
 ok("คอม sale 5% = 750", cc?.commission_amount === 750);
 
 console.log("2) จองคิว + กันจองซ้อน");
@@ -95,7 +94,17 @@ ok("บันทึกหัตถการ", proc.ok);
 const addon = await call("acception", "POST", `/opd/${opd.data.opd_ID}/addon`, {
   product_ID: "PD-003", qty: 1, method: "cash",
 });
-ok("add-on มาส์กทองคำ 900฿ แยกบิล", addon.ok && addon.data.price === 900);
+ok("add-on มาส์กทองคำ 900฿ (ครั้งแรก = บวกเข้ายอดคอร์ส)", addon.ok && addon.data.price === 900 && addon.data.first_visit === true);
+// ครั้งแรก → ยอดคอร์สเพิ่มเป็น 15900 (15000 + 900)
+const ccList = await call("sale", "GET", `/customer-courses?HN=${cust.data.HN_number}`);
+const ccNow = ccList.data?.find((x) => x.customer_course_ID === cc.customer_course_ID);
+ok("add-on บวกเข้ายอดคอร์ส → ค้าง 15900", ccNow?.balance_due === 15900, `got ${ccNow?.balance_due}`);
+
+console.log("5.5) ชำระเต็มจำนวน 15,900 (คอร์ส 15000 + add-on 900) — ก่อนปิดเคส");
+const payClose = await call("admin", "POST", `/customer-courses/${cc.customer_course_ID}/pay`, { amount: 15900, method: "cash" });
+ok("ชำระเต็ม → balance = 0 · paid", payClose.ok && payClose.data.balance_due === 0);
+const payPartial = await call("admin", "POST", `/customer-courses/${cc.customer_course_ID}/pay`, { amount: 100, method: "cash" });
+ok("จ่ายซ้ำ/บางส่วน → 409 (จ่ายครบแล้ว)", payPartial.status === 409);
 
 console.log("6) ปิดเคส — ตัด stock FIFO + นับครั้ง + ค่ามือ");
 const closed = await call("admin", "POST", `/opd/${opd.data.opd_ID}/close`);
@@ -113,15 +122,13 @@ const used = items.data.find((i) => i.state === "in_use");
 ok("มีขวด in_use", !!used);
 ok("เหลือ 8cc / 4 ครั้ง / มีวันควรใช้ก่อน", used?.cc_remaining === 8 && used?.uses_remaining === 4 && !!used?.open_expiry_at);
 
-console.log("8) จ่ายงวดผ่อน 10,000 → paid ครบ");
-const paid = await call("admin", "POST", `/customer-courses/${cc.customer_course_ID}/pay`, {
-  amount: 10000, method: "cash",
-});
-ok("จ่ายครบ balance = 0", paid.ok && paid.data.balance_due === 0);
+console.log("8) ยืนยันคอร์สชำระครบ (paid) + นับครั้งแล้ว");
+const ccFinal = (await call("sale", "GET", `/customer-courses?HN=${cust.data.HN_number}`)).data?.find((x) => x.customer_course_ID === cc.customer_course_ID);
+ok("คอร์สจ่ายครบ (paid) + เหลือ 4 ครั้ง", ccFinal?.payment_status === "paid" && ccFinal?.balance_due === 0 && ccFinal?.uses_remaining === 4, JSON.stringify(ccFinal?.payment_status));
 
 console.log("9) การเงิน + สิทธิ์");
 const fin = await call("admin", "GET", `/finance/summary?branch_ID=BR-001&from=${today}&to=${today}`);
-ok("รายรับวันนี้ = 5000 (งวดแรก) + 900 (add-on) + 10000 (งวดผ่อน) = 15900", fin.data?.income === 15900, `got ${fin.data?.income}`);
+ok("รายรับวันนี้ = 15900 (คอร์ส 15000 + add-on 900 · จ่ายเต็มครั้งเดียว)", fin.data?.income === 15900, `got ${fin.data?.income}`);
 // COGS = 700 (คอร์ส 2cc) + 300 (add-on มาส์ก PD-003 ตัด stock ตอนปิดเคส) = 1000
 ok("COGS = 1000 (คอร์ส 700 + add-on 300)", fin.data?.cogs === 1000, `got ${fin.data?.cogs}`);
 // ค่าแรง = ค่ามือหัตถการ 650 (BT150+หมอ500) เท่านั้น — คอม sale เป็นขั้นบันไดรายเดือน (หน้า /commission) ไม่ลง daily

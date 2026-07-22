@@ -285,7 +285,7 @@ function CaseEditor({ opd_ID, t, auth, onChanged, onClose }) {
   const [procedures, setProcedures] = useState([]);
   const [products, setProducts] = useState([]);
   const [vitals, setVitals] = useState({ blood_pressure: "", heart_rate: "", weight_kg: "", height_cm: "", fat_mass: "", muscle_mass: "", other: "" });
-  const [addon, setAddon] = useState({ product_ID: "", qty: 1, method: "cash", recommended_by: "" });
+  const [addon, setAddon] = useState({ product_ID: "", medical_procedure_ID: "", qty: 1, method: "cash", recommended_by: "" });
   const [courses, setCourses] = useState([]);
   const [custCourses, setCustCourses] = useState([]); // คอร์สค้างของลูกค้ารายนี้
   const [sales, setSales] = useState([]); // sale ในสาขา (เลือกดูแลเคส)
@@ -416,11 +416,17 @@ function CaseEditor({ opd_ID, t, auth, onChanged, onClose }) {
   };
   const doAddon = async () => {
     const p = products.find((x) => x.product_ID === addon.product_ID);
+    const mp = procedures.find((x) => x.medical_procedure_ID === addon.medical_procedure_ID);
+    if (!p && !mp) return toast.error("เลือกสินค้าหรือหัตถการก่อน");
     const price = (p?.selling_price || 0) * (addon.qty || 1);
-    const bill = opd.session_no === 1 ? "รวมบิลคอร์ส (ครั้งแรก)" : "แยกบิลทันที";
-    if (!window.confirm(`เก็บเงิน add-on: ${p?.name} ×${addon.qty} = ${money(price)}฿ (${bill}) ยืนยัน?`)) return;
+    const firstVisit = opd.session_no === 1;
+    const items = [p && `${p.name} ×${addon.qty}`, mp && `หัตถการ ${mp.name} (ค่ามือ ${money(mp.cost)}฿→${mp.type === "doctor" ? "หมอ" : "BT"})`].filter(Boolean).join(" + ");
+    const bill = firstVisit
+      ? `บวกเข้ายอดคอร์ส ${price > 0 ? `+${money(price)}฿` : "(ไม่มีค่าสินค้า)"} — จ่ายรวมที่การ์ดชำระเงิน`
+      : (price > 0 ? `เก็บเงินแยกบิลทันที ${money(price)}฿` : "บันทึกหัตถการ (ไม่มีค่าสินค้า)");
+    if (!window.confirm(`Add-on: ${items}\n${bill}\nยืนยัน?`)) return;
     await api(`/opd/${opd_ID}/addon`, { method: "POST", body: addon });
-    setAddon({ product_ID: "", qty: 1, method: "cash", recommended_by: "" });
+    setAddon({ product_ID: "", medical_procedure_ID: "", qty: 1, method: "cash", recommended_by: "" });
     reload();
   };
   const doClose = async () => {
@@ -430,6 +436,84 @@ function CaseEditor({ opd_ID, t, auth, onChanged, onClose }) {
   };
 
   const stepStyle = (on) => ({ opacity: on ? 1 : 0.55, transition: "opacity .15s" });
+
+  // การ์ด add-on — ครั้งแรก(session 1) ย้ายไปติดการ์ดชำระเงิน (บวกเข้ายอดคอร์ส จ่ายรวม) · ครั้งต่อไป = เก็บเงินแยกบิล
+  const firstVisit = opd.session_no === 1;
+  const addonProc = procedures.find((x) => x.medical_procedure_ID === addon.medical_procedure_ID);
+  const addonCard = (
+    <div className="card">
+      <h2><span className="h2-ico">➕</span> {t("add_on")}
+        <span className="muted" style={{ fontWeight: 400 }}>
+          ({firstVisit ? "ครั้งแรก = บวกเข้ายอดคอร์ส จ่ายรวม" : "แยกบิลเก็บเงินทันที"} · สินค้าตัด stock ตอนปิดเคส · หัตถการค่ามือ→BT/หมอ)
+        </span>
+      </h2>
+      {!isClosed && (
+        <>
+          <div className="row" style={{ alignItems: "flex-end" }}>
+            <div className="field">
+              <label>สินค้า (ตัด stock + คิดเงิน)</label>
+              <select value={addon.product_ID} onChange={(e) => setAddon((f) => ({ ...f, product_ID: e.target.value }))}>
+                <option value="">— ไม่มี —</option>
+                {products.map((p) => <option key={p.product_ID} value={p.product_ID}>{p.name} · {money(p.selling_price)}฿</option>)}
+              </select>
+            </div>
+            <div className="field" style={{ maxWidth: 80 }}>
+              <label>จำนวน</label>
+              <input type="number" min={1} value={addon.qty} onChange={(e) => setAddon((f) => ({ ...f, qty: +e.target.value }))} />
+            </div>
+            <div className="field">
+              <label>หัตถการ (ค่ามือ → BT/หมอ)</label>
+              <select value={addon.medical_procedure_ID} onChange={(e) => setAddon((f) => ({ ...f, medical_procedure_ID: e.target.value }))}>
+                <option value="">— ไม่มี —</option>
+                {procedures.map((mp) => <option key={mp.medical_procedure_ID} value={mp.medical_procedure_ID}>{mp.name} · ค่ามือ {money(mp.cost)}฿ ({mp.type === "doctor" ? "หมอ" : "BT"})</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>คนแนะ (คิดคอม)</label>
+              <select value={addon.recommended_by} onChange={(e) => setAddon((f) => ({ ...f, recommended_by: e.target.value }))}>
+                <option value="">— ไม่ระบุ —</option>
+                {sales.map((s) => <option key={s.user_ID} value={s.user_ID}>Sale: {s.full_name}</option>)}
+                {doctors.map((d) => <option key={d.user_ID} value={d.user_ID}>หมอ: {d.full_name}</option>)}
+              </select>
+            </div>
+            {!firstVisit && (
+              <div className="field">
+                <label>ช่องทาง</label>
+                <select value={addon.method} onChange={(e) => setAddon((f) => ({ ...f, method: e.target.value }))}>
+                  <option value="cash">เงินสด</option><option value="transfer">โอน</option><option value="card">บัตร</option>
+                </select>
+              </div>
+            )}
+            <AsyncButton className="btn gold" disabled={!addon.product_ID && !addon.medical_procedure_ID}
+              ok={firstVisit ? "เพิ่มลงบิลคอร์สแล้ว" : "เพิ่ม add-on + เก็บเงินแล้ว"} onClick={doAddon}>
+              {firstVisit ? "+ เพิ่มลงบิลคอร์ส" : "+ add-on (เก็บเงิน)"}
+            </AsyncButton>
+          </div>
+          {addonProc && (
+            <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+              * ค่ามือหัตถการ {money(addonProc.cost)}฿ จะจ่ายให้ {addonProc.type === "doctor" ? "หมอ" : "BT"} ของเคสนี้ตอนปิดเคส
+            </div>
+          )}
+        </>
+      )}
+      {opd.add_ons?.length > 0 && (
+        <div style={{ marginTop: isClosed ? 0 : 10 }}>
+          {opd.add_ons.map((a, i) => (
+            <div key={i} className="roster-item">
+              <span style={{ flex: 1 }}>
+                {a.product_ID ? `${a.name} ×${a.qty}` : a.name}
+                {a.medical_procedure_ID && <span className="badge blue nodot" style={{ marginLeft: 6 }}>💉 {a.proc_name} · ค่ามือ {money(a.proc_cost)}฿</span>}
+                {a.first_visit && <span className="badge gray nodot" style={{ marginLeft: 6 }}>รวมบิลคอร์ส</span>}
+                {a.recommended_by && <span className="muted" style={{ marginLeft: 6 }}>· แนะโดย {userMap[a.recommended_by] || a.recommended_by}</span>}
+              </span>
+              <span className="badge gold nodot">{a.price > 0 ? `${money(a.price)}฿` : "—"}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {isClosed && !opd.add_ons?.length && <div className="muted">— ไม่มี add-on —</div>}
+    </div>
+  );
 
   return (
     <div>
@@ -570,9 +654,21 @@ function CaseEditor({ opd_ID, t, auth, onChanged, onClose }) {
                 <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>* ปรับราคา/ต่อรอง ต้องให้ admin ทำ</div>
               )}
 
-              {/* จ่ายเต็มจำนวน แต่แยกช่องทางได้ (ตามราคาปรับถ้ามี) */}
-              {courseChosen && dueAmount > 0 && (
-                <SplitPay key={`${sell.mode}:${sell.course_ID}:${sell.existing_id}:${dueAmount}`}
+              {/* คอร์สใหม่: แนบก่อน (ยังไม่จ่าย) → เพิ่ม add-on แล้วจ่ายรวมทีเดียว · หรือจ่ายเต็มทันที */}
+              {sell.mode === "new" && courseChosen && dueAmount > 0 && (
+                <>
+                  <AsyncButton className="btn primary" style={{ marginTop: 10, width: "100%", justifyContent: "center" }}
+                    ok="เลือกคอร์สแล้ว — เพิ่ม add-on / ชำระด้านล่าง" onClick={() => attachCourse([])}>
+                    เลือกคอร์สนี้ (ยังไม่จ่าย · เพิ่ม add-on ก่อน แล้วจ่ายรวม)
+                  </AsyncButton>
+                  <div className="muted" style={{ margin: "8px 0", textAlign: "center" }}>— หรือ จ่ายเต็มทันที —</div>
+                  <SplitPay key={`new:${sell.course_ID}:${dueAmount}`}
+                    due={dueAmount} confirmLabel="จ่ายเต็มทันที" okMsg="เลือกคอร์ส + รับเงินครบแล้ว"
+                    onConfirm={attachCourse} />
+                </>
+              )}
+              {sell.mode === "existing" && courseChosen && dueAmount > 0 && (
+                <SplitPay key={`ex:${sell.existing_id}:${dueAmount}`}
                   due={dueAmount} confirmLabel="ยืนยัน (จ่ายเต็มจำนวน)" okMsg="เลือกคอร์ส + รับเงินครบแล้ว"
                   onConfirm={attachCourse} />
               )}
@@ -583,7 +679,7 @@ function CaseEditor({ opd_ID, t, auth, onChanged, onClose }) {
                     ok="เลือกคอร์สแล้ว" onClick={() => attachCourse([])}>ยืนยันเลือกคอร์ส</AsyncButton>
                 </>
               )}
-              <div className="muted" style={{ marginTop: 6 }}>* จ่ายเต็มราคาคอร์สก่อนเริ่มทำหัตถการ — แยกช่องทางได้ (สด/โอน/บัตร) รวมให้ครบยอด</div>
+              <div className="muted" style={{ marginTop: 6 }}>* ต้องจ่ายเต็มราคา (คอร์ส + add-on ครั้งแรก) ก่อนเริ่มทำหัตถการ — แยกช่องทางได้ (สด/โอน/บัตร)</div>
             </>
           ) : cc.balance_due > 0 ? (
             <>
@@ -608,6 +704,9 @@ function CaseEditor({ opd_ID, t, auth, onChanged, onClose }) {
           )}
         </div>
       )}
+
+      {/* add-on ครั้งแรก — ติดใต้การ์ดชำระเงิน (บวกเข้ายอดคอร์ส จ่ายรวม) */}
+      {firstVisit && !isClosed && hasCourse && addonCard}
 
       {isClosed && opd.outcome === "consult_no_sale" && (
         <div className="card" style={{ borderColor: "var(--slate)", background: "var(--slate-tint)" }}>
@@ -746,58 +845,8 @@ function CaseEditor({ opd_ID, t, auth, onChanged, onClose }) {
         </div>
       )}
 
-      {/* 3. add-on */}
-      <div className="card">
-        <h2><span className="h2-ico">➕</span> {t("add_on")}
-          <span className="muted" style={{ fontWeight: 400 }}>
-            ({opd.session_no === 1 ? "ครั้งแรก = รวมบิลคอร์ส" : "แยกบิลทันที"} · ตัด stock ตอนปิดเคส)
-          </span>
-        </h2>
-        {!isClosed && (
-          <div className="row" style={{ alignItems: "flex-end" }}>
-            <div className="field">
-              <label>สินค้า</label>
-              <select value={addon.product_ID} onChange={(e) => setAddon((f) => ({ ...f, product_ID: e.target.value }))}>
-                <option value="">—</option>
-                {products.map((p) => <option key={p.product_ID} value={p.product_ID}>{p.name} · {money(p.selling_price)}฿</option>)}
-              </select>
-            </div>
-            <div className="field" style={{ maxWidth: 80 }}>
-              <label>จำนวน</label>
-              <input type="number" min={1} value={addon.qty} onChange={(e) => setAddon((f) => ({ ...f, qty: +e.target.value }))} />
-            </div>
-            <div className="field">
-              <label>คนแนะ (คิดคอม)</label>
-              <select value={addon.recommended_by} onChange={(e) => setAddon((f) => ({ ...f, recommended_by: e.target.value }))}>
-                <option value="">— ไม่ระบุ —</option>
-                {sales.map((s) => <option key={s.user_ID} value={s.user_ID}>Sale: {s.full_name}</option>)}
-                {doctors.map((d) => <option key={d.user_ID} value={d.user_ID}>หมอ: {d.full_name}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <label>ช่องทาง</label>
-              <select value={addon.method} onChange={(e) => setAddon((f) => ({ ...f, method: e.target.value }))}>
-                <option value="cash">เงินสด</option><option value="transfer">โอน</option><option value="card">บัตร</option>
-              </select>
-            </div>
-            <AsyncButton className="btn gold" disabled={!addon.product_ID} ok="เพิ่ม add-on + เก็บเงินแล้ว" onClick={doAddon}>+ {t("add_on")}</AsyncButton>
-          </div>
-        )}
-        {opd.add_ons?.length > 0 && (
-          <div style={{ marginTop: isClosed ? 0 : 10 }}>
-            {opd.add_ons.map((a, i) => (
-              <div key={i} className="roster-item">
-                <span style={{ flex: 1 }}>{a.name} ×{a.qty}
-                  {a.first_visit && <span className="badge gray nodot" style={{ marginLeft: 6 }}>รวมบิลคอร์ส</span>}
-                  {a.recommended_by && <span className="muted" style={{ marginLeft: 6 }}>· แนะโดย {userMap[a.recommended_by] || a.recommended_by}</span>}
-                </span>
-                <span className="badge gold nodot">{money(a.price)}฿</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {isClosed && !opd.add_ons?.length && <div className="muted">— ไม่มี add-on —</div>}
-      </div>
+      {/* 3. add-on — ครั้งแรกย้ายไปติดการ์ดชำระเงินด้านบน · ครั้งต่อไป/ปิดเคสแล้วแสดงตรงนี้ */}
+      {(!firstVisit || isClosed) && addonCard}
 
       {/* 4. ปิดเคส */}
       {canManage && !isClosed && (

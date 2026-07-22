@@ -4,15 +4,17 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/client";
 import { useT } from "@/i18n/messages";
 import { money } from "@/components/ui";
+import { useBranches } from "@/components/useBranches";
 import ImageInput from "@/components/ImageInput";
 
 const EMPTY = {
-  name: "", quantity_used: 5, validity_days: 365, price: 0,
+  branch_ID: "", name: "", quantity_used: 5, validity_days: 365, price: 0,
   duration_minutes: 60, image: "", products: [], BT_procedures: [], doctor_procedures: [],
 };
 
 export default function CoursesPage() {
   const t = useT();
+  const { branchOptions, branchName } = useBranches();
   const [rows, setRows] = useState([]);
   const [products, setProducts] = useState([]);
   const [procedures, setProcedures] = useState([]);
@@ -72,12 +74,13 @@ export default function CoursesPage() {
         </h2>
         <table className="tbl">
           <thead>
-            <tr><th>ID</th><th>ชื่อ</th><th>ครั้ง</th><th>อายุ (วัน)</th><th>{t("price")}</th><th>สินค้า/ครั้ง</th><th>{t("actions")}</th></tr>
+            <tr><th>ID</th><th>สาขา</th><th>ชื่อ</th><th>ครั้ง</th><th>อายุ (วัน)</th><th>{t("price")}</th><th>สินค้า/ครั้ง</th><th>{t("actions")}</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.course_ID} style={{ opacity: r.active === false ? 0.45 : 1 }}>
                 <td>{r.course_ID}</td>
+                <td><span className="badge gray nodot">{branchName(r.branch_ID)}</span></td>
                 <td><b>{r.name}</b>{r.is_promotion_course && <span className="badge red" style={{ marginLeft: 6 }}>โปร</span>}</td>
                 <td>{r.quantity_used}</td>
                 <td>{r.validity_days || "ไม่หมดอายุ"}</td>
@@ -99,6 +102,11 @@ export default function CoursesPage() {
         <div className="card">
           <h2>{editing.course_ID ? `${t("edit")} ${editing.course_ID}` : t("add")}</h2>
           <div className="row">
+            <div className="field"><label>สาขา</label>
+              <select value={editing.branch_ID ?? ""} onChange={(e) => setEditing((s) => ({ ...s, branch_ID: e.target.value }))}>
+                <option value="">—</option>
+                {branchOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select></div>
             <div className="field"><label>ชื่อ course</label>
               <input value={editing.name} onChange={(e) => setEditing((s) => ({ ...s, name: e.target.value }))} /></div>
             <div className="field"><label>จำนวนครั้ง</label>

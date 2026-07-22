@@ -1,11 +1,13 @@
 "use client";
 import CrudPage from "@/components/CrudPage";
 import { money } from "@/components/ui";
+import { useBranches } from "@/components/useBranches";
 
 export default function ProductsPage() {
+  const { branchOptions, branchName } = useBranches();
   return (
     <CrudPage
-      title="สินค้า (catalog — ทุนจริงอยู่ที่ lot ตอนรับของเข้า)"
+      title="สินค้า (catalog · แยกสาขา — ทุนจริงอยู่ที่ lot ตอนรับของเข้า)"
       endpoint="/products"
       idField="product_ID"
       transform={(s) => ({
@@ -17,6 +19,7 @@ export default function ProductsPage() {
         shelf_life_after_open_days: +s.shelf_life_after_open_days || 0,
       })}
       fields={[
+        { key: "branch_ID", label: "สาขา", type: "select", options: () => branchOptions, render: (v) => branchName(v) },
         { key: "name", label: "ชื่อ" },
         {
           key: "type", label: "ประเภท", type: "select",

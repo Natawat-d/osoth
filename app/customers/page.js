@@ -33,11 +33,14 @@ export default function CustomersPage() {
     if (r.length === 0) toast.info("ไม่พบลูกค้า");
   };
 
-  const payInstallment = async () => {
+  // ชำระค่าคอร์สเต็มจำนวน (ไม่มีผ่อน) — จ่ายยอดค้างทั้งหมดครั้งเดียว
+  const payFull = async () => {
+    const cc = profile.courses.find((c) => c.customer_course_ID === pay.customer_course_ID);
+    if (!cc) return;
     await api(`/customer-courses/${pay.customer_course_ID}/pay`, {
-      method: "POST", body: { amount: +pay.amount, method: pay.method },
+      method: "POST", body: { amount: cc.balance_due, method: pay.method },
     });
-    setPay({ customer_course_ID: "", amount: "", method: "cash" });
+    setPay({ customer_course_ID: "", method: "cash" });
     open(profile.customer.HN_number);
   };
 
@@ -158,22 +161,20 @@ export default function CustomersPage() {
             </table>
             <div className="row" style={{ marginTop: 10 }}>
               <div className="field">
-                <label>{t("pay_installment")}</label>
+                <label>ชำระค่าคอร์ส (เต็มจำนวน · ไม่มีผ่อน)</label>
                 <select value={pay.customer_course_ID} onChange={(e) => setPay((p) => ({ ...p, customer_course_ID: e.target.value }))}>
-                  <option value="">— เลือก course ที่ค้าง —</option>
+                  <option value="">— เลือก course ที่ยังไม่ชำระ —</option>
                   {profile.courses.filter((c) => c.balance_due > 0).map((c) => (
                     <option key={c.customer_course_ID} value={c.customer_course_ID}>{c.course_snapshot?.name} (ค้าง {money(c.balance_due)}฿)</option>
                   ))}
                 </select>
               </div>
-              <div className="field"><label>จำนวน</label>
-                <input type="number" value={pay.amount} onChange={(e) => setPay((p) => ({ ...p, amount: e.target.value }))} /></div>
               <div className="field"><label>ช่องทาง</label>
                 <select value={pay.method} onChange={(e) => setPay((p) => ({ ...p, method: e.target.value }))}>
                   <option value="cash">เงินสด</option><option value="transfer">โอน</option><option value="card">บัตร</option>
                 </select></div>
-              <AsyncButton className="btn gold" disabled={!pay.customer_course_ID || !pay.amount} ok="รับชำระงวดแล้ว" onClick={payInstallment}>
-                {t("pay_installment")}
+              <AsyncButton className="btn gold" disabled={!pay.customer_course_ID} ok="รับชำระเต็มจำนวนแล้ว" onClick={payFull}>
+                ชำระเต็มจำนวน
               </AsyncButton>
             </div>
           </div>

@@ -6,6 +6,7 @@ import CrudPage from "@/components/CrudPage";
 import { api } from "@/lib/client";
 import { useT } from "@/i18n/messages";
 import { money, todayStr, AsyncButton, ROLE_LABEL, fmtThaiDate } from "@/components/ui";
+import { useBranches } from "@/components/useBranches";
 import { exportCsv } from "@/lib/exportCsv";
 
 const DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"];
@@ -14,6 +15,7 @@ export default function HrPage() {
   const [branches, setBranches] = useState([]);
   useEffect(() => { api("/branches").then(setBranches); }, []);
   const branchOptions = branches.map((b) => ({ value: b.branch_ID, label: b.name }));
+  const branchName = (id) => branches.find((b) => b.branch_ID === id)?.name || id || "-";
 
   return (
     <div>
@@ -39,7 +41,7 @@ export default function HrPage() {
             ],
             render: (v) => ROLE_LABEL[v] || v,
           },
-          { key: "branch_ID", label: "สาขา", type: "select", options: () => branchOptions },
+          { key: "branch_ID", label: "สาขา", type: "select", options: () => branchOptions, render: (v) => branchName(v) },
           { key: "email", label: "email", show: false },
           { key: "phone", label: "โทร", show: false },
           { key: "commission_rate", label: "คอม % (sale)", type: "number" },
@@ -54,6 +56,7 @@ export default function HrPage() {
 // เจ้าของระบบจัดการบัญชี login ของพนักงาน (ตั้ง username/รหัสเริ่มต้น · รีเซ็ต · เปิด/ปิด)
 function LoginManager() {
   const auth = useSelector((s) => s.auth);
+  const { branchName } = useBranches();
   const [users, setUsers] = useState([]);
   const [edit, setEdit] = useState(null); // { user, username, password }
   const [msg, setMsg] = useState("");
@@ -105,7 +108,7 @@ function LoginManager() {
             <tr key={u.user_ID}>
               <td><b>{u.full_name}</b> <span className="muted">{u.nick_name}</span></td>
               <td><span className="badge gray nodot">{ROLE_LABEL[u.role] || u.role}</span></td>
-              <td className="muted">{u.branch_ID}</td>
+              <td className="muted">{branchName(u.branch_ID)}</td>
               <td>{u.username ? <code>{u.username}</code> : <span className="muted">— ยังไม่ตั้ง —</span>}</td>
               <td>
                 {!u.username ? <span className="badge gray nodot">ไม่มี login</span>

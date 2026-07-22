@@ -3,11 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { AsyncButton, useToast, money } from "@/components/ui";
+import { useBranches } from "@/components/useBranches";
 import { api } from "@/lib/client";
 
 export default function CommissionPage() {
   const auth = useSelector((s) => s.auth);
   const branch_ID = auth.branch_ID;
+  const { branchName } = useBranches();
   const toast = useToast();
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [report, setReport] = useState(null);
@@ -40,11 +42,12 @@ export default function CommissionPage() {
           <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
         </div>
         <div className="grow" />
+        <span className="badge gold nodot">🏢 สาขา: {branchName(branch_ID)}</span>
       </div>
 
       {/* รายงานคอม */}
       <div className="card">
-        <h2><span className="h2-ico">📈</span> คอม sale เดือน {month}</h2>
+        <h2><span className="h2-ico">📈</span> คอม sale · {branchName(branch_ID)} · เดือน {month}</h2>
         <table className="tbl">
           <thead><tr><th>Sale</th><th>ยอดคอร์ส</th><th>+add-on แรก</th><th>ฐานยอด</th><th>ขั้น %</th><th>คอมขั้นบันได</th><th>คอม add-on</th><th>รวม</th></tr></thead>
           <tbody>
@@ -78,7 +81,7 @@ export default function CommissionPage() {
       {/* ตั้งค่า tier */}
       {setting && (
         <div className="card">
-          <h2><span className="h2-ico">⚙️</span> ตั้งค่าขั้นบันไดคอม sale (สาขานี้)</h2>
+          <h2><span className="h2-ico">⚙️</span> ตั้งค่าขั้นบันไดคอม sale (สาขา: {branchName(branch_ID)})</h2>
           <div className="field" style={{ maxWidth: 300 }}>
             <label>วิธีคิด</label>
             <select value={setting.tier_mode} onChange={(e) => setSetting((s) => ({ ...s, tier_mode: e.target.value }))}>

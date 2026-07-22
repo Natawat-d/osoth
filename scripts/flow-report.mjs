@@ -64,21 +64,21 @@ async function main() {
   page.on("pageerror", (e) => console.log("  ⚠ pageerror:", e.message));
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
 
-  // ===== 1. ขายคอร์ส + ผ่อนชำระ =====
-  const s1 = await call(AS.sale, "POST", "/customer-courses", { course_ID: "CS-001", reserve_contact: { nick_name: "มณี", phone: "0810000001" }, first_payment: { amount: 5000, method: "transfer" } });
+  // ===== 1. ขายคอร์ส (ยังไม่จ่าย · จ่ายเต็มที่ OPD · ไม่มีผ่อน) =====
+  const s1 = await call(AS.sale, "POST", "/customer-courses", { course_ID: "CS-001", reserve_contact: { nick_name: "มณี", phone: "0810000001" } });
   const cc1 = s1.data?.customer_course;
   await as("US-004", users); await go("/calendar");
   addStep({
-    num: 1, title: "ขายคอร์ส + ผ่อนชำระ", actor: "Sale (ฝ่ายขาย)",
-    narrative: "ฝ่ายขายเลือกคอร์สให้ลูกค้า จ่ายงวดแรกได้ (ผ่อนชำระ) ระบบบันทึกสิทธิ์คงเหลือ + snapshot คอร์ส (กันแก้ catalog ย้อนหลัง) และคิดคอมมิชชั่นให้ sale อัตโนมัติจาก % ที่ตั้งไว้ที่ตัวพนักงาน",
-    apis: [`POST /api/customer-courses`, `  body: { course_ID:"CS-001", reserve_contact:{nick_name,phone}, first_payment:{ amount:5000, method:"transfer" } }`],
-    rules: ["ผ่อนชำระได้ (บันทึก balance_due)", "คอม = total_price × user.commission_rate% (snapshot ณ วันขาย)", "เก็บ course_snapshot กันข้อมูลเพี้ยนภายหลัง", "ถือหลายคอร์สพร้อมกันได้ (ไม่จำกัด)"],
-    db: ["customer_course (สร้าง: uses_total=5, uses_remaining=5, status=active)", "payment (course_purchase 5,000฿ transfer)", "staff_earning (commission ให้ US-004)"],
+    num: 1, title: "ขายคอร์ส (จ่ายเต็มที่ OPD · ไม่มีผ่อน)", actor: "Sale (ฝ่ายขาย)",
+    narrative: "ฝ่ายขายเลือกคอร์สให้ลูกค้า ระบบบันทึกสิทธิ์คงเหลือ + snapshot คอร์ส (กันแก้ catalog ย้อนหลัง) และคิดคอมมิชชั่นให้ sale อัตโนมัติ · จองไม่ต้องจ่าย → จ่ายเต็มจำนวนที่ OPD (แยกช่องทางได้) · ไม่มีผ่อน (ผ่อนเป็นเรื่องของบัตร/EDC)",
+    apis: [`POST /api/customer-courses`, `  body: { course_ID:"CS-001", reserve_contact:{nick_name,phone} }`],
+    rules: ["ไม่มีผ่อน — จ่ายเต็มจำนวนเท่านั้น (จ่ายบางส่วนไม่ได้)", "คอม = total_price × user.commission_rate% (snapshot ณ วันขาย)", "เก็บ course_snapshot กันข้อมูลเพี้ยนภายหลัง", "ถือหลายคอร์สพร้อมกันได้ (ไม่จำกัด)"],
+    db: ["customer_course (สร้าง: uses_total=5, uses_remaining=5, status=active, unpaid)", "ยังไม่มี payment (เก็บเงินเต็มที่ OPD)", "staff_earning (commission ให้ US-004)"],
     checks: [
       chk("ราคาเต็มคอร์ส", cc1?.total_price === 15000, "15,000฿", `${cc1?.total_price}฿`),
-      chk("จ่ายงวดแรก", cc1?.paid_amount === 5000, "5,000฿", `${cc1?.paid_amount}฿`),
-      chk("ยอดค้าง", cc1?.balance_due === 10000, "10,000฿", `${cc1?.balance_due}฿`),
-      chk("สถานะชำระ", cc1?.payment_status === "partial", "partial", `${cc1?.payment_status}`),
+      chk("ยังไม่จ่าย", cc1?.paid_amount === 0, "0฿", `${cc1?.paid_amount}฿`),
+      chk("ยอดค้าง (เต็มราคา)", cc1?.balance_due === 15000, "15,000฿", `${cc1?.balance_due}฿`),
+      chk("สถานะชำระ", cc1?.payment_status === "unpaid", "unpaid", `${cc1?.payment_status}`),
       chk("เรทคอม sale", cc1?.commission_rate === 5, "5%", `${cc1?.commission_rate}%`),
       chk("ยอดคอม", cc1?.commission_amount === 750, "750฿", `${cc1?.commission_amount}฿`),
       chk("สิทธิ์คงเหลือ", cc1?.uses_remaining === 5, "5 ครั้ง", `${cc1?.uses_remaining} ครั้ง`),
@@ -187,17 +187,20 @@ async function main() {
   try { await page.getByRole("button", { name: /ทำเคสต่อ/ }).first().click(); await page.waitForTimeout(800); } catch {}
   addStep({
     num: 6, title: "บันทึกหัตถการ (BT + หมอ) + Add-on", actor: "Acception / หมอ / BT",
-    narrative: "บันทึกหัตถการที่ทำจริงตามสูตรคอร์ส (ขั้น BT และขั้นหมอ ข้ามได้ตามชนิดคอร์ส) · add-on = ลูกค้าทำเพิ่มหน้างานทั้งที่ซื้อคอร์สไปแล้ว → เก็บเงินทันทีแยกบิล ไม่ยุ่งกับเงินคอร์ส",
+    narrative: "บันทึกหัตถการที่ทำจริงตามสูตรคอร์ส (ขั้น BT และขั้นหมอ ข้ามได้ตามชนิดคอร์ส) · add-on = ลูกค้าทำเพิ่มหน้างาน · ครั้งแรกของคอร์ส add-on บวกเข้ายอดคอร์ส (จ่ายรวมทีเดียว) · เลือกหัตถการแนบได้ ค่ามือเข้า BT/หมอของเคส",
     apis: [`PUT  /api/opd/${opd.data.opd_ID}  { procedures_done:[{BT 150฿}, {doctor 500฿}] }`, `POST /api/opd/${opd.data.opd_ID}/addon  { product_ID:"PD-003", qty:1, method:"cash" }`],
-    rules: ["ค่ามือเรทคงที่ต่อครั้ง (บาท)", "add-on เก็บเงินทันที แยกบิล (payment แยก)", "ราคา add-on = product.selling_price × qty", "ผูก add-on กับ OPD ครั้งนั้น"],
-    db: ["opd.procedures_done[] (BT + doctor)", "payment (add_on แยกบิล)", "opd.add_ons[]"],
+    rules: ["ค่ามือเรทคงที่ต่อครั้ง (บาท)", "add-on ครั้งแรก = บวกเข้ายอดคอร์ส จ่ายรวม (ครั้งต่อไปแยกบิล)", "ราคา add-on = product.selling_price × qty", "add-on หัตถการ = ค่ามือ → BT/หมอ ของเคส"],
+    db: ["opd.procedures_done[] (BT + doctor)", "customer_course.balance += ราคา add-on (ครั้งแรก)", "opd.add_ons[]"],
     checks: [
       chk("บันทึก 2 หัตถการ", (proc.data?.procedures_done || []).length === 2, "2 รายการ", `${(proc.data?.procedures_done || []).length} รายการ`),
-      chk("add-on แยกบิล + ราคา", addon.ok && addon.data?.price === 900, "900฿", `${addon.data?.price}฿`),
-      chk("add-on ออก payment id", /PAY-/.test(addon.data?.payment?.payment_ID || ""), "PAY-xxxx", esc(addon.data?.payment?.payment_ID || "")),
+      chk("add-on ราคา 900฿", addon.ok && addon.data?.price === 900, "900฿", `${addon.data?.price}฿`),
+      chk("add-on ครั้งแรก = บวกเข้ายอดคอร์ส", addon.data?.first_visit === true && !addon.data?.payment, "รวมบิลคอร์ส", addon.data?.first_visit ? "รวมบิลคอร์ส" : "แยกบิล"),
     ],
     b64: await capture(),
   });
+
+  // ชำระเต็มจำนวน (คอร์ส 15,000 + add-on ครั้งแรก 900 = 15,900) ก่อนปิดเคส — ไม่มีผ่อน
+  await call(AS.admin, "POST", `/customer-courses/${cc1.customer_course_ID}/pay`, { amount: 15900, method: "cash" });
 
   // ===== 7. ปิดเคส atomic =====
   const closed = await call(AS.admin, "POST", `/opd/${opd.data.opd_ID}/close`);
@@ -252,10 +255,10 @@ async function main() {
     num: 9, title: "การเงิน — กราฟ + ต้นทุนจริง + แยก/รวมสาขา", actor: "Admin / Super Admin",
     narrative: "สรุปผลจากข้อมูลจริงของทุกเคส: รายรับจาก payment จริง − ต้นทุนจริงตาม lot ที่ตัด − ค่ามือ/คอม − รายจ่ายอื่น = กำไร · มีกราฟเส้นแนวโน้มรายวัน + กราฟวง (ยอดขายคอร์ส/ช่องทาง/ประเภท) · super_admin ดูแยกหรือรวมทุกสาขาได้ · บันทึกเป็น PDF ได้",
     apis: [`GET /api/finance/summary?branch_ID=BR-001&from=${today}&to=${today}`, `GET /api/finance/summary?branch_ID=all  (รวมทุกสาขา — super_admin)`],
-    rules: ["COGS = ต้นทุนจริงของ lot ที่ถูกตัด (ไม่ใช่ค่าเฉลี่ย)", "รายรับแยกช่องทาง (สด/โอน/บัตร) และประเภท", "กราฟ SVG เขียนเอง ไม่พึ่ง library", "ลูกหนี้ค้างผ่อน = Σ balance_due"],
+    rules: ["COGS = ต้นทุนจริงของ lot ที่ถูกตัด (ไม่ใช่ค่าเฉลี่ย)", "รายรับแยกช่องทาง (สด/โอน/บัตร) และประเภท", "กราฟ SVG เขียนเอง ไม่พึ่ง library", "คอร์สค้างชำระ = Σ balance_due (unpaid)"],
     db: ["อ่านอย่างเดียว (payment + opd.stock_used + staff_earning + expense + customer_course)"],
     checks: [
-      chk("รายรับ (งวดแรก + add-on)", fin.data?.income === 5900, "5,900฿", `${fin.data?.income}฿`),
+      chk("รายรับ (คอร์ส 15000 + add-on 900 · จ่ายเต็ม)", fin.data?.income === 15900, "15,900฿", `${fin.data?.income}฿`),
       chk("ต้นทุนสินค้า (คอร์ส 700 + add-on 300)", fin.data?.cogs === 1000, "1000฿", `${fin.data?.cogs}฿`),
       chk("ค่ามือหัตถการ", fin.data?.labor_cost === 650, "650฿ (BT150+หมอ500)", `${fin.data?.labor_cost}฿`),
       chk("มี time-series (กราฟเส้น)", Array.isArray(fin.data?.series) && fin.data.series.length > 0, "มีข้อมูล", `${fin.data?.series?.length} วัน`),
@@ -473,7 +476,7 @@ stock_lot ─(รับของเข้า)▶ inventory_item[]&nbsp;&nbsp;·&
 กำไร = รายรับ − ต้นทุนสินค้า(lot จริง) − ค่ามือ/คอม − รายจ่ายอื่น<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= ${fin?.data?.income ?? "-"} − ${fin?.data?.cogs ?? "-"} − ${fin?.data?.labor_cost ?? "-"} − ${fin?.data?.other_expense ?? "-"} = <b>${fin?.data?.net ?? "-"} ฿</b><br/>
 COGS ต่อการตัด = (cc_used / sub_unit_size) × cost_price_per_unit ของ lot&nbsp;&nbsp;→&nbsp;&nbsp;(2 / 10) × 3,500 = 700฿<br/>
-ลูกหนี้ค้างผ่อน = Σ customer_course.balance_due (payment_status ≠ paid)
+คอร์สค้างชำระ = Σ customer_course.balance_due (unpaid) — ไม่มีผ่อน
     </div>
 
     <h2 style="margin-top:18px">ภาคผนวก G — Tech Stack</h2>

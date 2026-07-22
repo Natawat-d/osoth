@@ -118,7 +118,7 @@ export default function FinancePage() {
             <div className="card">
               <h2><span className="h2-ico">🧾</span> รายรับแยกประเภท</h2>
               <DonutChart data={Object.entries(data.income_by_type || {}).map(([m, v]) => ({
-                label: { course_purchase: "ซื้อคอร์ส", installment: "ผ่อนงวด", add_on: "Add-on", deposit: "มัดจำ" }[m] || m, value: v,
+                label: { course_purchase: "ซื้อคอร์ส", installment: "ชำระคอร์ส", add_on: "Add-on", deposit: "มัดจำ" }[m] || m, value: v,
               }))} unit="฿" />
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function FinancePage() {
               </div>
               <div className="hint-box">
                 <b>รายการค้าง (exception):</b>{" "}
-                ลูกหนี้ค้างผ่อน {recon.exceptions.debtor_count} ราย = {money(recon.exceptions.receivables_total)}฿ ·
+                คอร์สค้างชำระ {recon.exceptions.debtor_count} ราย = {money(recon.exceptions.receivables_total)}฿ ·
                 คิววันนี้ที่ยังไม่จบ {recon.exceptions.pending_reserves.length} คิว
                 {recon.exceptions.pending_reserves.length > 0 && (
                   <div style={{ marginTop: 6 }}>

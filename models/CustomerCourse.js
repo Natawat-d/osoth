@@ -29,9 +29,10 @@ const CustomerCourseSchema = new mongoose.Schema(
     // การเงิน — รองรับผ่อนชำระ
     paid_amount: { type: Number, default: 0 },
     balance_due: { type: Number, default: 0 },
+    // ไม่มีผ่อน — จ่ายเต็ม (paid) หรือ ยังไม่จ่าย (unpaid) เท่านั้น
     payment_status: {
       type: String,
-      enum: ["unpaid", "partial", "paid"],
+      enum: ["unpaid", "paid"],
       default: "unpaid",
     },
     // คอมมิชชั่น (snapshot ณ วันขาย)

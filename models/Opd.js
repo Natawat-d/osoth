@@ -62,18 +62,24 @@ const OpdSchema = new mongoose.Schema(
       ],
       default: [],
     },
-    // add_on — เก็บเงินทันที แยกบิล
+    // add_on — ครั้งแรก = บวกเข้ายอดคอร์ส (จ่ายรวม) · ครั้งต่อไป = แยกบิลทันที
+    // เลือกได้ทั้ง สินค้า (ตัด stock + ราคาขาย) และ/หรือ หัตถการ (ค่ามือ → BT/หมอ ของเคส)
     add_ons: {
       type: [
         {
-          product_ID: String,
+          product_ID: { type: String, default: null }, // สินค้า (ตัด stock) — optional
           name: String,
           qty: Number,
           cc_used: Number,
-          price: Number,
+          price: Number,                                // ราคาที่ลูกค้าจ่าย (จากสินค้า)
           recommended_by: { type: String, default: null }, // คนแนะ (sale/หมอ) → คิดคอม
           first_visit: { type: Boolean, default: false },   // ครั้งแรก = รวมบิลคอร์ส
-          payment_ID: String,
+          // หัตถการที่แนบมากับ add-on — ค่ามือยึดตาม BT/หมอ ของเคสนี้
+          medical_procedure_ID: { type: String, default: null },
+          proc_name: { type: String, default: "" },
+          proc_type: { type: String, enum: ["BT", "doctor", null], default: null },
+          proc_cost: { type: Number, default: 0 },      // ค่ามือ → BT/หมอ (คิดตอนปิดเคส)
+          payment_ID: { type: String, default: null },
           _id: false,
         },
       ],
