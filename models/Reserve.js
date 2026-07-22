@@ -69,6 +69,7 @@ const ReserveSchema = new mongoose.Schema(
     opd_ID: { type: String, default: null },
     created_by: { type: String, default: "" },
     note: { type: String, default: "" },
+    payment_slip: { type: String, default: "" }, // สลิปจ่ายเงินจอง (รูป data URL) — คนจองแนบให้ลูกค้า
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

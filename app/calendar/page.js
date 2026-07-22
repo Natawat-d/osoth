@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import CalendarGrid from "@/components/CalendarGrid";
+import ImageInput from "@/components/ImageInput";
 import {
   StatusBadge, StatusLegend, Stepper, AsyncButton, useToast,
   todayStr, money, fmtThaiDate, addMinutes,
@@ -39,6 +40,7 @@ export default function SaleCalendarPage() {
   const [form, setForm] = useState({
     customer_course_ID: "", sell_course_ID: "", room_ID: "", doctor_ID: "",
     time_start: "10:00", time_end: "11:00", nick_name: "", phone: "", is_walk_in: false,
+    payment_slip: "",
   });
 
   const loadEvents = useCallback(() => {
@@ -121,10 +123,11 @@ export default function SaleCalendarPage() {
         date, time_start: form.time_start, time_end: form.time_end,
         room_ID: form.room_ID, doctor_ID: form.doctor_ID || null,
         is_walk_in: form.is_walk_in,
+        payment_slip: form.payment_slip || "", // สลิปจ่ายเงินจอง (แนบตอนจอง)
         // ไม่มีมัดจำ — จ่ายค่าคอร์สเต็มจำนวนก่อนทำหัตถการที่ OPD
       },
     });
-    setForm((f) => ({ ...f, nick_name: "", phone: "", customer_course_ID: "", sell_course_ID: "" }));
+    setForm((f) => ({ ...f, nick_name: "", phone: "", customer_course_ID: "", sell_course_ID: "", payment_slip: "" }));
     setPickedCustomer(null);
     loadEvents();
   };
@@ -177,6 +180,14 @@ export default function SaleCalendarPage() {
             ) : (
               <div style={{ maxWidth: 620, margin: "6px 0 16px" }}>
                 <Stepper steps={FLOW_STEPS} current={selected.status} />
+              </div>
+            )}
+            {selected.payment_slip && (
+              <div style={{ marginBottom: 12 }}>
+                <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>🧾 สลิปจ่ายเงินจอง</div>
+                <a href={selected.payment_slip} target="_blank" rel="noreferrer">
+                  <img src={selected.payment_slip} alt="สลิป" style={{ maxWidth: 180, maxHeight: 220, borderRadius: 6, border: "1px solid var(--line)", cursor: "zoom-in" }} />
+                </a>
               </div>
             )}
             {/* หน้าจองคิว = จัดการ "การจอง" เท่านั้น (เลื่อนนัด/ยกเลิก) — การรับลูกค้า+เปิดเคสไปที่ปฏิทิน(รับลูกค้า) */}
@@ -328,7 +339,12 @@ export default function SaleCalendarPage() {
               onChange={(e) => setForm((f) => ({ ...f, is_walk_in: e.target.checked }))} />
             {t("walk_in")} (ลูกค้าไม่ได้จองล่วงหน้า)
           </label>
-          <AsyncButton className="btn primary" style={{ width: "100%", justifyContent: "center" }}
+          <ImageInput
+            label="แนบสลิปจ่ายเงินจอง (ถ้ามี)"
+            value={form.payment_slip}
+            onChange={(v) => setForm((f) => ({ ...f, payment_slip: v }))}
+          />
+          <AsyncButton className="btn primary" style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
             disabled={!form.room_ID} ok="จองคิวสำเร็จ" onClick={book}>
             {t("book_btn")}
           </AsyncButton>

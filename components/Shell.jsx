@@ -39,6 +39,7 @@ const NAV = [
   { href: "/products", key: "nav_products", ico: "🧴", roles: ["super_admin", "admin"] },
   { href: "/hr", key: "nav_hr", ico: "👥", roles: ["super_admin", "admin"] },
   { group: "การเงิน" },
+  { href: "/executive", key: "nav_executive", ico: "👑", roles: ["super_admin"] },
   { href: "/finance", key: "nav_finance", ico: "💰", roles: ["super_admin", "admin"] },
   { href: "/my-earnings", key: "nav_my_earnings", ico: "📈", roles: ["doctor", "BT", "sale"] },
   { group: "ระบบ / ตั้งค่า" },
@@ -211,22 +212,23 @@ function GlobalSearch() {
   );
 }
 
-// หน้าแรก: เลือกว่าเป็นลูกค้า หรือ พนักงาน
+// หน้าแรก: เลือกว่าเป็นลูกค้า / พนักงาน / ผู้บริหาร
 function Landing() {
   const router = useRouter();
-  const [mode, setMode] = useState("home"); // home | staff
+  const [mode, setMode] = useState("home"); // home | staff | exec
 
   if (mode === "staff") return <StaffLogin onBack={() => setMode("home")} />;
+  if (mode === "exec") return <StaffLogin onBack={() => setMode("home")} exec redirectTo="/executive" />;
 
   return (
     <div className="login-bg">
-      <div className="landing-card corner-cn">
+      <div className="landing-card corner-cn wide3">
         <div className="login-brand">
           <div className="login-mark">☯</div>
           <div className="login-title">โอสถ</div>
           <div className="login-sub">OSOTH · คลินิกความงาม</div>
         </div>
-        <div className="landing-grid">
+        <div className="landing-grid g3">
           <button className="landing-tile customer" onClick={() => router.push("/store")}>
             <span className="landing-ico">🌸</span>
             <b>ลูกค้า</b>
@@ -237,15 +239,21 @@ function Landing() {
             <b>พนักงาน</b>
             <span className="muted">เข้าสู่ระบบด้วยบัญชีพนักงาน</span>
           </button>
+          <button className="landing-tile exec" onClick={() => setMode("exec")}>
+            <span className="landing-ico">👑</span>
+            <b>ผู้บริหาร</b>
+            <span className="muted">Dashboard การเงินทุกสาขา</span>
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// ฟอร์ม login พนักงาน (username + password → JWT cookie)
-function StaffLogin({ onBack }) {
+// ฟอร์ม login พนักงาน (username + password → JWT) · exec=โหมดผู้บริหาร (เด้งไป dashboard)
+function StaffLogin({ onBack, exec = false, redirectTo = null }) {
   const dispatch = useDispatch();
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -258,7 +266,13 @@ function StaffLogin({ onBack }) {
     setBusy(true);
     try {
       const data = await api("/auth/login", { method: "POST", body: { username, password } });
-      dispatch(login(data)); // { user, must_change_password }
+      if (exec && data.user?.role !== "super_admin") {
+        setError("บัญชีนี้ไม่ใช่ผู้บริหาร (เจ้าของระบบ)");
+        setBusy(false);
+        return;
+      }
+      dispatch(login(data)); // { user, token, must_change_password }
+      if (redirectTo && data.user?.role === "super_admin" && !data.must_change_password) router.push(redirectTo);
     } catch (err) {
       setError(err.message || "เข้าสู่ระบบไม่สำเร็จ");
     } finally {
@@ -270,9 +284,9 @@ function StaffLogin({ onBack }) {
     <div className="login-bg">
       <form className="login-card corner-cn" onSubmit={submit}>
         <div className="login-brand">
-          <div className="login-mark">🔑</div>
-          <div className="login-title">เข้าสู่ระบบพนักงาน</div>
-          <div className="login-sub">Staff Login</div>
+          <div className="login-mark">{exec ? "👑" : "🔑"}</div>
+          <div className="login-title">{exec ? "เข้าสู่ระบบผู้บริหาร" : "เข้าสู่ระบบพนักงาน"}</div>
+          <div className="login-sub">{exec ? "Executive · เจ้าของระบบเท่านั้น" : "Staff Login"}</div>
         </div>
         {error && <div className="err">{error}</div>}
         <label className="fld">
