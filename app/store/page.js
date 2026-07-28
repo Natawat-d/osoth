@@ -8,9 +8,9 @@ import CalendarGrid from "@/components/CalendarGrid";
 import PromoCarousel from "@/components/PromoCarousel";
 import { todayStr, money } from "@/components/ui";
 
-// public fetch — ไม่แนบ auth (ลูกค้า anonymous)
+// public fetch — ไม่แนบ auth (ลูกค้า anonymous) · รองรับ subpath /osoth (basePath)
 async function pub(path) {
-  const res = await fetch(`/api/public${path}`);
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/public${path}`);
   const json = await res.json().catch(() => ({ ok: false }));
   if (!json.ok) throw new Error(json.error || "โหลดข้อมูลไม่สำเร็จ");
   return json.data;
@@ -75,7 +75,7 @@ export default function StorePage() {
             <div className="store-sub">คลินิกความงาม — คิวว่าง & ติดต่อจอง</div>
           </div>
         </div>
-        <a className="btn ghost small" href="/">← เข้าสู่ระบบพนักงาน</a>
+        <a className="btn ghost small" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`}>← เข้าสู่ระบบพนักงาน</a>
       </header>
 
       <div className="store-wrap">

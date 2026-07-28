@@ -2,18 +2,20 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
-    ports:
-      - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    # internal-only: no published port; app reaches it as host "mongo"
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_BASE_PATH: "/osoth"
+    image: osoth-app
     restart: unless-stopped
+    env_file: .env
     ports:
-      - "3000:3000"
-    environment:
-      - MONGODB_URI=mongodb://mongo:27017/osoth
+      - "127.0.0.1:3100:3000"   # localhost only; nginx proxies /osoth -> here
     depends_on:
       - mongo
 

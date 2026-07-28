@@ -38,12 +38,12 @@ export const GET = apiHandler(async (req) => {
   const userName = Object.fromEntries(users.map((u) => [u.user_ID, u.nick_name || u.full_name]));
 
   // โครงต่อสาขา
-  const mk = () => ({ income: 0, cogs: 0, fee: 0, commission: 0, expense: 0, cases: 0, courses_sold: 0, receivables: 0 });
+  const mk = () => ({ income: 0, tx: 0, cogs: 0, fee: 0, commission: 0, expense: 0, cases: 0, courses_sold: 0, receivables: 0 });
   const byBranch = {};
   for (const b of branches) byBranch[b.branch_ID] = { branch_ID: b.branch_ID, name: b.name, ...mk() };
   const bucket = (id) => (byBranch[id] = byBranch[id] || { branch_ID: id, name: id, ...mk() });
 
-  for (const p of payments) bucket(p.branch_ID).income += p.amount;
+  for (const p of payments) { const b = bucket(p.branch_ID); b.income += p.amount; b.tx += 1; }
   for (const o of closedOpds) {
     const b = bucket(o.branch_ID);
     b.cogs += (o.stock_used || []).reduce((x, u) => x + (u.cost_of_goods || 0), 0);
@@ -67,13 +67,14 @@ export const GET = apiHandler(async (req) => {
   })).sort((a, b) => b.income - a.income);
 
   const total = branchRows.reduce((t, b) => ({
-    income: t.income + b.income, cogs: t.cogs + b.cogs, fee: t.fee + b.fee,
+    income: t.income + b.income, tx: t.tx + b.tx, cogs: t.cogs + b.cogs, fee: t.fee + b.fee,
     commission: t.commission + b.commission, expense: t.expense + b.expense,
     net: t.net + b.net, cases: t.cases + b.cases, courses_sold: t.courses_sold + b.courses_sold,
     receivables: t.receivables + b.receivables,
-  }), { income: 0, cogs: 0, fee: 0, commission: 0, expense: 0, net: 0, cases: 0, courses_sold: 0, receivables: 0 });
+  }), { income: 0, tx: 0, cogs: 0, fee: 0, commission: 0, expense: 0, net: 0, cases: 0, courses_sold: 0, receivables: 0 });
   for (const k of Object.keys(total)) total[k] = r2(total[k]);
   total.labor = r2(total.fee + total.commission);
+  total.avg_tx = total.tx > 0 ? r2(total.income / total.tx) : 0;
 
   // time-series รายวัน (รวมทุกสาขา)
   const series = {};

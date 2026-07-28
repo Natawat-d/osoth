@@ -75,6 +75,8 @@ export default function Shell({ children }) {
 
   // หน้าลูกค้า (สาธารณะ) — ไม่ต้อง login และไม่มี Shell/เมนู
   if (pathname === "/store" || pathname.startsWith("/store/")) return <>{children}</>;
+  // โมดูลผู้บริหาร — แยกออกมาเป็น standalone (ไม่มี sidebar) · หน้าเพจ guard สิทธิ์เอง
+  if (pathname === "/executive") return <>{children}</>;
 
   if (!hydrated || !auth.ready) return null;
   if (!auth.user) return (<><Toaster /><Landing /></>);
