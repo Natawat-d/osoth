@@ -12,12 +12,8 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       // เก็บ token ไว้ส่งเป็น Bearer (มีเฉพาะตอน login จริง — /me ไม่ส่ง token กลับ)
       if (action.payload.token) persistToken(action.payload.token);
-      // owner (super_admin) คงสาขาที่เคยเลือกไว้; role อื่นล็อกที่สาขาตัวเอง
-      const saved = typeof window !== "undefined" ? localStorage.getItem("osoth_branch") : null;
-      state.branch_ID =
-        action.payload.user.role === "super_admin" && saved !== null
-          ? saved
-          : action.payload.user.branch_ID;
+      // V2: สาขาเดียว — ล็อกตามสาขาของ user (BR-001) ไม่มีสลับสาขาแล้ว
+      state.branch_ID = action.payload.user.branch_ID;
       state.must_change_password = !!action.payload.must_change_password;
       state.ready = true;
       persistBranch(state.branch_ID);

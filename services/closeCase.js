@@ -76,6 +76,9 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
   // ต้องชำระค่าคอร์ส (รวม add-on ครั้งแรก) ให้ครบก่อนปิดเคส — ไม่มีผ่อน จ่ายเต็มจำนวน
   if ((cc.balance_due || 0) > 0)
     throw httpError(400, "ต้องชำระค่าคอร์ส (รวม add-on) ให้ครบก่อนปิดเคส");
+  // V3: ต้องแนบใบยินยอมอย่างน้อย 1 ใบก่อนปิดเคส (ทุกเคส แม้คอร์สเดิม)
+  if (!opd.consents || opd.consents.length === 0)
+    throw httpError(400, "ต้องแนบใบยินยอมการทำหัตถการก่อนปิดเคส (อัปโหลด/เซ็นบนจอ)");
 
   // ---- 1+2. ตัด stock FIFO (ใช้กับทั้งสูตร course และ add-on ที่เป็นสินค้าคลัง) ----
   const stockUsed = [];

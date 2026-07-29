@@ -42,8 +42,7 @@ export const GET = apiHandler(async (req) => {
     status: r.status,
   }));
 
-  // roster: resolve override รายวันชนะ weekly
-  const dow = new Date(`${date}T00:00:00`).getDay();
+  // roster: resolve override รายวันชนะช่วงเวร (V3.1: assignments เป็นช่วงวันที่)
   const docById = Object.fromEntries(doctors.map((d) => [d.user_ID, d]));
   const roster = schedules
     .map((s) => {
@@ -53,7 +52,7 @@ export const GET = apiHandler(async (req) => {
         if (ov.type === "leave") return null;
         slot = { room_ID: ov.room_ID, time_start: ov.time_start, time_end: ov.time_end };
       } else {
-        slot = (s.weekly || []).find((w) => w.day_of_week === dow);
+        slot = [...(s.assignments || [])].reverse().find((a) => a.date_start <= date && date <= a.date_end);
       }
       if (!slot) return null;
       const d = docById[s.doctor_ID];

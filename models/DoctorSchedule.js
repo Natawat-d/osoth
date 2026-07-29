@@ -1,15 +1,20 @@
 import mongoose from "mongoose";
 
-const WeeklySlotSchema = new mongoose.Schema(
+// V3.1: ลงเวรหมอเป็น "ช่วงวันที่" (วันไหนถึงวันไหน เวลาอะไร ห้องอะไร) — ไม่ fix รายสัปดาห์ทั้งเดือนแล้ว
+// หมอ 1 คนมีได้หลายช่วง (เช่น 1–15 ส.ค. ห้อง 1 เช้า · 20–25 ส.ค. ห้อง VIP บ่าย)
+const AssignmentSchema = new mongoose.Schema(
   {
-    day_of_week: { type: Number, min: 0, max: 6, required: true }, // 0=อาทิตย์
-    room_ID: { type: String, required: true },
+    date_start: { type: String, required: true }, // "YYYY-MM-DD"
+    date_end: { type: String, required: true },   // รวมวันสุดท้าย
     time_start: { type: String, required: true }, // "10:00"
     time_end: { type: String, required: true },
+    room_ID: { type: String, required: true },
+    note: { type: String, default: "" },
   },
   { _id: false }
 );
 
+// ข้อยกเว้นรายวัน: ลา (ไม่อยู่) หรือ custom (สลับห้อง/เวลาเฉพาะวัน) — ชนะ assignment
 const OverrideSchema = new mongoose.Schema(
   {
     date: { type: String, required: true }, // "YYYY-MM-DD"
@@ -25,7 +30,7 @@ const DoctorScheduleSchema = new mongoose.Schema(
   {
     branch_ID: { type: String, required: true, index: true },
     doctor_ID: { type: String, required: true, index: true },
-    weekly: { type: [WeeklySlotSchema], default: [] },
+    assignments: { type: [AssignmentSchema], default: [] },
     overrides: { type: [OverrideSchema], default: [] },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }

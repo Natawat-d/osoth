@@ -3,6 +3,7 @@ import { apiHandler, requireRole } from "@/lib/api";
 import { findOverlap, toUnix } from "@/services/overlap";
 import { genId } from "@/services/ids";
 import { notifyBooking } from "@/services/notify";
+import { emitEvent } from "@/lib/realtime";
 
 // GET /api/reserves?branch_ID=..&date=YYYY-MM-DD
 export const GET = apiHandler(async (req) => {
@@ -10,6 +11,11 @@ export const GET = apiHandler(async (req) => {
   const filter = {};
   if (sp.get("branch_ID")) filter.branch_ID = sp.get("branch_ID");
   if (sp.get("date")) filter.date = sp.get("date");
+  else if (sp.get("from") || sp.get("to")) {
+    filter.date = {};
+    if (sp.get("from")) filter.date.$gte = sp.get("from");
+    if (sp.get("to")) filter.date.$lte = sp.get("to");
+  }
   if (sp.get("status")) filter.status = sp.get("status");
   if (sp.get("HN")) filter.HN_number = sp.get("HN");
   return Reserve.find(filter).sort({ unix_start: 1 }).lean();
@@ -59,5 +65,6 @@ export const POST = apiHandler(async (req) => {
 
   // แจ้งเตือนจอง (GAP-02: LINE) — ผ่าน adapter (stub จนกว่าจะต่อ LINE จริง)
   notifyBooking(reserve).catch(() => {});
+  emitEvent("reserve:changed", { reserve_ID: reserve.reserve_ID, date: reserve.date }); // realtime → ปฏิทินทุกจอ refresh
   return reserve;
 });

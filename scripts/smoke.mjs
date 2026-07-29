@@ -6,8 +6,9 @@ const BASE = process.env.BASE_URL || "http://localhost:3000/api";
 const TOKENS = {
   sale: await loginToken("sale"),
   admin: await loginToken("admin"),
-  acception: await loginToken("reception"),
+  acception: await loginToken("admin"), // V3: ไม่มี reception — admin ทำหน้าที่รับลูกค้า
   doctor: await loginToken("dr.mangkorn"),
+  owner: await loginToken("owner"), // V3: การเงินเป็นของ owner
 };
 
 let pass = 0, fail = 0;
@@ -106,6 +107,13 @@ ok("ชำระเต็ม → balance = 0 · paid", payClose.ok && payClose.d
 const payPartial = await call("admin", "POST", `/customer-courses/${cc.customer_course_ID}/pay`, { amount: 100, method: "cash" });
 ok("จ่ายซ้ำ/บางส่วน → 409 (จ่ายครบแล้ว)", payPartial.status === 409);
 
+console.log("5.9) V3: ใบยินยอม — ปิดเคสไม่ได้ถ้าไม่แนบ");
+const closeNoConsent = await call("admin", "POST", `/opd/${opd.data.opd_ID}/close`);
+ok("ไม่มีใบยินยอม → 400", closeNoConsent.status === 400, JSON.stringify(closeNoConsent.error || ""));
+const tinyPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const consentUp = await call("admin", "POST", `/opd/${opd.data.opd_ID}/consent`, { kind: "signature", file: tinyPng, filename: "sig.png" });
+ok("แนบใบยินยอม (เซ็นบนจอ) สำเร็จ", consentUp.ok && consentUp.data.consents === 1);
+
 console.log("6) ปิดเคส — ตัด stock FIFO + นับครั้ง + ค่ามือ");
 const closed = await call("admin", "POST", `/opd/${opd.data.opd_ID}/close`);
 ok("ปิดเคสสำเร็จ", closed.ok, JSON.stringify(closed));
@@ -127,7 +135,7 @@ const ccFinal = (await call("sale", "GET", `/customer-courses?HN=${cust.data.HN_
 ok("คอร์สจ่ายครบ (paid) + เหลือ 4 ครั้ง", ccFinal?.payment_status === "paid" && ccFinal?.balance_due === 0 && ccFinal?.uses_remaining === 4, JSON.stringify(ccFinal?.payment_status));
 
 console.log("9) การเงิน + สิทธิ์");
-const fin = await call("admin", "GET", `/finance/summary?branch_ID=BR-001&from=${today}&to=${today}`);
+const fin = await call("owner", "GET", `/finance/summary?branch_ID=BR-001&from=${today}&to=${today}`); // V3: การเงินเป็นของ owner
 ok("รายรับวันนี้ = 15900 (คอร์ส 15000 + add-on 900 · จ่ายเต็มครั้งเดียว)", fin.data?.income === 15900, `got ${fin.data?.income}`);
 // COGS = 700 (คอร์ส 2cc) + 300 (add-on มาส์ก PD-003 ตัด stock ตอนปิดเคส) = 1000
 ok("COGS = 1000 (คอร์ส 700 + add-on 300)", fin.data?.cogs === 1000, `got ${fin.data?.cogs}`);

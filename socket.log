@@ -1,0 +1,5 @@
+
+> osoth@0.1.0 socket
+> node scripts/socket-server.mjs
+
+[socket] osoth realtime on :3002

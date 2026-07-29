@@ -75,7 +75,7 @@ function addCase({ status, courseID, withOpd, opdStatus, procedures = [], addons
     unix_start: toUnix(T, time), unix_end: toUnix(T, addMin(time, dur)),
     room_ID: room, doctor_ID: courseID && info?.dr ? doctor : null, BT_ID: courseID && info?.bt ? bt : null,
     deposit: 0, status, is_walk_in: idx % 4 === 0, reschedule_history: [],
-    status_history: [{ status, at: now, by: "US-003" }], opd_ID: null, created_by: "US-004", note: "", created_at: now, updated_at: now,
+    status_history: [{ status, at: now, by: "US-002" }], opd_ID: null, created_by: "US-004", note: "", created_at: now, updated_at: now,
   };
   if (withOpd) {
     const opdID = `OPD-${p(opd++)}`;
@@ -105,7 +105,7 @@ function addCase({ status, courseID, withOpd, opdStatus, procedures = [], addons
       sale_ID: sale, consulted: opdStatus === "closed" && outcome === "consult_no_sale" ? true : false,
       consult_doctor_ID: opdStatus === "consulting" || outcome === "consult_no_sale" ? doctor : null,
       outcome, price_override: null, date: T, room_ID: room, time_start: time, time_end: addMin(time, dur),
-      opd_data: measured || opdStatus === "closed" || ["bt_stage", "doctor_stage"].includes(opdStatus) ? { blood_pressure: "120/80", heart_rate: 72, weight_kg: 55, height_cm: 165, fat_mass: 22, muscle_mass: 40, other: "", measured_by: "US-003", measured_at: now } : { measured_at: null },
+      opd_data: measured || opdStatus === "closed" || ["bt_stage", "doctor_stage"].includes(opdStatus) ? { blood_pressure: "120/80", heart_rate: 72, weight_kg: 55, height_cm: 165, fat_mass: 22, muscle_mass: 40, other: "", measured_by: "US-002", measured_at: now } : { measured_at: null },
       BT_ID: info?.bt ? bt : null, doctor_ID: info?.dr ? doctor : (opdStatus === "consulting" || outcome === "consult_no_sale" ? doctor : null),
       procedures_done: procedures, stock_used: stockUsed, add_ons: addonDocs,
       status: opdStatus, closed_by: opdStatus === "closed" ? "US-002" : null, closed_at: opdStatus === "closed" ? now : null, created_at: now, updated_at: now,
@@ -171,6 +171,35 @@ await db.collection("expenses").insertMany([
   { expense_ID: "EX-000001", branch_ID: "BR-001", category: "rent", description: "ค่าเช่าที่", amount: 30000, date: T, created_by: "US-002", created_at: now, updated_at: now },
   { expense_ID: "EX-000002", branch_ID: "BR-001", category: "utility", description: "ค่าไฟ/น้ำ", amount: 4500, date: T, created_by: "US-002", created_at: now, updated_at: now },
 ]);
+
+// ---- ประวัติย้อนหลัง 14 วัน (ให้กราฟ dashboard มีหลายจุด) ----
+// payment/earning/expense backdated — ไม่ผูก opd/คอร์ส (ไม่กระทบ flow อื่น) · JE จะ post อัตโนมัติสมดุลเสมอ
+{
+  const hist = { pays: [], earns: [], exps: [] };
+  const dayStr = (n) => { const d = new Date(now.getTime() - n * 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const rnd = (seed) => { let x = seed; return () => { x = (x * 9301 + 49297) % 233280; return x / 233280; }; };
+  const r = rnd(42); // deterministic — seed ซ้ำได้ผลเดิม
+  const methods = ["cash", "transfer", "card"];
+  let hp = 900, he = 900, hx = 900;
+  for (let n = 14; n >= 1; n--) {
+    const date = dayStr(n);
+    const dt = new Date(now.getTime() - n * 86400000);
+    const txCount = 1 + Math.floor(r() * 3); // 1-3 บิล/วัน
+    for (let k = 0; k < txCount; k++) {
+      const amt = [4500, 8000, 12000, 15000, 6000, 9900][Math.floor(r() * 6)];
+      hist.pays.push({ payment_ID: `PAY-H${String(hp++).padStart(4, "0")}`, branch_ID: "BR-001", HN_number: null, type: "course_purchase", ref: {}, amount: amt, method: methods[Math.floor(r() * 3)], paid_at: dt, received_by: "US-002", created_at: dt, updated_at: dt });
+    }
+    // ค่ามือ/คอมรายวัน
+    const who = r() > 0.5 ? { u: "US-005", role: "doctor" } : { u: "US-007", role: "BT" };
+    hist.earns.push({ earning_ID: `EN-H${String(he++).padStart(4, "0")}`, branch_ID: "BR-001", user_ID: who.u, role: who.role, type: "procedure_fee", ref: {}, amount: 300 + Math.floor(r() * 5) * 100, date, created_at: dt, updated_at: dt });
+    // ค่าใช้จ่ายบางวัน
+    if (n % 4 === 0) hist.exps.push({ expense_ID: `EX-H${String(hx++).padStart(4, "0")}`, branch_ID: "BR-001", category: "other", description: "ค่าใช้จ่ายเบ็ดเตล็ด", amount: 800 + Math.floor(r() * 10) * 100, date, recorded_by: "US-002", created_at: dt, updated_at: dt });
+  }
+  await db.collection("payments").insertMany(hist.pays);
+  await db.collection("staffearnings").insertMany(hist.earns);
+  await db.collection("expenses").insertMany(hist.exps);
+  console.log(`  history 14 วัน: payments ${hist.pays.length} · earnings ${hist.earns.length} · expenses ${hist.exps.length}`);
+}
 
 // ---- bump counters กัน ID ชนกับที่ genId จะสร้าง ----
 const setC = (key, seq) => db.collection("counters").updateOne({ key }, { $set: { seq } }, { upsert: true });

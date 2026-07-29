@@ -1,0 +1,242 @@
+"use client";
+// ปฏิทิน (รับลูกค้า) — V3 Bootstrap แท้: เช็คอินมาถึง / สร้าง HN / เปิดเคส → ส่งต่อ OPD
+// กริดปฏิทินเดิมห่อ .lgc · แผงขวาเป็น Bootstrap
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { pushToast } from "@/store/uiSlice";
+import Link from "next/link";
+import MonthCalendar from "@/components/MonthCalendar";
+import DayRoomGrid, { STATUS_META } from "@/components/DayRoomGrid";
+import InfoBox from "@/components/InfoBox";
+import { api } from "@/lib/client";
+
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const STATUS_TH = {
+  booked: ["จองแล้ว", "secondary"], arrived: ["มาถึง", "info"], ready: ["พร้อมทำ", "primary"],
+  bt_stage: ["BT ทำ", "warning"], doctor_stage: ["หมอทำ", "danger"], done: ["เสร็จ", "success"],
+};
+const SBadge = ({ s }) => { const [l, c] = STATUS_TH[s] || [s, "light"]; return <span className={`badge text-bg-${c}`}>{l}</span>; };
+const FLOW = ["booked", "arrived", "ready", "bt_stage", "doctor_stage", "done"];
+
+export default function ReceptionPage() {
+  const branch_ID = useSelector((s) => s.auth.branch_ID);
+  const dispatch = useDispatch();
+  const toast = {
+    success: (m) => dispatch(pushToast({ type: "success", message: m })),
+    error: (m) => dispatch(pushToast({ type: "error", message: m })),
+  };
+  const [date, setDate] = useState(todayStr());
+  const [rooms, setRooms] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [opds, setOpds] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [roster, setRoster] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [monthEvents, setMonthEvents] = useState({});
+  const loadMonth = useCallback((ym) => {
+    api(`/reserves?branch_ID=${branch_ID}&from=${ym}-01&to=${ym}-31`).then((rs) => {
+      const m = {};
+      for (const r of rs.filter((x) => !["cancelled", "no_show"].includes(x.status))) {
+        (m[r.date] = m[r.date] || []).push({
+          label: `${r.time_start} ${r.contact?.nick_name || r.HN_number || ""}`,
+          color: STATUS_META[r.status]?.color,
+        });
+      }
+      setMonthEvents(m);
+    }).catch(() => {});
+  }, [branch_ID]);
+  useEffect(() => { if (branch_ID) loadMonth(date.slice(0, 7)); }, [branch_ID, date, loadMonth]);
+
+  const loadEvents = useCallback(() => {
+    if (!branch_ID) return;
+    api(`/reserves?branch_ID=${branch_ID}&date=${date}`).then((r) =>
+      setEvents(r.filter((e) => !["cancelled", "no_show"].includes(e.status)))).catch(() => {});
+    api(`/opd?branch_ID=${branch_ID}&date=${date}`).then(setOpds).catch(() => setOpds([]));
+    api(`/schedules?branch_ID=${branch_ID}&date=${date}`).then(setRoster).catch(() => setRoster([]));
+  }, [branch_ID, date]);
+  useEffect(() => {
+    if (!branch_ID) return;
+    api(`/rooms?branch_ID=${branch_ID}`).then((r) => setRooms(r.filter((x) => x.active).sort((a, b) => a.order - b.order))).catch(() => {});
+    api(`/users?role=doctor`).then(setDoctors).catch(() => {});
+  }, [branch_ID]);
+  useEffect(loadEvents, [loadEvents]);
+  useEffect(() => {
+    if (selected) {
+      const fresh = events.find((e) => e.reserve_ID === selected.reserve_ID);
+      if (fresh && fresh !== selected) setSelected(fresh);
+    }
+  }, [events]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const docById = Object.fromEntries(doctors.map((d) => [d.user_ID, d]));
+  const roomDoctor = {};
+  roster.forEach((s) => {
+    const d = docById[s.doctor_ID];
+    if (d && s.room_ID) roomDoctor[s.room_ID] = { name: d.nick_name || d.full_name, color: d.color };
+  });
+  const roomName = (id) => rooms.find((r) => r.room_ID === id)?.name || id;
+
+  const counts = useMemo(() => ({
+    waiting: events.filter((e) => e.status === "booked").length,
+    arrived: events.filter((e) => e.status === "arrived").length,
+    opened: events.filter((e) => e.opd_ID).length,
+  }), [events]);
+
+  return (
+    <div className="app-content">
+      <div className="container-fluid pt-3">
+        <div className="d-flex align-items-center mb-2 flex-wrap gap-2">
+          <h4 className="fw-bold mb-0">ปฏิทิน (รับลูกค้า)</h4>
+          <span className="text-muted small">คลิกคิวเพื่อรับเข้า / เปิดเคส</span>
+          <input type="date" className="form-control form-control-sm ms-auto" style={{ width: 150 }}
+                 value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div className="row g-2 mb-3">
+          <div className="col-md-4 col-4"><InfoBox ico="bi-hourglass-split" label="รอรับ" value={counts.waiting} color="secondary" /></div>
+          <div className="col-md-4 col-4"><InfoBox ico="bi-person-check" label="มาถึงแล้ว" value={counts.arrived} color="info" /></div>
+          <div className="col-md-4 col-4"><InfoBox ico="bi-clipboard2-pulse" label="เปิดเคสแล้ว" value={counts.opened} color="success" /></div>
+        </div>
+
+        <div className="row g-3">
+          <div className="col-lg-8">
+            <MonthCalendar value={date} onSelect={setDate} onMonthChange={loadMonth} events={monthEvents}
+              headerExtra={<span className="badge text-bg-light border">คิววันที่เลือก {events.length}</span>} />
+
+            <div className="card shadow-sm mt-3">
+              <div className="card-header py-2 d-flex align-items-center">
+                <span className="fw-semibold"><i className="bi bi-columns-gap me-1 text-primary" />ตารางห้อง · {date.split("-").reverse().join("/")}</span>
+                <span className="text-muted small ms-2">คลิกคิวเพื่อรับเข้า/เปิดเคส</span>
+              </div>
+              <div className="card-body p-2">
+                <DayRoomGrid rooms={rooms} events={events} roomDoctor={roomDoctor} selectedId={selected?.reserve_ID}
+                             onEventClick={setSelected} />
+              </div>
+            </div>
+          </div>
+
+          <div className="col-lg-4">
+            {selected
+              ? <ReceptionPanel r={selected} opd={opds.find((o) => o.opd_ID === selected.opd_ID)}
+                                roomName={roomName} toast={toast} onDone={loadEvents} onClear={() => setSelected(null)} />
+              : (
+                <div className="card shadow-sm">
+                  <div className="card-body text-center text-muted py-5">
+                    <i className="bi bi-bell fs-1 d-block mb-2" />
+                    เลือกคิวลูกค้าจากปฏิทิน<br />เพื่อรับเข้า / เปิดเคส
+                  </div>
+                </div>
+              )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
+  const [showNew, setShowNew] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [newCust, setNewCust] = useState({
+    full_name: "", sure_name: "", nick_name: r.contact?.nick_name || "", phone: r.contact?.phone || "", drug_allergies: "",
+  });
+
+  const run = async (fn, msg) => {
+    setBusy(true);
+    try { await fn(); if (msg) toast.success(msg); onDone(); }
+    catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+  const setStatus = (status, msg) => run(() => api(`/reserves/${r.reserve_ID}`, { method: "PUT", body: { status } }), msg);
+  const openCase = () => {
+    if (!r.HN_number) return setShowNew(true);
+    run(() => api("/opd", { method: "POST", body: { reserve_ID: r.reserve_ID, HN_number: r.HN_number } }), "เปิดเคสแล้ว — ส่งต่อ OPD");
+  };
+  const createCustomerAndOpen = () => run(async () => {
+    const body = {
+      ...newCust, branch_ID: r.branch_ID,
+      drug_allergies: newCust.drug_allergies ? newCust.drug_allergies.split(",").map((s) => s.trim()).filter(Boolean) : [],
+    };
+    const c = await api("/customers", { method: "POST", body });
+    await api(`/reserves/${r.reserve_ID}`, { method: "PUT", body: { HN_number: c.HN_number } });
+    await api("/opd", { method: "POST", body: { reserve_ID: r.reserve_ID, HN_number: c.HN_number } });
+    setShowNew(false);
+  }, "สร้าง HN + เปิดเคสแล้ว");
+
+  const canReceive = ["booked", "arrived", "ready"].includes(r.status);
+  const opened = !!r.opd_ID;
+  const closed = opd?.status === "closed";
+  const stepIdx = FLOW.indexOf(r.status);
+
+  return (
+    <div className="card shadow-sm">
+      <div className="card-header py-2 d-flex align-items-center gap-2">
+        <b>{r.contact?.nick_name || r.HN_number || "ลูกค้าใหม่"}</b>
+        <span className="text-muted small">{roomName(r.room_ID)} · {r.time_start}–{r.time_end}{r.is_walk_in ? " · Walk-in" : ""}</span>
+        <span className="ms-auto"><SBadge s={r.status} /></span>
+        <button className="btn-close" onClick={onClear} />
+      </div>
+      <div className="card-body py-3">
+        {/* step flow */}
+        <div className="d-flex flex-wrap gap-1 mb-3">
+          {FLOW.map((s, i) => {
+            const [l] = STATUS_TH[s] || [s];
+            return (
+              <span key={s} className={`badge rounded-pill ${i <= stepIdx ? "text-bg-primary" : "text-bg-light border text-muted"}`}>
+                {i <= stepIdx ? "✓ " : ""}{l}
+              </span>
+            );
+          })}
+        </div>
+
+        <div className="small mb-2">
+          <span className="text-muted me-1">รหัสผู้ป่วย:</span>
+          {r.HN_number ? <span className="badge text-bg-primary">{r.HN_number}</span> : <span className="badge text-bg-secondary">ยังไม่มี HN</span>}
+          {r.contact?.phone && <span className="ms-2 text-muted">โทร {r.contact.phone}</span>}
+        </div>
+        {r.customer_course_ID && <div className="text-muted small mb-2">🎴 มีคอร์สผูกกับการจอง · ชำระที่ OPD</div>}
+
+        {opened ? (
+          <div className={`alert ${closed ? "alert-success" : "alert-info"} py-2`}>
+            <b>{closed ? "✓ เคสปิดแล้ว" : "เปิดเคสแล้ว"} · {r.opd_ID}</b>
+            <Link href="/app/opd" className="btn btn-primary btn-sm d-block ms-auto px-4 mt-2">→ ไปที่ห้องทำเคส (OPD)</Link>
+          </div>
+        ) : (
+          <>
+            <div className="d-flex gap-2 flex-wrap mb-2">
+              {r.status === "booked" && (
+                <button className="btn btn-info btn-sm text-white" disabled={busy} onClick={() => setStatus("arrived", "บันทึกลูกค้ามาถึงแล้ว")}>
+                  <i className="bi bi-person-check me-1" /> ลูกค้ามาถึง
+                </button>
+              )}
+              {["booked", "arrived"].includes(r.status) && (
+                <button className="btn btn-outline-secondary btn-sm" disabled={busy} onClick={() => setStatus("no_show", "บันทึกไม่มาตามนัด")}>ไม่มาตามนัด</button>
+              )}
+            </div>
+            {canReceive && !showNew && (
+              <button className="btn btn-primary d-block ms-auto px-4" disabled={busy} onClick={openCase}>
+                {busy && <span className="spinner-border spinner-border-sm me-1" />}
+                {r.HN_number ? "เปิดเคส →" : "สร้าง HN + เปิดเคส →"}
+              </button>
+            )}
+            {showNew && (
+              <div className="border rounded-3 p-3 bg-light">
+                <b className="small">ลูกค้าใหม่ — สร้าง HN</b>
+                {[["full_name", "ชื่อ *"], ["sure_name", "นามสกุล"], ["nick_name", "ชื่อเล่น"], ["phone", "เบอร์โทร"], ["drug_allergies", "แพ้ยา (คั่นด้วย ,)"]].map(([k, lb]) => (
+                  <div className="mt-2" key={k}>
+                    <label className="form-label small mb-1">{lb}</label>
+                    <input className="form-control form-control-sm" value={newCust[k]} onChange={(e) => setNewCust((f) => ({ ...f, [k]: e.target.value }))} />
+                  </div>
+                ))}
+                <div className="d-flex gap-2 mt-3">
+                  <button className="btn btn-primary btn-sm" disabled={!newCust.full_name || busy} onClick={createCustomerAndOpen}>
+                    {busy && <span className="spinner-border spinner-border-sm me-1" />}สร้าง HN + เปิดเคส
+                  </button>
+                  <button className="btn btn-outline-secondary btn-sm" onClick={() => setShowNew(false)}>ยกเลิก</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

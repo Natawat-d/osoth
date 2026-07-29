@@ -1,48 +1,48 @@
 /* ============================================================
-   โอสถ (OSOTH) — Design System
-   ธีมจีนสมัยใหม่ "เบา เน้นใช้งาน" — โทนหมึก/กระดาษสะอาด
-   แดงชาด(ตราประทับ) + ทองบางๆ ใช้เฉพาะจุด ไม่แสบตา
+   โอสถ (OSOTH) — Design System · V2
+   โทน AdminLTE (น้ำเงินแบรนด์ Osoth #1560a3 + เทา neutral, flat)
+   หน้าเก่าทั้งหมด (legacy) เปลี่ยนตามตัวแปรชุดนี้อัตโนมัติ
    ============================================================ */
 :root {
-  /* -- surfaces & ink (โทนโรส/ไวน์ นวลตา) -- */
-  --bg: #f6efec;          /* กระดาษโรสอุ่นๆ */
+  /* -- surfaces & ink (เทา AdminLTE) -- */
+  --bg: #f4f6f9;          /* พื้นเทาอ่อน AdminLTE */
   --surface: #ffffff;
-  --surface-2: #faf3f2;   /* แถบ/หัวตารางโรสจาง */
-  --ink: #241a1d;         /* ตัวหนังสือหลัก (พลัม-หมึกอุ่น) */
-  --ink-2: #6a595e;       /* รอง */
-  --ink-3: #9c8a90;       /* hint / sub-text */
-  --line: #ecdfdc;        /* เส้นขอบโรสอ่อน */
-  --line-2: #ddccc9;      /* เส้นเข้มขึ้น */
+  --surface-2: #f8f9fa;   /* แถบ/หัวตาราง */
+  --ink: #212529;         /* ตัวหนังสือหลัก */
+  --ink-2: #5c636a;       /* รอง */
+  --ink-3: #90979e;       /* hint / sub-text */
+  --line: #e4e8ec;        /* เส้นขอบ */
+  --line-2: #d3d9df;      /* เส้นเข้มขึ้น */
 
-  /* -- brand accents (โรส-ไวน์ + ทอง ตามธีม skincare) -- */
-  --seal: #a8455c;        /* โรส-ไวน์ (แทนแดงชาด) */
-  --seal-dark: #7e2f43;   /* ไวน์เข้ม */
-  --seal-tint: #f7e9ee;   /* พื้นโรสจางสำหรับ badge */
-  --gold: #a5842f;        /* ทองลึก ไม่จ้า */
-  --gold-line: #e5d7bb;
-  --gold-tint: #f6efdc;
+  /* -- brand accents (น้ำเงิน Osoth ตามโลโก้) -- */
+  --seal: #1560a3;        /* primary น้ำเงินแบรนด์ */
+  --seal-dark: #0f4a7d;   /* น้ำเงินเข้ม */
+  --seal-tint: #e7f0f9;   /* พื้นน้ำเงินจางสำหรับ badge */
+  --gold: #0f6674;        /* accent รอง (teal เข้ม) */
+  --gold-line: #cfe0e4;
+  --gold-tint: #e6f1f3;
 
-  /* -- semantic -- */
-  --jade: #2f7d5b;        /* success (เขียวหยก) */
-  --jade-tint: #e7f1eb;
-  --amber: #a9761a;       /* warning */
-  --amber-tint: #f6ecd8;
-  --info: #34618f;        /* info (คราม) */
-  --info-tint: #e8eef5;
-  --slate: #64615a;       /* neutral */
-  --slate-tint: #eeece7;
+  /* -- semantic (โทน Bootstrap) -- */
+  --jade: #198754;        /* success */
+  --jade-tint: #e8f4ee;
+  --amber: #b98905;       /* warning */
+  --amber-tint: #fdf3d8;
+  --info: #0d6efd;        /* info */
+  --info-tint: #e7f0ff;
+  --slate: #6c757d;       /* neutral */
+  --slate-tint: #eef0f2;
 
-  /* -- sidebar (หมึกเข้ม ไม่ใช่แดง = ไม่ล้าตา) -- */
-  --side: #3a2029;        /* ไซด์บาร์ไวน์เข้ม (ตามโทน skincare) */
-  --side-2: #26141a;
-  --side-ink: #eddcd9;
-  --side-hint: #ab929a;
+  /* -- sidebar (เทาเข้ม AdminLTE dark) -- */
+  --side: #212631;        /* ไซด์บาร์เทาเข้ม */
+  --side-2: #1a1e27;
+  --side-ink: #e9ecef;
+  --side-hint: #9aa2ac;
 
   --radius: 7px;
   --radius-sm: 5px;
-  --shadow-sm: 0 1px 2px rgba(30, 26, 20, 0.05);
-  --shadow: 0 4px 16px rgba(30, 26, 20, 0.08);
-  --shadow-pop: 0 12px 40px rgba(30, 26, 20, 0.18);
+  --shadow-sm: 0 1px 2px rgba(20, 26, 34, 0.05);
+  --shadow: 0 3px 12px rgba(20, 26, 34, 0.07);
+  --shadow-pop: 0 12px 40px rgba(20, 26, 34, 0.16);
 }
 
 * { box-sizing: border-box; padding: 0; margin: 0; }
@@ -50,13 +50,8 @@
 html, body {
   height: 100%;
   color: var(--ink);
-  /* พื้นกระดาษ + ลายเหรียญทองจางๆ (祥云/coin motif) — เบามากเพื่อคงความอ่านง่าย */
+  /* V2: พื้นเทาเรียบสไตล์ AdminLTE (ตัดลายจีนออก) */
   background-color: var(--bg);
-  background-image:
-    radial-gradient(circle at center, rgba(165, 132, 47, 0.05) 1.4px, transparent 1.6px),
-    radial-gradient(circle at center, rgba(168, 69, 92, 0.035) 1.4px, transparent 1.6px);
-  background-size: 34px 34px, 34px 34px;
-  background-position: 0 0, 17px 17px;
   font-family: var(--font-body), "Sarabun", "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 1.5;

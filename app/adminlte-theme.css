@@ -1,0 +1,124 @@
+/* ── OSOTH V2 · ปรับ AdminLTE ให้เข้ากับแบรนด์ ──
+   โหลดหลัง bootstrap + adminlte (ดู (site)/layout.js และ (app)/layout.js)
+   - ฟอนต์ Sarabun ทั้งระบบ (ทางการ อ่านง่ายในตาราง/ฟอร์ม)
+   - สี primary = น้ำเงินแบรนด์ Osoth #1560a3 (เข้ากับโลโก้)  */
+
+:root {
+  --osoth-primary: #1560a3;
+  --osoth-primary-dark: #0f4a7d;
+  --bs-primary: #1560a3;
+  --bs-primary-rgb: 21, 96, 163;
+}
+
+/* ฟอนต์ Sarabun มาจาก next/font (--font-body) ที่ตั้งใน root layout */
+body,
+.wrapper,
+.app-wrapper {
+  font-family: var(--font-body), "Sarabun", system-ui, sans-serif;
+}
+
+/* ปุ่ม/ลิงก์ primary ใช้สีแบรนด์ */
+.btn-primary {
+  --bs-btn-bg: var(--osoth-primary);
+  --bs-btn-border-color: var(--osoth-primary);
+  --bs-btn-hover-bg: var(--osoth-primary-dark);
+  --bs-btn-hover-border-color: var(--osoth-primary-dark);
+  --bs-btn-active-bg: var(--osoth-primary-dark);
+  --bs-btn-active-border-color: var(--osoth-primary-dark);
+}
+.text-primary { color: var(--osoth-primary) !important; }
+.bg-primary { background-color: var(--osoth-primary) !important; }
+a { color: var(--osoth-primary); }
+a:hover { color: var(--osoth-primary-dark); }
+
+/* sidebar แบรนด์ (AdminLTE sidebar-dark) — ให้ active ใช้สีแบรนด์ */
+.app-sidebar .nav-sidebar .nav-link.active {
+  background-color: var(--osoth-primary);
+  color: #fff;
+}
+.brand-link { border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+.brand-image { border-radius: 6px; }
+
+/* หน้า about_me / auth — พื้นหลังไล่เฉดน้ำเงินแบรนด์ */
+.osoth-auth-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1560a3 0%, #0f4a7d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.osoth-logo-box {
+  width: 72px; height: 72px; border-radius: 14px;
+  background: var(--osoth-primary);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.osoth-logo-box img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── month calendar grid (หน้า /calendar ลูกค้า — สไตล์ FullCalendar ใน AdminLTE ref) ── */
+.mcal { width: 100%; overflow-x: auto; }
+.mcal-head {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid #dee2e6; background: #f8f9fa;
+  font-weight: 600; font-size: 13px; text-align: center;
+}
+.mcal-head > div { padding: 8px 4px; }
+.mcal-row { display: grid; grid-template-columns: repeat(7, 1fr); }
+.mcal-cell {
+  position: relative; min-height: 92px; padding: 4px 5px;
+  border-right: 1px solid #e9ecef; border-bottom: 1px solid #e9ecef;
+  background: #fff; text-align: left; vertical-align: top;
+  display: flex; flex-direction: column; gap: 2px; align-items: stretch;
+  border-top: none; border-left: none; cursor: pointer;
+  transition: background 0.12s;
+}
+.mcal-cell:hover { background: #f0f6fc; }
+.mcal-cell.out { background: #fafbfc; }
+.mcal-cell.out .mcal-day { color: #b6bec5; }
+.mcal-cell.today { background: #fffbeb; }
+.mcal-cell.sel { outline: 2px solid var(--osoth-primary); outline-offset: -2px; z-index: 1; }
+.mcal-day { font-size: 12.5px; font-weight: 600; color: #495057; align-self: flex-end; }
+.mcal-day.badge { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.mcal-ev {
+  display: block; color: #fff; border-radius: 4px;
+  font-size: 10.5px; line-height: 1.35; padding: 1px 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mcal-more { font-size: 10.5px; color: #6c757d; padding-left: 2px; }
+.mcal-count { display: none; font-size: 10px; align-self: flex-start; }
+@media (max-width: 768px) {
+  .mcal-cell { min-height: 64px; }
+  .mcal-ev, .mcal-more { display: none; }  /* จอเล็ก: เหลือ badge จำนวนคิว */
+  .mcal-count { display: inline-flex; }
+}
+
+/* ── Dark mode (data-bs-theme="dark") — สลับ tokens ของ .lgc ให้เข้าชุด ── */
+[data-bs-theme="dark"] .lgc {
+  --bg: #1a1d21;
+  --surface: #23272b;
+  --surface-2: #2b3035;
+  --ink: #dee2e6;
+  --ink-2: #9aa2ac;
+  --ink-3: #6c757d;
+  --line: #3a4046;
+  --line-2: #4a5158;
+  --seal-tint: #16324a;
+  --gold-tint: #14343a;
+  --jade-tint: #12352a;
+  --amber-tint: #3a3020;
+  --info-tint: #142c47;
+  --slate-tint: #2b3035;
+}
+[data-bs-theme="dark"] .osoth-auth-bg { background: linear-gradient(135deg, #0d3a63, #081f33); }
+[data-bs-theme="dark"] .mcal-cell { background: #23272b; }
+[data-bs-theme="dark"] .mcal-cell.out { background: #1e2226; }
+[data-bs-theme="dark"] .mcal-cell.today { background: #33301a; }
+[data-bs-theme="dark"] .mcal-head { background: #2b3035; border-color: #3a4046; }
+
+/* ── พิมพ์สลิปเงินเดือน: โชว์เฉพาะ .payslip-print ── */
+@media print {
+  body.printing-payslip * { visibility: hidden !important; }
+  body.printing-payslip .payslip-print, body.printing-payslip .payslip-print * { visibility: visible !important; }
+  body.printing-payslip .payslip-print { position: absolute; inset: 0; width: 100%; background: #fff; }
+}

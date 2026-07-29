@@ -8,7 +8,7 @@ export const GET = apiHandler(async (req) => {
   const u = await User.findOne({ user_ID: auth.user_ID }).lean();
   if (!u || !u.login_active || !u.active) throw Object.assign(new Error("บัญชีถูกปิดใช้งาน"), { status: 401 });
   return {
-    user: { user_ID: u.user_ID, role: u.role, branch_ID: u.branch_ID, full_name: u.full_name, nick_name: u.nick_name, username: u.username },
+    user: { user_ID: u.user_ID, role: u.role, branch_ID: u.branch_ID, full_name: u.full_name, nick_name: u.nick_name, username: u.username, salary: u.salary || 0, profile_picture: u.profile_picture || "" },
     must_change_password: !!u.must_change_password,
   };
 });

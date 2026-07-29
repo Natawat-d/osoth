@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "socket": "node scripts/socket-server.mjs",
     "lint": "eslint",
     "seed": "node scripts/seed.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
@@ -13,15 +14,22 @@
     "gen:photos": "node scripts/gen-photos.mjs"
   },
   "dependencies": {
+    "@popperjs/core": "^2.11.8",
     "@reduxjs/toolkit": "^2.12.0",
+    "admin-lte": "^4.1.0",
     "bcryptjs": "^3.0.3",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.4",
     "next": "16.2.10",
     "next-intl": "^4.13.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-redux": "^9.3.0"
+    "react-redux": "^9.3.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "eslint": "^9",

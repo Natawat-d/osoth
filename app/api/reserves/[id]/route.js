@@ -1,6 +1,7 @@
 import Reserve from "@/models/Reserve";
 import { apiHandler, requireRole } from "@/lib/api";
 import { findOverlap, toUnix } from "@/services/overlap";
+import { emitEvent } from "@/lib/realtime";
 
 const STATUS_FLOW = {
   booked: ["arrived", "ready", "cancelled", "no_show"],
@@ -57,6 +58,7 @@ export const PUT = apiHandler(async (req, { params }) => {
     if (r.room_ID) rs.room_ID = r.room_ID;
     if (r.doctor_ID !== undefined) rs.doctor_ID = r.doctor_ID;
     await rs.save();
+    emitEvent("reserve:changed", { reserve_ID: rs.reserve_ID, date: rs.date, kind: "reschedule" });
     return rs;
   }
 
@@ -71,6 +73,7 @@ export const PUT = apiHandler(async (req, { params }) => {
     rs.status = body.status;
     rs.status_history.push({ status: body.status, at: now, by: auth.user_ID });
     await rs.save();
+    emitEvent("reserve:changed", { reserve_ID: rs.reserve_ID, date: rs.date, status: rs.status });
     return rs;
   }
 

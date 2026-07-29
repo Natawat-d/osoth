@@ -1,6 +1,7 @@
 import Opd from "@/models/Opd";
 import Reserve from "@/models/Reserve";
 import { apiHandler, requireRole, getAuth } from "@/lib/api";
+import { emitEvent, notify } from "@/lib/realtime";
 
 export const GET = apiHandler(async (req, { params }) => {
   const { id } = await params;
@@ -55,6 +56,19 @@ export const PUT = apiHandler(async (req, { params }) => {
         $push: { status_history: { status: body.status, at: new Date(), by: auth.user_ID } },
       }
     );
+    // ── realtime (V2): คิวถึง BT/หมอ → แจ้งเตือน + กระจายให้หน้า OPD/ปฏิทิน refresh ──
+    const stageTH = body.status === "bt_stage" ? "ขั้น BT (หัตถการ)" : "ขั้นแพทย์";
+    const target = body.status === "bt_stage"
+      ? (opd.BT_ID ? { user_ID: opd.BT_ID } : { role: "BT" })
+      : (opd.doctor_ID ? { user_ID: opd.doctor_ID } : { role: "doctor" });
+    notify({
+      ...target,
+      type: "queue",
+      title: `คิวถึง${stageTH}`,
+      message: `เคส ${opd.opd_ID} · HN ${opd.HN_number} · ห้อง ${opd.room_ID}`,
+      ref: { opd_ID: opd.opd_ID, reserve_ID: opd.reserve_ID, href: "/app/opd" },
+    });
   }
+  if (body.status) emitEvent("opd:stage", { opd_ID: opd.opd_ID, status: opd.status });
   return opd;
 });

@@ -85,6 +85,23 @@ const OpdSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    // V3: ใบยินยอมการทำหัตถการ — ต้องมีอย่างน้อย 1 ใบก่อน "ปิดเคส" (ทุกเคสแม้คอร์สเดิม)
+    consents: {
+      type: [
+        {
+          kind: { type: String, enum: ["upload", "signature"], required: true }, // สแกน/ถ่ายรูป หรือ เซ็นบนจอ
+          file: { type: String, required: true },     // data URL (PDF/รูป/ลายเซ็น) ≤5MB
+          filename: { type: String, default: "" },
+          mime: { type: String, default: "" },
+          size: { type: Number, default: 0 },          // bytes โดยประมาณ
+          note: { type: String, default: "" },
+          uploaded_by: { type: String, default: "" },
+          uploaded_at: { type: Date, default: null },
+          _id: false,
+        },
+      ],
+      default: [],
+    },
     status: {
       type: String,
       enum: ["open", "consulting", "measuring", "bt_stage", "doctor_stage", "closed"],

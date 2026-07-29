@@ -6,6 +6,11 @@ services:
       - mongo_data:/data/db
     # internal-only: no published port; app reaches it as host "mongo"
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # internal-only: pub/sub ระหว่าง app → socket
+
   app:
     build:
       context: .
@@ -14,10 +19,27 @@ services:
     image: osoth-app
     restart: unless-stopped
     env_file: .env
+    environment:
+      REDIS_URL: "redis://redis:6379"
     ports:
       - "127.0.0.1:3100:3000"   # localhost only; nginx proxies /osoth -> here
     depends_on:
       - mongo
+      - redis
+
+  socket:
+    image: osoth-app            # ใช้ image เดียวกัน (มี scripts/socket-server.mjs)
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      REDIS_URL: "redis://redis:6379"
+      SOCKET_PORT: "3000"
+      SOCKET_PATH: "/osoth/socket.io"   # ให้ตรง nginx location
+    command: ["node", "scripts/socket-server.mjs"]
+    ports:
+      - "127.0.0.1:3102:3000"   # nginx: location /osoth/socket.io -> 127.0.0.1:3102
+    depends_on:
+      - redis
 
 volumes:
   mongo_data:

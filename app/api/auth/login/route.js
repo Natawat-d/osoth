@@ -6,7 +6,7 @@ import dbConnect from "@/lib/db";
 
 const LOCK_FAILS = 5;
 const LOCK_MINS = 15;
-const safe = (u) => ({ user_ID: u.user_ID, role: u.role, branch_ID: u.branch_ID, full_name: u.full_name, nick_name: u.nick_name, username: u.username });
+const safe = (u) => ({ user_ID: u.user_ID, role: u.role, branch_ID: u.branch_ID, full_name: u.full_name, nick_name: u.nick_name, username: u.username, salary: u.salary || 0, profile_picture: u.profile_picture || "" });
 const err = (status, message) => NextResponse.json({ ok: false, error: message }, { status });
 
 // POST /api/auth/login { username, password } → set httpOnly cookie + return { user, token, must_change_password }
