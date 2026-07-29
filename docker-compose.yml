@@ -21,6 +21,7 @@ services:
     env_file: .env
     environment:
       REDIS_URL: "redis://redis:6379"
+      NEXT_PUBLIC_BASE_PATH: "/osoth"   # must match build arg or next start serves 404s
     ports:
       - "127.0.0.1:3100:3000"   # localhost only; nginx proxies /osoth -> here
     depends_on:
