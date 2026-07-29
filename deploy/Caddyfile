@@ -1,19 +1,9 @@
-# Caddy front server — แทน Plesk nginx บน 80/443
-# osoth.com ได้ Let's Encrypt อัตโนมัติ (ต่ออายุเอง) · IP เปล่าใช้ tls internal
+# Caddy front server — แทน Plesk nginx บน 80/443 (สำเนาจริงอยู่ /etc/caddy/Caddyfile บน VPS)
+# osoth.com ได้ Let's Encrypt อัตโนมัติ (ต่ออายุเอง) · แอปเสิร์ฟที่ root โดเมน
 # rollback: systemctl stop caddy && systemctl unmask nginx && systemctl enable --now nginx
 
 {
 	email akkraaiclaude@gmail.com
-}
-
-# ---- OSOTH app (Next.js :3100 + Socket.IO :3102) ----
-(osoth_app) {
-	handle /osoth/socket.io* {
-		reverse_proxy 127.0.0.1:3102
-	}
-	handle /osoth* {
-		reverse_proxy 127.0.0.1:3100
-	}
 }
 
 # ---- Plesk mail autoconfig (Outlook/Thunderbird) ----
@@ -28,12 +18,15 @@
 	}
 }
 
-# ---- โดเมนหลัก: ทั้งโดเมนคือแอป OSOTH (เหมือน vhost เดิม) ----
+# ---- โดเมนหลัก: ทั้งโดเมนคือแอป OSOTH (Next.js :3100 + Socket.IO :3102) ----
 osoth.com, www.osoth.com, ipv4.osoth.com {
 	import mailcfg
-	redir / /osoth 302
-	handle /osoth/socket.io* {
+	handle /socket.io* {
 		reverse_proxy 127.0.0.1:3102
+	}
+	# URL เก่าใต้ /osoth → ตัด prefix แล้วส่งเข้าโดเมนตรง
+	handle_path /osoth* {
+		redir https://osoth.com{uri} 302
 	}
 	handle {
 		reverse_proxy 127.0.0.1:3100
@@ -45,11 +38,13 @@ webmail.osoth.com {
 	reverse_proxy 127.0.0.1:8880
 }
 
-# ---- IP ตรง (HTTP) : /osoth + /RISR_hr + fallback Apache/Plesk ----
+# ---- IP ตรง (HTTP): RISR_hr + Plesk fallback · bookmark เก่า /osoth → โดเมน ----
 http://147.50.254.104 {
-	import osoth_app
 	handle /RISR_hr* {
 		reverse_proxy 127.0.0.1:3001
+	}
+	handle_path /osoth* {
+		redir https://osoth.com{uri} 302
 	}
 	handle /plesk-site-preview/* {
 		reverse_proxy 127.0.0.1:8880 {
@@ -64,9 +59,11 @@ http://147.50.254.104 {
 # ---- IP ตรง (HTTPS, ใบ self-signed ภายใน — browser จะเตือน เป็นปกติของ IP) ----
 https://147.50.254.104 {
 	tls internal
-	import osoth_app
 	handle /RISR_hr* {
 		reverse_proxy 127.0.0.1:3001
+	}
+	handle_path /osoth* {
+		redir https://osoth.com{uri} 302
 	}
 	handle {
 		# เดิม nginx ชี้ default 443 → Plesk (8880)

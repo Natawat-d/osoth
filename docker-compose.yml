@@ -15,15 +15,15 @@ services:
     build:
       context: .
       args:
-        NEXT_PUBLIC_BASE_PATH: "/osoth"
+        NEXT_PUBLIC_BASE_PATH: ""       # เสิร์ฟที่ root โดเมน https://osoth.com
     image: osoth-app
     restart: unless-stopped
     env_file: .env
     environment:
       REDIS_URL: "redis://redis:6379"
-      NEXT_PUBLIC_BASE_PATH: "/osoth"   # must match build arg or next start serves 404s
+      NEXT_PUBLIC_BASE_PATH: ""         # must match build arg or next start serves 404s
     ports:
-      - "127.0.0.1:3100:3000"   # localhost only; nginx proxies /osoth -> here
+      - "127.0.0.1:3100:3000"   # localhost only; Caddy proxies osoth.com -> here
     depends_on:
       - mongo
       - redis
@@ -35,10 +35,10 @@ services:
     environment:
       REDIS_URL: "redis://redis:6379"
       SOCKET_PORT: "3000"
-      SOCKET_PATH: "/osoth/socket.io"   # ให้ตรง nginx location
+      SOCKET_PATH: "/socket.io"         # ให้ตรง path ที่ client ต่อ (root domain)
     command: ["node", "scripts/socket-server.mjs"]
     ports:
-      - "127.0.0.1:3102:3000"   # nginx: location /osoth/socket.io -> 127.0.0.1:3102
+      - "127.0.0.1:3102:3000"   # Caddy: /socket.io -> 127.0.0.1:3102
     depends_on:
       - redis
 
