@@ -6,6 +6,7 @@
 //   onMonthChange("YYYY-MM")  เดือนเปลี่ยน (โหลด event ใหม่)
 //   events         { "YYYY-MM-DD": [{ label, color }] } — ชิปในช่องวัน (สีตามสถานะ/หมอ)
 //   maxChips       จำนวนชิปสูงสุดต่อวัน (default 3)
+//   compact        true = ปฏิทินย่อ: ไม่โชว์รายละเอียดใคร แสดงแค่จำนวนคิว (กดวันแล้วไปดูตารางห้องเอา)
 import { useMemo, useState } from "react";
 
 const MONTHS_TH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
@@ -13,7 +14,7 @@ const DOW_TH = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
 const pad2 = (n) => String(n).padStart(2, "0");
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
 
-export default function MonthCalendar({ value, onSelect, onMonthChange, events = {}, maxChips = 3, headerExtra = null }) {
+export default function MonthCalendar({ value, onSelect, onMonthChange, events = {}, maxChips = 3, compact = false, headerExtra = null }) {
   const init = value ? new Date(`${value}T00:00:00`) : new Date();
   const [ym, setYm] = useState({ y: init.getFullYear(), m: init.getMonth() });
 
@@ -63,7 +64,7 @@ export default function MonthCalendar({ value, onSelect, onMonthChange, events =
         {headerExtra}
       </div>
       <div className="card-body p-0">
-        <div className="mcal">
+        <div className={`mcal ${compact ? "mcal-compact" : ""}`}>
           <div className="mcal-head">
             {DOW_TH.map((d, i) => <div key={d} className={i === 0 || i === 6 ? "text-danger" : ""}>{d}</div>)}
           </div>
@@ -78,10 +79,10 @@ export default function MonthCalendar({ value, onSelect, onMonthChange, events =
                           className={`mcal-cell ${cell.inMonth ? "" : "out"} ${isToday ? "today" : ""} ${isSel ? "sel" : ""}`}
                           onClick={() => onSelect?.(cell.date)}>
                     <span className={`mcal-day ${isToday ? "badge text-bg-primary rounded-circle" : ""}`}>{cell.day}</span>
-                    {chips.slice(0, maxChips).map((c, i) => (
+                    {!compact && chips.slice(0, maxChips).map((c, i) => (
                       <span key={i} className="mcal-ev" style={{ background: c.color || "#1560a3" }}>{c.label}</span>
                     ))}
-                    {chips.length > maxChips && <span className="mcal-more">+{chips.length - maxChips} เพิ่มเติม</span>}
+                    {!compact && chips.length > maxChips && <span className="mcal-more">+{chips.length - maxChips} เพิ่มเติม</span>}
                     {chips.length > 0 && <span className="mcal-count badge text-bg-primary">{chips.length}</span>}
                   </button>
                 );

@@ -43,13 +43,10 @@ export default function BookingPage() {
   const [monthEvents, setMonthEvents] = useState({}); // "YYYY-MM-DD" → ชิปคิว (สีตามสถานะ)
   const loadMonth = useCallback((ym) => {
     api(`/reserves?branch_ID=${branch_ID}&from=${ym}-01&to=${ym}-31`).then((rs) => {
+      // ปฏิทินย่อ: เก็บแค่จำนวนคิวต่อวัน (รายละเอียดดูในตารางห้องหลังกดวัน)
       const m = {};
-      for (const r of rs.filter((x) => !["cancelled", "no_show"].includes(x.status))) {
-        (m[r.date] = m[r.date] || []).push({
-          label: `${r.time_start} ${r.contact?.nick_name || r.HN_number || ""}`,
-          color: STATUS_META[r.status]?.color,
-        });
-      }
+      for (const r of rs.filter((x) => !["cancelled", "no_show"].includes(x.status)))
+        (m[r.date] = m[r.date] || []).push({});
       setMonthEvents(m);
     }).catch(() => {});
   }, [branch_ID]);
@@ -172,7 +169,7 @@ export default function BookingPage() {
           {/* ซ้าย: กริดปฏิทินเดิม (ห่อ .lgc) + การ์ดจัดการคิว */}
           <div className="col-lg-8">
             {/* ปฏิทินเดือน (ref AdminLTE) → คลิกวัน → ตารางแยกห้องด้านล่าง */}
-            <MonthCalendar value={date} onSelect={setDate} onMonthChange={loadMonth} events={monthEvents}
+            <MonthCalendar value={date} onSelect={setDate} onMonthChange={loadMonth} events={monthEvents} compact
               headerExtra={<span className="badge text-bg-light border">คิววันที่เลือก {events.length}</span>} />
 
             <div className="card shadow-sm mt-3">

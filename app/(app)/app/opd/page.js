@@ -8,6 +8,7 @@ import { pushToast } from "@/store/uiSlice";
 import { api } from "@/lib/client";
 import InfoBox from "@/components/InfoBox";
 import SignaturePad from "@/components/SignaturePad";
+import ConsentAgreement from "@/components/ConsentAgreement";
 
 const money = (n) => Number(n || 0).toLocaleString("th-TH");
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -243,6 +244,8 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
   const [priceOv, setPriceOv] = useState("");
   const [signMode, setSignMode] = useState(false);
   const [viewConsent, setViewConsent] = useState(null);
+  const [customer, setCustomer] = useState(null); // ใช้เติมข้อมูลในหนังสือยินยอม
+  const [company, setCompany] = useState(null);
 
   const reload = useCallback(async () => {
     const o = await api(`/opd/${opd_ID}`);
@@ -253,6 +256,11 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
     setCustCourses(list.filter((x) => x.status === "active"));
   }, [opd_ID]);
   useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    if (!opd?.HN_number) return;
+    api(`/customers/${encodeURIComponent(opd.HN_number)}`).then((r) => setCustomer(r.customer)).catch(() => {});
+    api("/setup/state").then((s) => setCompany(s.company)).catch(() => {});
+  }, [opd?.HN_number]);
 
   useEffect(() => {
     if (!opd?.branch_ID) return;
@@ -615,20 +623,33 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
               <input type="file" accept="application/pdf,image/*" hidden
                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadConsent(f).catch(() => {}); e.target.value = ""; }} />
             </label>
-            <button className={`btn btn-sm ${signMode ? "btn-secondary" : "btn-outline-primary"}`} onClick={() => setSignMode((v) => !v)}>
-              <i className="bi bi-pen me-1" /> {signMode ? "ปิดแผ่นเซ็น" : "เซ็นบนจอ"}
+            <button className="btn btn-primary btn-sm" onClick={() => setSignMode(true)}>
+              <i className="bi bi-pen me-1" /> ให้ลูกค้าอ่าน + เซ็นบนจอ (iPad)
             </button>
             <a className="btn btn-outline-secondary btn-sm"
-               href={`/app/consent-form?name=${encodeURIComponent(opd.HN_number)}&hn=${encodeURIComponent(opd.HN_number)}&course=${encodeURIComponent(snap?.name || "")}`}
+               href={`/app/consent-form?hn=${encodeURIComponent(opd.HN_number)}&course=${encodeURIComponent(snap?.name || "")}`}
                target="_blank" rel="noreferrer">
-              <i className="bi bi-printer me-1" /> พิมพ์แบบฟอร์มเปล่า
+              <i className="bi bi-printer me-1" /> พิมพ์กระดาษ
             </a>
           </div>
         )}
         {signMode && !isClosed && (
-          <div className="mb-2" style={{ maxWidth: 560 }}>
-            <div className="text-muted small mb-1">ให้ลูกค้าเซ็นในกรอบ แล้วกด "ใช้ลายเซ็นนี้"</div>
-            <SignaturePad onConfirm={signConsent} />
+          <div className="modal fade show d-block" style={{ background: "rgba(0,0,0,.5)" }}>
+            <div className="modal-dialog modal-xl modal-dialog-scrollable">
+              <div className="modal-content">
+                <div className="modal-header py-2">
+                  <b><i className="bi bi-file-earmark-medical me-2 text-primary" />หนังสือยินยอมทำหัตถการ — ให้ลูกค้าอ่านแล้วเซ็นด้านล่าง</b>
+                  <button className="btn-close" onClick={() => setSignMode(false)} />
+                </div>
+                <div className="modal-body">
+                  <ConsentAgreement customer={customer} procedure={snap?.name || ""} company={company} />
+                  <div className="border-top pt-3 mt-3" style={{ maxWidth: 560, margin: "0 auto" }}>
+                    <div className="text-muted small mb-1"><i className="bi bi-pen me-1" />ลูกค้าเซ็นชื่อ (ผู้ให้ความยินยอม/ผู้ใช้บริการ) ในกรอบ แล้วกด "ใช้ลายเซ็นนี้"</div>
+                    <SignaturePad height={170} onConfirm={signConsent} />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
         {(opd.consents || []).length > 0 ? (

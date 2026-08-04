@@ -8,6 +8,7 @@ import Link from "next/link";
 import MonthCalendar from "@/components/MonthCalendar";
 import DayRoomGrid, { STATUS_META } from "@/components/DayRoomGrid";
 import InfoBox from "@/components/InfoBox";
+import CustomerRegistrationForm from "@/components/CustomerRegistrationForm";
 import { api } from "@/lib/client";
 
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -35,13 +36,10 @@ export default function ReceptionPage() {
   const [monthEvents, setMonthEvents] = useState({});
   const loadMonth = useCallback((ym) => {
     api(`/reserves?branch_ID=${branch_ID}&from=${ym}-01&to=${ym}-31`).then((rs) => {
+      // ปฏิทินย่อ: เก็บแค่จำนวนคิวต่อวัน (รายละเอียดดูในตารางห้องหลังกดวัน)
       const m = {};
-      for (const r of rs.filter((x) => !["cancelled", "no_show"].includes(x.status))) {
-        (m[r.date] = m[r.date] || []).push({
-          label: `${r.time_start} ${r.contact?.nick_name || r.HN_number || ""}`,
-          color: STATUS_META[r.status]?.color,
-        });
-      }
+      for (const r of rs.filter((x) => !["cancelled", "no_show"].includes(x.status)))
+        (m[r.date] = m[r.date] || []).push({});
       setMonthEvents(m);
     }).catch(() => {});
   }, [branch_ID]);
@@ -98,7 +96,7 @@ export default function ReceptionPage() {
 
         <div className="row g-3">
           <div className="col-lg-8">
-            <MonthCalendar value={date} onSelect={setDate} onMonthChange={loadMonth} events={monthEvents}
+            <MonthCalendar value={date} onSelect={setDate} onMonthChange={loadMonth} events={monthEvents} compact
               headerExtra={<span className="badge text-bg-light border">คิววันที่เลือก {events.length}</span>} />
 
             <div className="card shadow-sm mt-3">
@@ -135,9 +133,6 @@ export default function ReceptionPage() {
 function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
   const [showNew, setShowNew] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [newCust, setNewCust] = useState({
-    full_name: "", sure_name: "", nick_name: r.contact?.nick_name || "", phone: r.contact?.phone || "", drug_allergies: "",
-  });
 
   const run = async (fn, msg) => {
     setBusy(true);
@@ -147,19 +142,16 @@ function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
   };
   const setStatus = (status, msg) => run(() => api(`/reserves/${r.reserve_ID}`, { method: "PUT", body: { status } }), msg);
   const openCase = () => {
-    if (!r.HN_number) return setShowNew(true);
+    if (!r.HN_number) return setShowNew(true); // ลูกค้าใหม่ → กรอกเอกสารประวัติผู้ใช้บริการก่อน
+    // ลูกค้าเดิม (มี HN) → ใช้ข้อมูลประวัติชุดเดิม แม้มาคนละคอร์ส
     run(() => api("/opd", { method: "POST", body: { reserve_ID: r.reserve_ID, HN_number: r.HN_number } }), "เปิดเคสแล้ว — ส่งต่อ OPD");
   };
-  const createCustomerAndOpen = () => run(async () => {
-    const body = {
-      ...newCust, branch_ID: r.branch_ID,
-      drug_allergies: newCust.drug_allergies ? newCust.drug_allergies.split(",").map((s) => s.trim()).filter(Boolean) : [],
-    };
-    const c = await api("/customers", { method: "POST", body });
+  const createCustomerAndOpen = (body) => run(async () => {
+    const c = await api("/customers", { method: "POST", body: { ...body, branch_ID: r.branch_ID } });
     await api(`/reserves/${r.reserve_ID}`, { method: "PUT", body: { HN_number: c.HN_number } });
     await api("/opd", { method: "POST", body: { reserve_ID: r.reserve_ID, HN_number: c.HN_number } });
     setShowNew(false);
-  }, "สร้าง HN + เปิดเคสแล้ว");
+  }, "สร้าง HN + บันทึกประวัติ + เปิดเคสแล้ว");
 
   const canReceive = ["booked", "arrived", "ready"].includes(r.status);
   const opened = !!r.opd_ID;
@@ -192,6 +184,14 @@ function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
           {r.HN_number ? <span className="badge text-bg-primary">{r.HN_number}</span> : <span className="badge text-bg-secondary">ยังไม่มี HN</span>}
           {r.contact?.phone && <span className="ms-2 text-muted">โทร {r.contact.phone}</span>}
         </div>
+        {r.HN_number && (
+          <div className="small mb-2">
+            <Link href={`/app/history-form?hn=${encodeURIComponent(r.HN_number)}`} target="_blank" className="text-decoration-none">
+              <i className="bi bi-file-earmark-person me-1" />ประวัติผู้ใช้บริการ / ข้อมูลสุขภาพ (ดู · พิมพ์ PDF)
+            </Link>
+            <div className="text-muted" style={{ fontSize: 11 }}>ลูกค้าเดิม — ใช้ข้อมูลชุดเดิม ไม่ต้องกรอกใหม่แม้คนละคอร์ส</div>
+          </div>
+        )}
         {r.customer_course_ID && <div className="text-muted small mb-2">🎴 มีคอร์สผูกกับการจอง · ชำระที่ OPD</div>}
 
         {opened ? (
@@ -211,28 +211,16 @@ function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
                 <button className="btn btn-outline-secondary btn-sm" disabled={busy} onClick={() => setStatus("no_show", "บันทึกไม่มาตามนัด")}>ไม่มาตามนัด</button>
               )}
             </div>
-            {canReceive && !showNew && (
+            {canReceive && (
               <button className="btn btn-primary d-block ms-auto px-4" disabled={busy} onClick={openCase}>
                 {busy && <span className="spinner-border spinner-border-sm me-1" />}
-                {r.HN_number ? "เปิดเคส →" : "สร้าง HN + เปิดเคส →"}
+                {r.HN_number ? "เปิดเคส →" : "ลูกค้าใหม่ — กรอกประวัติ + สร้าง HN →"}
               </button>
             )}
             {showNew && (
-              <div className="border rounded-3 p-3 bg-light">
-                <b className="small">ลูกค้าใหม่ — สร้าง HN</b>
-                {[["full_name", "ชื่อ *"], ["sure_name", "นามสกุล"], ["nick_name", "ชื่อเล่น"], ["phone", "เบอร์โทร"], ["drug_allergies", "แพ้ยา (คั่นด้วย ,)"]].map(([k, lb]) => (
-                  <div className="mt-2" key={k}>
-                    <label className="form-label small mb-1">{lb}</label>
-                    <input className="form-control form-control-sm" value={newCust[k]} onChange={(e) => setNewCust((f) => ({ ...f, [k]: e.target.value }))} />
-                  </div>
-                ))}
-                <div className="d-flex gap-2 mt-3">
-                  <button className="btn btn-primary btn-sm" disabled={!newCust.full_name || busy} onClick={createCustomerAndOpen}>
-                    {busy && <span className="spinner-border spinner-border-sm me-1" />}สร้าง HN + เปิดเคส
-                  </button>
-                  <button className="btn btn-outline-secondary btn-sm" onClick={() => setShowNew(false)}>ยกเลิก</button>
-                </div>
-              </div>
+              <CustomerRegistrationForm
+                initial={{ nick_name: r.contact?.nick_name || "", phone: r.contact?.phone || "" }}
+                busy={busy} onSubmit={createCustomerAndOpen} onCancel={() => setShowNew(false)} />
             )}
           </>
         )}

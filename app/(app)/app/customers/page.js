@@ -138,7 +138,11 @@ function CustomersInner() {
               <div className="card shadow-sm mb-3">
                 <div className="card-header py-2 d-flex align-items-center">
                   <b>{profile.customer.HN_number} — {profile.customer.full_name} {profile.customer.sure_name}</b>
-                  {!editing && <button className="btn btn-outline-secondary btn-sm ms-auto" onClick={startEdit}><i className="bi bi-pencil me-1" />แก้ไข</button>}
+                  <a className="btn btn-outline-primary btn-sm ms-auto" target="_blank" rel="noreferrer"
+                     href={`/app/history-form?hn=${encodeURIComponent(profile.customer.HN_number)}`}>
+                    <i className="bi bi-file-earmark-person me-1" />ประวัติผู้ใช้บริการ (PDF)
+                  </a>
+                  {!editing && <button className="btn btn-outline-secondary btn-sm ms-2" onClick={startEdit}><i className="bi bi-pencil me-1" />แก้ไข</button>}
                 </div>
                 <div className="card-body py-3">
                   {!editing ? (

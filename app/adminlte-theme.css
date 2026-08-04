@@ -92,6 +92,10 @@ a:hover { color: var(--osoth-primary-dark); }
   .mcal-ev, .mcal-more { display: none; }  /* จอเล็ก: เหลือ badge จำนวนคิว */
   .mcal-count { display: inline-flex; }
 }
+/* โหมดย่อ (จอง/รับลูกค้า): ไม่มีชิปรายชื่อ เหลือเลขวัน + จำนวนคิว — กดวันไปดูตารางห้องแทน */
+.mcal-compact .mcal-cell { min-height: 46px; padding: 3px 4px; flex-direction: row; align-items: center; gap: 4px; }
+.mcal-compact .mcal-day { align-self: auto; margin-left: auto; order: 2; }
+.mcal-compact .mcal-count { display: inline-flex; order: 1; }
 
 /* ── Dark mode (data-bs-theme="dark") — สลับ tokens ของ .lgc ให้เข้าชุด ── */
 [data-bs-theme="dark"] .lgc {
