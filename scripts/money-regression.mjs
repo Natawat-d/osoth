@@ -9,6 +9,7 @@ const ok = (name, cond, detail = "") => {
 };
 const section = (t) => console.log("\n" + t);
 
+const todayLocal = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const tokens = {};
 async function login(u) {
   if (tokens[u]) return tokens[u];
@@ -169,6 +170,77 @@ const earn1 = await api("owner", `/earnings?user_ID=all&from=2026-09-10&to=2026-
 // นับ earning ของ opd นี้ต้องไม่ซ้ำสองชุด (ถ้าปิดซ้ำจะ x2)
 const opdEarnings = (earn1.data.rows || earn1.data || []).filter?.((e) => e.ref?.opd_ID === opdID) || [];
 ok("ค่ามือไม่บันทึกซ้ำ", opdEarnings.length <= 2, `${opdEarnings.length} รายการ`);
+
+
+// ── 10. ฟีเจอร์ V3.5: ใบเสร็จ / void / มัดจำ / ปิดวัน / เคลียร์บัตร / ปิดงวด / deferred revenue ──
+section("10) ใบเสร็จ + void + คืนยอดคอร์ส");
+const cust2 = await api("admin", "/customers", { method: "POST", body: { full_name: "REGใบเสร็จ", phone: "0800000002" } });
+const HN2 = cust2.data.HN_number;
+const buy = await api("admin", "/customer-courses", { method: "POST", body: { HN_number: HN2, course_ID: course.course_ID, payments: [{ amount: course.price, method: "cash" }] } });
+ok("ขาย+จ่าย → ได้ใบเสร็จเลขรัน RC", buy.status === 200 && /^RC\d{4}-\d{5}$/.test(buy.data.receipt?.receipt_no || ""), buy.data.receipt?.receipt_no);
+ok("คอร์สใหม่เป็น deferred", buy.data.customer_course.deferred === true);
+await api("owner", "/gl/journal/rebuild", { method: "POST" });
+const jeDef = await api("owner", "/gl/journal?source=payment");
+const defJe = (jeDef.data || []).find((j) => (j.memo || "").includes(buy.data.payments[0].payment_ID));
+ok("เงินคอร์ส deferred เครดิต 2310 (รายได้รับล่วงหน้า)", !!defJe && defJe.lines.some((l) => l.account_code === "2310" && l.credit === course.price));
+// void ใบเสร็จ → เงินกลับ + คอร์สกลับค้าง
+const rcList = await api("owner", `/receipts?cc=${buy.data.customer_course.customer_course_ID}`);
+const rcId = rcList.data[0].receipt_ID;
+ok("void โดยไม่ให้เหตุผล → 400", (await api("owner", `/receipts/${rcId}/void`, { method: "POST", body: {} })).status === 400);
+const vd = await api("owner", `/receipts/${rcId}/void`, { method: "POST", body: { reason: "คีย์ผิดคน" } });
+ok("void ใบเสร็จสำเร็จ", vd.status === 200 && vd.data.voided_payments.length === 1);
+const ccAfterVoid = await api("admin", `/customer-courses?HN=${HN2}`);
+ok("คอร์สกลับเป็นค้างชำระเต็มยอด", ccAfterVoid.data[0].balance_due === course.price && ccAfterVoid.data[0].payment_status === "unpaid");
+ok("void ซ้ำ → 409", (await api("owner", `/receipts/${rcId}/void`, { method: "POST", body: { reason: "ซ้ำ" } })).status === 409);
+await api("owner", "/gl/journal/rebuild", { method: "POST" });
+const tbAfterVoid = await api("owner", "/gl/reports/trial-balance");
+ok("TB ยังสมดุลหลัง void", tbAfterVoid.data.balanced === true);
+
+section("11) มัดจำจอง: วาง → ใช้จ่ายคอร์ส");
+const rs2 = await api("admin", "/reserves", { method: "POST", body: { branch_ID: "BR-001", date: "2026-09-20", time_start: "10:00", time_end: "10:30", room_ID: "RM-001", HN_number: HN2, is_walk_in: true, contact: { nick_name: "REGมัดจำ" } } });
+const dep = await api("admin", `/reserves/${rs2.data.reserve_ID}/deposit`, { method: "POST", body: { amount: 199, method: "cash" } });
+ok("วางมัดจำ 199 + ได้ใบเสร็จ", dep.status === 200 && !!dep.data.receipt?.receipt_no);
+ok("วางซ้ำ → 409", (await api("admin", `/reserves/${rs2.data.reserve_ID}/deposit`, { method: "POST", body: { amount: 100, method: "cash" } })).status === 409);
+// เปิดเคส + จ่ายคอร์สด้วย เงินสด + มัดจำ
+const opd2 = await api("admin", "/opd", { method: "POST", body: { reserve_ID: rs2.data.reserve_ID, HN_number: HN2 } });
+const cc2id = ccAfterVoid.data[0].customer_course_ID;
+await api("admin", `/opd/${opd2.data.opd_ID}/course`, { method: "POST", body: { existing_customer_course_ID: cc2id } });
+const payMix = await api("admin", `/customer-courses/${cc2id}/pay`, { method: "POST", body: { reserve_ID: rs2.data.reserve_ID, payments: [{ amount: course.price - 199, method: "cash" }, { amount: 199, method: "deposit" }] } });
+ok("จ่ายคอร์ส เงินสด+มัดจำ → 200", payMix.status === 200, JSON.stringify(payMix.error || ""));
+const rsAfter = await api("admin", `/reserves/${rs2.data.reserve_ID}`);
+ok("มัดจำสถานะ applied", rsAfter.data.deposit_status === "applied");
+ok("ใช้มัดจำเกินที่วาง → 4xx", (await api("admin", `/customer-courses/${cc2id}/pay`, { method: "POST", body: { reserve_ID: rs2.data.reserve_ID, payments: [{ amount: 1, method: "deposit" }] } })).status !== 200);
+
+section("12) ปิดยอดสิ้นวัน + เคลียร์บัตร + ปิดงวด");
+const dcPre = await api("owner", `/finance/daily-close?date=${todayLocal()}`);
+ok("ดู expected cash ได้", dcPre.status === 200 && typeof dcPre.data.expected_cash === "number");
+const dcPost = await api("owner", "/finance/daily-close", { method: "POST", body: { date: todayLocal(), counted_cash: dcPre.data.expected_cash - 100, note: "เทสต์ขาด 100" } });
+ok("ปิดยอดวัน (ขาด 100) → 200", dcPost.status === 200 && dcPost.data.diff === -100);
+ok("ปิดวันซ้ำ → 409", (await api("owner", "/finance/daily-close", { method: "POST", body: { date: todayLocal(), counted_cash: 0 } })).status === 409);
+const jeDc = await api("owner", "/gl/journal?source=daily_close");
+ok("ส่วนต่างลง JE (Dr 6300 / Cr 1000)", (jeDc.data || []).some((j) => j.source_ID === dcPost.data.close_ID && j.lines.some((l) => l.account_code === "6300" && l.debit === 100)));
+const cs0 = await api("owner", "/finance/card-settlement");
+ok("ดูยอด 1020 ค้างได้", cs0.status === 200);
+const csPost = await api("owner", "/finance/card-settlement", { method: "POST", body: { amount: 100, fee: 2.5 } });
+ok("เคลียร์บัตร 100 (fee 2.5) → 200", csPost.status === 200 && csPost.data.net === 97.5);
+ok("fee >= ยอด → 400", (await api("owner", "/finance/card-settlement", { method: "POST", body: { amount: 10, fee: 10 } })).status === 400);
+ok("ล็อกงวดถึงสิ้นเดือนก่อน → 200", (await api("owner", "/gl/period-lock", { method: "PUT", body: { locked_through: "2026-07-31" } })).status === 200);
+await new Promise((r) => setTimeout(r, 5200)); // รอ cache ล็อกหมดอายุ (5s)
+ok("expense ย้อนหลังในงวดที่ล็อก → 409", (await api("owner", "/expenses", { method: "POST", body: { category: "other", description: "ย้อนหลัง", amount: 50, date: "2026-07-15" } })).status === 409);
+ok("expense วันนี้ยังบันทึกได้", (await api("owner", "/expenses", { method: "POST", body: { category: "other", description: "วันนี้", amount: 50 } })).status === 200);
+ok("ปลดล็อก → 200", (await api("owner", "/gl/period-lock", { method: "PUT", body: { locked_through: "" } })).status === 200);
+
+section("13) deferred revenue: ปิดเคสแล้วรับรู้รายได้เข้า 4000");
+await api("admin", `/opd/${opd2.data.opd_ID}`, { method: "PUT", body: { opd_data: { weight_kg: 55 } } });
+await api("admin", `/opd/${opd2.data.opd_ID}/consent`, { method: "POST", body: { kind: "signature", file: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5CYII=", filename: "s.png", mime: "image/png" } });
+const close2 = await api("admin", `/opd/${opd2.data.opd_ID}/close`, { method: "POST" });
+ok("ปิดเคสคอร์ส deferred → 200", close2.status === 200, JSON.stringify(close2.error || ""));
+await api("owner", "/gl/journal/rebuild", { method: "POST" });
+const jeRec = await api("owner", "/gl/journal?source=revenue_rec");
+const recJe = (jeRec.data || []).find((j) => j.source_ID === opd2.data.opd_ID);
+ok("มี JE รับรู้รายได้ (Dr 2310 / Cr 4000)", !!recJe && recJe.lines.some((l) => l.account_code === "4000" && l.credit > 0));
+const tbFinal = await api("owner", "/gl/reports/trial-balance");
+ok("TB สมดุลปิดท้ายทุกฟีเจอร์", tbFinal.data.balanced === true);
 
 console.log(`\n══ ผลรวม: ผ่าน ${pass} · ตก ${fail} ══`);
 process.exit(fail ? 1 : 0);

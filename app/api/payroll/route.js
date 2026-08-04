@@ -5,7 +5,7 @@ import Attendance from "@/models/Attendance";
 import { apiHandler } from "@/lib/api";
 import { requireOwner } from "@/lib/owner";
 import { genId } from "@/services/ids";
-import { ensureCoA, postFromPayrollRun } from "@/services/gl";
+import { ensureCoA, postFromPayrollRun, assertPeriodOpen } from "@/services/gl";
 
 const r2 = (n) => Math.round(n * 100) / 100;
 // ประกันสังคมมาตรฐาน: 5% ของฐานเงินเดือน · ฐานขั้นต่ำ 1,650 / เพดาน 15,000
@@ -124,6 +124,7 @@ export const POST = apiHandler(async (req) => {
   );
 
   if (action === "pay") {
+    await assertPeriodOpen(`${period}-28`); // งวดบัญชีปิดแล้วจ่ายย้อนไม่ได้
     // JE รวมศูนย์ที่ services/gl.js (postFromPayrollRun) — rebuild ก็ post ชุดเดียวกันได้ (กู้ journal)
     await postFromPayrollRun(doc, auth.user_ID);
     doc.status = "paid";

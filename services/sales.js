@@ -7,7 +7,9 @@ import User from "@/models/User";
 import Opd from "@/models/Opd";
 import Product from "@/models/Product";
 import MedicalProcedure from "@/models/MedicalProcedure";
+import Reserve from "@/models/Reserve";
 import { genId, localDate } from "./ids";
+import { issueReceipt } from "./receipts";
 
 // ขาย course: สร้าง customer_course (+snapshot) + บันทึกเงิน + คอม sale
 // การชำระเงิน: จ่ายเต็มจำนวน แต่แยกได้หลายช่องทาง (สด/โอน/บัตร) ผ่าน payments[]
@@ -109,6 +111,7 @@ export async function purchaseCourse({
     sale_ID,
     commission_rate,
     commission_amount,
+    deferred: true, // V3.5: คอร์สใหม่รับรู้รายได้ตามครั้งใช้ (เงินเข้า 2310 ก่อน)
   });
 
   // บันทึก payment แยกตามช่องทาง (จ่ายเต็มแต่คนละบัตร/สด/โอนได้)
@@ -124,22 +127,35 @@ export async function purchaseCourse({
       method: line.method,
       paid_at: now,
       received_by,
+      deferred: true,
     });
     createdPayments.push(pay);
   }
   const payment = createdPayments[0] || null; // backward compat
+  // ออกใบเสร็จอัตโนมัติเมื่อรับเงิน
+  let receipt = null;
+  if (createdPayments.length)
+    receipt = await issueReceipt({
+      branch_ID, HN_number,
+      customer_name: reserve_contact?.nick_name || "",
+      items: [{ description: `คอร์ส ${course.name}`, amount: total }],
+      payments: createdPayments.map((p) => ({ payment_ID: p.payment_ID, method: p.method, amount: p.amount })),
+      ref: { customer_course_ID: cc.customer_course_ID },
+      issued_by: received_by,
+    });
 
   // คอม sale ไม่คิดแบบ flat ต่อคอร์สแล้ว — ใช้ "ขั้นบันไดจากยอดขายรวม/เดือน" (หน้า /commission)
   // + คอม add-on (คิดตอนปิดเคส) · cc.sale_ID เก็บไว้ให้รายงาน tier รวมยอด
 
-  return { customer_course: cc, payment, payments: createdPayments };
+  return { customer_course: cc, payment, payments: createdPayments, receipt };
 }
 
 // รับชำระค่าคอร์ส "เต็มยอดคงค้าง" ครั้งเดียว — ไม่มีผ่อน (ผ่อนเป็นเรื่องของบัตร/EDC)
 // แยกช่องทางได้ (สด/โอน/บัตร) แต่รวมต้องเท่ายอดค้างพอดี
 // atomic: จอง (claim) ยอดค้างด้วย findOneAndUpdate แบบมีเงื่อนไขก่อนสร้าง Payment
 // — สอง request พร้อมกัน (double-click) สำเร็จได้แค่ 1 เท่านั้น อีกอันได้ 409
-export async function payCourseFull({ customer_course_ID, payments = [], received_by = "" }) {
+// รองรับจ่ายด้วย "มัดจำ" ที่วางไว้ตอนจอง: บรรทัด method="deposit" (ต้องส่ง reserve_ID มาตรวจยอด)
+export async function payCourseFull({ customer_course_ID, payments = [], received_by = "", reserve_ID = null }) {
   const pre = await CustomerCourse.findOne({ customer_course_ID }).lean();
   if (!pre) throw httpError(404, "ไม่พบ course ของลูกค้า");
   if (pre.balance_due <= 0) throw httpError(409, "course นี้จ่ายครบแล้ว");
@@ -153,6 +169,20 @@ export async function payCourseFull({ customer_course_ID, payments = [], receive
   if (sum !== pre.balance_due)
     throw httpError(400, `ต้องชำระเต็มจำนวน ${pre.balance_due}฿ (รับมา ${sum}฿) — ระบบไม่รองรับผ่อน`);
 
+  // บรรทัดมัดจำ: ตรวจกับมัดจำที่ค้างอยู่จริงของคิวนี้
+  const depLine = lines.find((l) => l.method === "deposit");
+  let depositReserve = null;
+  if (depLine) {
+    if (lines.filter((l) => l.method === "deposit").length > 1)
+      throw httpError(400, "ใช้มัดจำได้บรรทัดเดียว");
+    if (!reserve_ID) throw httpError(400, "จ่ายด้วยมัดจำต้องระบุ reserve_ID");
+    depositReserve = await Reserve.findOne({ reserve_ID }).lean();
+    if (!depositReserve || depositReserve.deposit_status !== "held")
+      throw httpError(409, "คิวนี้ไม่มีมัดจำค้างอยู่ให้ใช้");
+    if (depLine.amount !== depositReserve.deposit)
+      throw httpError(400, `ยอดมัดจำที่ใช้ต้องเท่าที่วางไว้ (${depositReserve.deposit}฿)`);
+  }
+
   // claim ยอดค้างแบบ atomic: เงื่อนไข balance_due ต้องยังเท่ายอดที่กำลังจ่ายพอดี
   const cc = await CustomerCourse.findOneAndUpdate(
     { customer_course_ID, balance_due: sum },
@@ -160,6 +190,11 @@ export async function payCourseFull({ customer_course_ID, payments = [], receive
     { new: true }
   );
   if (!cc) throw httpError(409, "รายการนี้ถูกชำระไปแล้ว/กำลังประมวลผลอยู่ — รีเฟรชแล้วตรวจสอบยอด");
+  if (depositReserve)
+    await Reserve.updateOne(
+      { reserve_ID, deposit_status: "held" },
+      { $set: { deposit_status: "applied" } }
+    );
 
   const now = new Date();
   const created = [];
@@ -169,14 +204,22 @@ export async function payCourseFull({ customer_course_ID, payments = [], receive
       branch_ID: cc.branch_ID,
       HN_number: cc.HN_number,
       type: "installment",
-      ref: { customer_course_ID, opd_ID: null },
+      ref: { customer_course_ID, opd_ID: null, reserve_ID: line.method === "deposit" ? reserve_ID : null },
       amount: line.amount,
       method: line.method,
       paid_at: now,
       received_by,
+      deferred: !!cc.deferred,
     }));
   }
-  return { payments: created, payment: created[0] || null, balance_due: 0 };
+  const receipt = await issueReceipt({
+    branch_ID: cc.branch_ID, HN_number: cc.HN_number,
+    items: [{ description: `ชำระค่าคอร์ส ${cc.course_snapshot?.name || cc.course_ID}`, amount: sum }],
+    payments: created.map((p) => ({ payment_ID: p.payment_ID, method: p.method, amount: p.amount })),
+    ref: { customer_course_ID },
+    issued_by: received_by,
+  });
+  return { payments: created, payment: created[0] || null, balance_due: 0, receipt };
 }
 
 // add_on: ทำเพิ่มหน้างาน — เลือกได้ทั้ง "สินค้า" (ตัด stock + ราคาขาย) และ/หรือ "หัตถการ" (ค่ามือ → BT/หมอ ของเคส)
@@ -221,7 +264,7 @@ export async function addAddOn({
       await cc.save();
     }
   } else if (price > 0) {
-    // ครั้งต่อไป (หรือไม่มีคอร์ส) = เก็บเงินแยกบิลทันที
+    // ครั้งต่อไป (หรือไม่มีคอร์ส) = เก็บเงินแยกบิลทันที + ออกใบเสร็จ
     payment = await Payment.create({
       payment_ID: await genId("PAY", 6),
       branch_ID: opd.branch_ID,
@@ -232,6 +275,13 @@ export async function addAddOn({
       method,
       paid_at: now,
       received_by,
+    });
+    await issueReceipt({
+      branch_ID: opd.branch_ID, HN_number: opd.HN_number,
+      items: [{ description: `Add-on ${product ? product.name : proc.name} × ${qty}`, amount: price }],
+      payments: [{ payment_ID: payment.payment_ID, method, amount: price }],
+      ref: { opd_ID },
+      issued_by: received_by,
     });
   }
 

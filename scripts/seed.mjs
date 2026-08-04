@@ -26,6 +26,7 @@ export async function seedBase(db) {
     // V2
     "companies", "notifications", "glaccounts", "journalentries",
     "suppliers", "apbills", "budgets", "payrollruns",
+    "receipts", "dailycloses", "cardsettlements",
   ];
   for (const c of collections) await db.collection(c).deleteMany({});
 

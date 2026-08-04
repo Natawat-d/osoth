@@ -28,7 +28,11 @@ const ReserveSchema = new mongoose.Schema(
     room_ID: { type: String, required: true },
     doctor_ID: { type: String, default: null },
     BT_ID: { type: String, default: null },
-    deposit: { type: Number, default: 0 }, // มัดจำตอนจอง (เช่น 199) — สร้าง payment แยก
+    deposit: { type: Number, default: 0 }, // มัดจำตอนจอง (เช่น 199)
+    // none=ไม่มี · held=วางแล้ว · applied=หักเข้าคอร์สแล้ว · forfeited=ริบ (no-show) · refunded=คืนแล้ว
+    deposit_status: { type: String, enum: ["none", "held", "applied", "forfeited", "refunded"], default: "none" },
+    deposit_payment_ID: { type: String, default: null },
+    deposit_refund_method: { type: String, default: "cash" }, // ช่องทางที่คืนมัดจำ (ใช้ตอน rebuild JE)
 
     status: {
       type: String,

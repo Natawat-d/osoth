@@ -159,8 +159,18 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
     }
   }
 
-  // ---- 3. นับครั้ง course ----
+  // ---- 3. นับครั้ง course + รับรู้รายได้ (deferred) ----
   const newRemaining = cc.uses_remaining - 1;
+  // คอร์ส deferred: เงินเข้า 2310 ตอนจ่าย → รับรู้เป็นรายได้จริง (4000) ตามครั้งที่ใช้
+  // ครั้งสุดท้ายรับรู้ส่วนที่เหลือทั้งหมด (กันเศษปัดตกค้าง) — JE ถูก post ตอน rebuild (source revenue_rec:opd_ID)
+  let revenueRecognized = 0;
+  if (cc.deferred) {
+    const already = cc.revenue_recognized || 0;
+    const per = Math.round(((cc.total_price || 0) / (cc.uses_total || 1)) * 100) / 100;
+    revenueRecognized = newRemaining <= 0
+      ? Math.max(0, Math.round(((cc.total_price || 0) - already) * 100) / 100)
+      : Math.min(per, Math.max(0, (cc.total_price || 0) - already));
+  }
   await CustomerCourse.updateOne(
     { customer_course_ID: cc.customer_course_ID },
     {
@@ -168,6 +178,7 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
         uses_remaining: newRemaining,
         ...(newRemaining <= 0 ? { status: "completed" } : {}),
       },
+      ...(revenueRecognized > 0 ? { $inc: { revenue_recognized: revenueRecognized } } : {}),
     },
     opt
   );
@@ -261,6 +272,7 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
         closed_by,
         closed_at: now,
         closing_at: null, // ปลดธง claim
+        revenue_recognized: revenueRecognized, // ยอดรับรู้รายได้ของเคสนี้ (rebuild post JE จากตรงนี้)
       },
     },
     opt

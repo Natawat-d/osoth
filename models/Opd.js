@@ -112,6 +112,8 @@ const OpdSchema = new mongoose.Schema(
     closed_at: { type: Date, default: null },
     // ธง claim ตอนกำลังปิดเคส — กันปิดซ้ำจาก double-click/สอง request พร้อมกัน
     closing_at: { type: Date, default: null },
+    // รายได้ที่รับรู้จากเคสนี้ (deferred course: Dr 2310 / Cr 4000) — rebuild ใช้ post JE
+    revenue_recognized: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

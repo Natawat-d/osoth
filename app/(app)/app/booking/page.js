@@ -226,6 +226,29 @@ export default function BookingPage() {
                     <a className="btn btn-primary btn-sm ms-auto" href="/app/reception">รับลูกค้า/เปิดเคส →</a>
                   </div>
 
+                  {/* มัดจำการจอง — กัน no-show · ริบอัตโนมัติเมื่อไม่มา · หักเข้าค่าคอร์สตอนจ่ายที่ OPD */}
+                  <div className="d-flex gap-2 flex-wrap align-items-center border-top pt-2 mt-2">
+                    <span className="text-muted small"><i className="bi bi-shield-check me-1" />มัดจำ:</span>
+                    {selected.deposit_status === "held" ? (
+                      <>
+                        <span className="badge text-bg-success">วางแล้ว {selected.deposit}฿</span>
+                        <button className="btn btn-outline-secondary btn-sm" onClick={async () => {
+                          if (!confirm(`คืนมัดจำ ${selected.deposit}฿?`)) return;
+                          try { await api(`/reserves/${selected.reserve_ID}/deposit?method=cash`, { method: "DELETE" }); toast.success("คืนมัดจำแล้ว"); loadEvents(); setSelected(null); }
+                          catch (e) { toast.error(e.message); }
+                        }}>คืนมัดจำ</button>
+                      </>
+                    ) : selected.deposit_status === "applied" ? (
+                      <span className="badge text-bg-info">หักเข้าค่าคอร์สแล้ว ({selected.deposit}฿)</span>
+                    ) : selected.deposit_status === "forfeited" ? (
+                      <span className="badge text-bg-dark">ริบแล้ว ({selected.deposit}฿ · ไม่มาตามนัด)</span>
+                    ) : ["booked", "arrived"].includes(selected.status) ? (
+                      <DepositForm reserve={selected} toast={toast} onDone={() => { loadEvents(); setSelected(null); }} />
+                    ) : (
+                      <span className="text-muted small">—</span>
+                    )}
+                  </div>
+
                   {resched && (
                     <div className="border rounded-3 p-3 mt-3 bg-light">
                       <b className="small">เลื่อนนัด — เลือกวัน/เวลา/ห้องใหม่</b>
@@ -352,5 +375,31 @@ export default function BookingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ฟอร์มรับมัดจำเล็กๆ ในการ์ดคิว — Dr เงินสด/โอน/บัตร / Cr เงินมัดจำรับล่วงหน้า (2300) + ออกใบเสร็จ
+function DepositForm({ reserve, toast, onDone }) {
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState("cash");
+  const [busy, setBusy] = useState(false);
+  return (
+    <span className="d-flex gap-1 align-items-center">
+      <input type="number" className="form-control form-control-sm" style={{ width: 90 }}
+             placeholder="เช่น 199" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <select className="form-select form-select-sm" style={{ width: 90 }} value={method} onChange={(e) => setMethod(e.target.value)}>
+        <option value="cash">เงินสด</option><option value="transfer">โอน</option><option value="card">บัตร</option>
+      </select>
+      <button className="btn btn-outline-primary btn-sm" disabled={!(Number(amount) > 0) || busy} onClick={async () => {
+        setBusy(true);
+        try {
+          const r = await api(`/reserves/${reserve.reserve_ID}/deposit`, { method: "POST", body: { amount: Number(amount), method } });
+          toast.success(`รับมัดจำ ${amount}฿ แล้ว · ใบเสร็จ ${r.receipt?.receipt_no || ""}`);
+          onDone();
+        } catch (e) { toast.error(e.message); } finally { setBusy(false); }
+      }}>
+        {busy && <span className="spinner-border spinner-border-sm me-1" />}รับมัดจำ
+      </button>
+    </span>
   );
 }

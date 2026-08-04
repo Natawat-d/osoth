@@ -10,5 +10,6 @@ export const POST = apiHandler(async (req, { params }) => {
   const payments = Array.isArray(body.payments)
     ? body.payments
     : [{ amount: body.amount, method: body.method || "cash" }];
-  return payCourseFull({ customer_course_ID: id, payments, received_by: auth.user_ID });
+  // reserve_ID จำเป็นเมื่อจ่ายด้วยมัดจำ (บรรทัด method: "deposit") — ตรวจกับมัดจำที่ค้างของคิวนั้น
+  return payCourseFull({ customer_course_ID: id, payments, received_by: auth.user_ID, reserve_ID: body.reserve_ID || null });
 });

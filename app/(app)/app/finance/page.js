@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useSelector } from "react-redux";
 import DailyFinance from "@/components/lgc/DailyFinance";
 import CommissionReport from "@/components/lgc/CommissionReport";
+import { ReceiptsTab, ClosingTab } from "@/components/FinanceClosingTabs";
 import {
   useGetFinReportQuery, useGetJournalQuery, usePostJournalMutation,
   useGetGlAccountsQuery, useSaveGlAccountMutation,
@@ -19,6 +20,8 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 const TABS = [
   { key: "daily", label: "รายวัน/ปิดยอด", ico: "bi-calendar-day" },
+  { key: "receipts", label: "ใบเสร็จ", ico: "bi-receipt" },
+  { key: "closing", label: "ปิดวัน/ปิดงวด", ico: "bi-safe" },
   { key: "pnl", label: "งบกำไรขาดทุน", ico: "bi-graph-up" },
   { key: "tb", label: "งบทดลอง", ico: "bi-list-columns" },
   { key: "journal", label: "สมุดรายวัน", ico: "bi-journal-text" },
@@ -55,6 +58,8 @@ export default function FinanceV2Page() {
         </ul>
 
         {tab === "daily" && <div className="lgc"><DailyFinance /></div>}
+        {tab === "receipts" && <ReceiptsTab />}
+        {tab === "closing" && <ClosingTab />}
         {tab === "commission" && <div className="lgc"><CommissionReport /></div>}
         {tab === "pnl" && <PnlTab />}
         {tab === "tb" && <TrialBalanceTab />}

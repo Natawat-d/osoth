@@ -30,6 +30,9 @@ const CustomerCourseSchema = new mongoose.Schema(
     paid_amount: { type: Number, default: 0 },
     balance_due: { type: Number, default: 0 },
     // ไม่มีผ่อน — จ่ายเต็ม (paid) หรือ ยังไม่จ่าย (unpaid) เท่านั้น
+    // V3.5: รับรู้รายได้ตามครั้งใช้ (deferred revenue) — เฉพาะคอร์สที่ขายหลังเปิดฟีเจอร์
+    deferred: { type: Boolean, default: false },
+    revenue_recognized: { type: Number, default: 0 }, // ยอดที่รับรู้เข้า 4000 แล้วสะสม
     payment_status: {
       type: String,
       enum: ["unpaid", "paid"],

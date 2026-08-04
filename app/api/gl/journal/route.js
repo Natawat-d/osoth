@@ -1,7 +1,7 @@
 import JournalEntry from "@/models/JournalEntry";
 import { apiHandler } from "@/lib/api";
 import { requireOwner } from "@/lib/owner";
-import { postJE, ensureCoA } from "@/services/gl";
+import { postJE, ensureCoA, assertPeriodOpen } from "@/services/gl";
 import { localDate } from "@/services/ids";
 
 // GET /api/gl/journal?from=&to=&source= — สมุดรายวัน (ล่าสุดก่อน)
@@ -27,6 +27,7 @@ export const POST = apiHandler(async (req) => {
   const lines = (body.lines || []).filter((l) => (l.debit || 0) > 0 || (l.credit || 0) > 0);
   if (lines.length < 2)
     throw Object.assign(new Error("ต้องมีอย่างน้อย 2 บรรทัด (เดบิต/เครดิต)"), { status: 400 });
+  await assertPeriodOpen(body.date || localDate());
   return postJE({
     date: body.date || localDate(),
     memo: body.memo || "",

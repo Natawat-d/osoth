@@ -24,6 +24,8 @@ export const DEFAULT_COA = [
   { code: "2100", name: "ค่าตอบแทนพนักงานค้างจ่าย", type: "liability", group: "PAYABLE", system: true },
   { code: "2050", name: "ประกันสังคมค้างนำส่ง", type: "liability", group: "PAYABLE", system: true },
   { code: "2060", name: "ภาษีหัก ณ ที่จ่ายค้างนำส่ง", type: "liability", group: "PAYABLE", system: true },
+  { code: "2300", name: "เงินมัดจำรับล่วงหน้า", type: "liability", group: "PAYABLE", system: true },
+  { code: "2310", name: "รายได้รับล่วงหน้า (คอร์ส)", type: "liability", group: "PAYABLE", system: true },
   // ทุน
   { code: "3000", name: "ทุน", type: "equity", group: "EQUITY", system: true },
   { code: "3900", name: "กำไรสะสม", type: "equity", group: "EQUITY", system: true },
@@ -38,6 +40,7 @@ export const DEFAULT_COA = [
   { code: "6100", name: "ค่าเช่า", type: "expense", group: "OPEX", system: true },
   { code: "6200", name: "ค่าน้ำ/ไฟ/สาธารณูปโภค", type: "expense", group: "OPEX", system: true },
   { code: "6300", name: "ค่าใช้จ่ายดำเนินงานอื่น", type: "expense", group: "OPEX", system: true },
+  { code: "6400", name: "ค่าธรรมเนียมบัตร/ช่องทางชำระ", type: "expense", group: "OPEX", system: true },
   { code: "6500", name: "ค่าขนส่ง (FREIGHT)", type: "expense", group: "FREIGHT", system: true },
   { code: "6600", name: "ค่าใช้จ่ายโครงการ/เตรียมเปิด (PEC)", type: "expense", group: "PEC", system: true },
 ];
@@ -50,8 +53,24 @@ export async function ensureCoA() {
 }
 
 const r2 = (n) => Math.round(n * 100) / 100;
-const METHOD_ACC = { cash: "1000", transfer: "1010", card: "1020" };
+const METHOD_ACC = { cash: "1000", transfer: "1010", card: "1020", deposit: "2300" }; // deposit = หักจากมัดจำ (ตัดหนี้ 2300)
 const EXPENSE_ACC = { rent: "6100", salary: "6000", utility: "6200", other: "6300" };
+
+// ── ปิดงวดบัญชี: ห้ามบันทึกเอกสารเงินลงวันที่ในงวดที่ล็อกแล้ว ──
+// เรียกจากจุด "สร้างเอกสารใหม่" ที่ผู้ใช้เลือกวันที่เองได้ (expense/manual JE/payroll/ปิดวัน/เคลียร์บัตร)
+let _lockCache = { value: "", at: 0 };
+export async function assertPeriodOpen(date) {
+  if (Date.now() - _lockCache.at > 5000) {
+    const Company = (await import("@/models/Company")).default;
+    const co = await Company.findOne({}).lean();
+    _lockCache = { value: co?.gl_locked_through || "", at: Date.now() };
+  }
+  if (_lockCache.value && date && date <= _lockCache.value)
+    throw Object.assign(
+      new Error(`งวดบัญชีถึง ${_lockCache.value} ปิดแล้ว — บันทึกย้อนหลังไม่ได้ (ให้กลับรายการในงวดปัจจุบัน)`),
+      { status: 409 }
+    );
+}
 
 // ── post journal entry (ตรวจสมดุล debit=credit + ห้ามบรรทัดติดลบ/ไม่ใช่ตัวเลข) ──
 export async function postJE({ date, memo = "", lines, source_type = "manual", source_ID = null, posted_by = "" }) {
@@ -84,16 +103,111 @@ export async function postJE({ date, memo = "", lines, source_type = "manual", s
 // ── สร้าง JE จากธุรกรรม operation (แต่ละตัว idempotent ผ่าน source_type+source_ID) ──
 const dstr = (d) => (typeof d === "string" ? d.slice(0, 10) : localDate(new Date(d)));
 
+// ฝั่งเครดิตของเงินรับ:
+//   deposit → 2300 (มัดจำ = หนี้สิน ไม่ใช่รายได้) · add_on → 4100 (บริการเกิดทันที)
+//   คอร์ส deferred → 2310 (รายได้รับล่วงหน้า รอรับรู้ตอนใช้จริง) · คอร์สเดิม → 4000
+const paymentRevAcc = (p) =>
+  p.type === "deposit" ? "2300" : p.type === "add_on" ? "4100" : p.deferred ? "2310" : "4000";
+
 export async function postFromPayment(p) {
-  const revAcc = p.type === "add_on" ? "4100" : "4000";
   return postJE({
     date: dstr(p.paid_at),
     memo: `รับเงิน ${p.type} · ${p.payment_ID}${p.HN_number ? " · " + p.HN_number : ""}`,
     lines: [
       { account_code: METHOD_ACC[p.method] || "1000", debit: p.amount, credit: 0 },
-      { account_code: revAcc, debit: 0, credit: p.amount },
+      { account_code: paymentRevAcc(p), debit: 0, credit: p.amount },
     ],
     source_type: "payment", source_ID: p.payment_ID,
+  });
+}
+
+// กลับรายการเงินรับ (void/คืนเงิน) — JE ขาสลับกับตอนรับ ลงวันที่ที่ void
+export async function postPaymentVoid(p) {
+  return postJE({
+    date: dstr(p.void_at || new Date()),
+    memo: `กลับรายการ (void) ${p.payment_ID} · ${p.void_reason || ""}`,
+    lines: [
+      { account_code: paymentRevAcc(p), debit: p.amount, credit: 0 },
+      { account_code: METHOD_ACC[p.method] || "1000", debit: 0, credit: p.amount },
+    ],
+    source_type: "reversal", source_ID: `void:${p.payment_ID}`,
+  });
+}
+
+// รับรู้รายได้คอร์ส deferred ต่อครั้งที่ใช้ (ตอนปิดเคส): Dr 2310 / Cr 4000
+export async function postRevenueRecognition({ opd_ID, date, amount }) {
+  if (!(amount > 0)) return null;
+  return postJE({
+    date,
+    memo: `รับรู้รายได้คอร์ส (ใช้สิทธิ์) เคส ${opd_ID}`,
+    lines: [
+      { account_code: "2310", debit: amount, credit: 0 },
+      { account_code: "4000", debit: 0, credit: amount },
+    ],
+    source_type: "revenue_rec", source_ID: opd_ID,
+  });
+}
+
+// ริบมัดจำ (no-show): Dr 2300 / Cr รายได้อื่น 4100
+export async function postDepositForfeit(rs) {
+  if (!(rs.deposit > 0)) return null;
+  return postJE({
+    date: rs.date || localDate(),
+    memo: `ริบมัดจำ (ไม่มาตามนัด) ${rs.reserve_ID}`,
+    lines: [
+      { account_code: "2300", debit: rs.deposit, credit: 0 },
+      { account_code: "4100", debit: 0, credit: rs.deposit },
+    ],
+    source_type: "deposit_forfeit", source_ID: rs.reserve_ID,
+  });
+}
+
+// คืนมัดจำ (ยกเลิกล่วงหน้า): Dr 2300 / Cr เงินสด/โอน
+export async function postDepositRefund(rs, method = "cash") {
+  if (!(rs.deposit > 0)) return null;
+  return postJE({
+    date: localDate(),
+    memo: `คืนมัดจำ ${rs.reserve_ID}`,
+    lines: [
+      { account_code: "2300", debit: rs.deposit, credit: 0 },
+      { account_code: METHOD_ACC[method] || "1000", debit: 0, credit: rs.deposit },
+    ],
+    source_type: "deposit_refund", source_ID: rs.reserve_ID,
+  });
+}
+
+// ปิดยอดสิ้นวัน — ส่วนต่างเงินสดนับจริง: ขาด → สูญเสีย · เกิน → รายได้อื่น
+export async function postFromDailyClose(dc) {
+  const diff = r2(dc.diff || 0);
+  if (diff === 0) return null;
+  const lines = diff < 0
+    ? [
+        { account_code: "6300", debit: -diff, credit: 0 },
+        { account_code: "1000", debit: 0, credit: -diff },
+      ]
+    : [
+        { account_code: "1000", debit: diff, credit: 0 },
+        { account_code: "4100", debit: 0, credit: diff },
+      ];
+  return postJE({
+    date: dc.date,
+    memo: `ปิดยอดสิ้นวัน ${dc.date}: เงินสด${diff < 0 ? "ขาด" : "เกิน"} ${Math.abs(diff)}฿ ${dc.note || ""}`,
+    lines,
+    source_type: "daily_close", source_ID: dc.close_ID,
+  });
+}
+
+// เคลียร์เงินบัตร: Dr ธนาคาร(สุทธิ) + Dr ค่าธรรมเนียม / Cr ลูกหนี้บัตร 1020
+export async function postFromCardSettlement(cs) {
+  return postJE({
+    date: cs.date,
+    memo: `เคลียร์เงินบัตรเข้าธนาคาร ${cs.settle_ID}${cs.note ? " · " + cs.note : ""}`,
+    lines: [
+      { account_code: "1010", debit: cs.net, credit: 0 },
+      ...(cs.fee > 0 ? [{ account_code: "6400", debit: cs.fee, credit: 0 }] : []),
+      { account_code: "1020", debit: 0, credit: cs.amount },
+    ],
+    source_type: "card_settle", source_ID: cs.settle_ID,
   });
 }
 
@@ -225,7 +339,10 @@ export async function postFromPayrollRun(run, posted_by = "") {
 export async function rebuildJournal() {
   await ensureCoA();
   const PayrollRun = (await import("@/models/PayrollRun")).default;
-  const [payments, opds, earnings, expenses, lots, bills, payrolls] = await Promise.all([
+  const DailyClose = (await import("@/models/DailyClose")).default;
+  const CardSettlement = (await import("@/models/CardSettlement")).default;
+  const Reserve = (await import("@/models/Reserve")).default;
+  const [payments, opds, earnings, expenses, lots, bills, payrolls, dailyCloses, settles, depReserves] = await Promise.all([
     Payment.find({}).lean(),
     Opd.find({ status: "closed" }).lean(),
     StaffEarning.find({}).lean(),
@@ -233,6 +350,9 @@ export async function rebuildJournal() {
     StockLot.find({}).lean(),
     ApBill.find({}).lean(),
     PayrollRun.find({ status: "paid" }).lean(),
+    DailyClose.find({}).lean(),
+    CardSettlement.find({}).lean(),
+    Reserve.find({ deposit_status: { $in: ["forfeited", "refunded"] } }).lean(),
   ]);
   let posted = 0;
   const skipped = [];
@@ -264,6 +384,18 @@ export async function rebuildJournal() {
     for (let i = 0; i < (b.payments || []).length; i++)
       await tryPost(`ap_payment:${b.bill_ID}:${i}`, () => postFromApPayment(b, b.payments[i], i));
   for (const pr of payrolls) await tryPost(`payroll:${pr.payroll_ID}`, () => postFromPayrollRun(pr));
+  // V3.5: กลับรายการ payment ที่ void · รับรู้รายได้คอร์ส deferred · ปิดวัน · เคลียร์บัตร · มัดจำริบ/คืน
+  for (const p of payments)
+    if (p.voided) await tryPost(`void:${p.payment_ID}`, () => postPaymentVoid(p));
+  for (const o of opds)
+    if (o.revenue_recognized > 0)
+      await tryPost(`revenue_rec:${o.opd_ID}`, () =>
+        postRevenueRecognition({ opd_ID: o.opd_ID, date: o.date, amount: o.revenue_recognized }));
+  for (const dc of dailyCloses) await tryPost(`daily_close:${dc.close_ID}`, () => postFromDailyClose(dc));
+  for (const cs of settles) await tryPost(`card_settle:${cs.settle_ID}`, () => postFromCardSettlement(cs));
+  for (const rs of depReserves)
+    await tryPost(`deposit:${rs.reserve_ID}`, () =>
+      rs.deposit_status === "forfeited" ? postDepositForfeit(rs) : postDepositRefund(rs, rs.deposit_refund_method || "cash"));
   return { posted, skipped };
 }
 

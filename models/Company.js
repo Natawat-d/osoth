@@ -12,6 +12,8 @@ const CompanySchema = new mongoose.Schema(
     phone: { type: String, default: "" },
     email: { type: String, default: "" },
     // ---- แบรนด์ (Setup > Brand) — ใช้กับ about_me / navbar / ใบเสร็จ ----
+    // ปิดงวดบัญชี: ห้ามบันทึกเอกสารเงินลงวันที่ <= วันนี้ (แก้ย้อนหลังต้องกลับรายการในงวดปัจจุบัน)
+    gl_locked_through: { type: String, default: "" }, // "YYYY-MM-DD" · "" = ไม่ล็อก
     brand: {
       display_name: { type: String, default: "Osoth" },
       logo: { type: String, default: "/brand/logo.jpg" }, // path public หรือ data URL

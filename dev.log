@@ -6,75 +6,289 @@
 - Local:         http://localhost:3001
 - Network:       http://100.79.248.126:3001
 - Environments: .env.local
-✓ Ready in 677ms
+✓ Ready in 889ms
 
- POST /api/auth/login 200 in 1124ms (next.js: 981ms, application-code: 143ms)
- GET /api/expenses 401 in 149ms (next.js: 143ms, application-code: 6ms)
- GET /api/purchase-orders 401 in 136ms (next.js: 130ms, application-code: 6ms)
- GET /api/commission/report 401 in 129ms (next.js: 124ms, application-code: 5ms)
- GET /api/customers 401 in 103ms (next.js: 97ms, application-code: 5ms)
- GET /api/customer-courses 401 in 114ms (next.js: 109ms, application-code: 6ms)
- GET /api/opd 401 in 104ms (next.js: 100ms, application-code: 4ms)
- GET /api/payments 404 in 1124ms (next.js: 999ms, application-code: 126ms)
- GET /api/stock/summary?branch_ID=BR-001 401 in 128ms (next.js: 123ms, application-code: 6ms)
- GET /api/users 401 in 125ms (next.js: 118ms, application-code: 7ms)
- GET /api/gl/journal 401 in 120ms (next.js: 113ms, application-code: 6ms)
- GET /api/gl/reports/pnl 401 in 1399ms (next.js: 1388ms, application-code: 11ms)
- GET /api/payroll?period=2026-07 401 in 129ms (next.js: 123ms, application-code: 6ms)
- GET /api/earnings 401 in 125ms (next.js: 120ms, application-code: 5ms)
- GET /api/executive/summary 401 in 121ms (next.js: 116ms, application-code: 5ms)
- GET /api/finance/summary 401 in 120ms (next.js: 115ms, application-code: 5ms)
- GET /api/reserves?branch_ID=BR-001&date=2026-09-01 401 in 225ms (next.js: 219ms, application-code: 6ms)
-⨯ ReferenceError: publicApiHandler is not defined
-    at module evaluation (app\api\setup\state\route.js:9:20)
-    at Object.<anonymous> (D:\arkara_project\clinic_project\osot\.next\dev\server\app\api\setup\state\route.js:6:3)
-   7 | //   has_company: มีข้อมูลบริษัทแล้วหรือยัง
-   8 | // ใช้ตัดสินใจ redirect หน้าแรก (root → register หรือ about_me/login)
->  9 | export const GET = publicApiHandler(async () => {
-     |                    ^
-  10 |   const ownerCount = await User.countDocuments({ role: "super_admin" });
-  11 |   const company = await Company.findOne({});
-  12 |   return { {
-  page: '/api/setup/state'
-}
- GET /api/setup/state 500 in 1001ms (next.js: 872ms, application-code: 129ms)
-⨯ ReferenceError: publicApiHandler is not defined
-    at module evaluation (app\api\public\storefront\route.js:6:20)
-    at Object.<anonymous> (D:\arkara_project\clinic_project\osot\.next\dev\server\app\api\public\storefront\route.js:6:3)
-  4 | // GET /api/public/storefront → สาขาที่เปิดหน้าร้าน (สาธารณะ, ไม่ต้อง login)
-  5 | // คืนเฉพาะข้อมูลติดต่อสาธารณะ — ไม่มีข้อมูลลูกค้า/ยอดขาย
-> 6 | export const GET = publicApiHandler(async () => {
-    |                    ^
-  7 |   const branches = await Branch.find({ storefront_enabled: true, active: true })
-  8 |     .sort({ name: 1 })
-  9 |     .lean(); {
-  page: '/api/public/storefront'
-}
- GET /api/public/storefront 500 in 151ms (next.js: 144ms, application-code: 7ms)
- POST /api/auth/login 200 in 73ms (next.js: 3ms, application-code: 70ms)
- GET /api/users 200 in 13ms (next.js: 3ms, application-code: 10ms)
- POST /api/auth/login 200 in 67ms (next.js: 3ms, application-code: 65ms)
- GET /api/users 200 in 14ms (next.js: 4ms, application-code: 10ms)
- POST /api/expenses 400 in 36ms (next.js: 3ms, application-code: 33ms)
- POST /api/expenses 400 in 29ms (next.js: 2ms, application-code: 27ms)
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/auth/login 200 in 1885ms (next.js: 1549ms, application-code: 335ms)
+ GET /api/expenses 401 in 941ms (next.js: 829ms, application-code: 112ms)
+ GET /api/purchase-orders 401 in 273ms (next.js: 248ms, application-code: 25ms)
+ GET /api/commission/report 401 in 247ms (next.js: 239ms, application-code: 8ms)
+ GET /api/customers 401 in 141ms (next.js: 135ms, application-code: 7ms)
+ GET /api/customer-courses 401 in 332ms (next.js: 324ms, application-code: 8ms)
+ GET /api/opd 401 in 157ms (next.js: 146ms, application-code: 10ms)
+ GET /api/stock/summary?branch_ID=BR-001 401 in 187ms (next.js: 165ms, application-code: 21ms)
+ GET /api/users 401 in 138ms (next.js: 131ms, application-code: 7ms)
+ GET /api/gl/journal 401 in 162ms (next.js: 154ms, application-code: 8ms)
+ GET /api/gl/reports/pnl 401 in 2.6s (next.js: 2.6s, application-code: 11ms)
+ GET /api/payroll?period=2026-07 401 in 285ms (next.js: 258ms, application-code: 27ms)
+ GET /api/earnings 401 in 298ms (next.js: 274ms, application-code: 24ms)
+ GET /api/executive/summary 401 in 282ms (next.js: 272ms, application-code: 10ms)
+ GET /api/finance/summary 401 in 176ms (next.js: 164ms, application-code: 12ms)
+ GET /api/reserves?branch_ID=BR-001&date=2026-09-01 401 in 304ms (next.js: 295ms, application-code: 9ms)
+ GET /api/setup/state 200 in 403ms (next.js: 271ms, application-code: 132ms)
+ GET /api/public/storefront 200 in 482ms (next.js: 189ms, application-code: 293ms)
+ POST /api/auth/login 200 in 145ms (next.js: 4ms, application-code: 140ms)
+ GET /api/users 200 in 20ms (next.js: 4ms, application-code: 16ms)
+ POST /api/auth/login 200 in 144ms (next.js: 5ms, application-code: 139ms)
+ GET /api/users 200 in 33ms (next.js: 7ms, application-code: 25ms)
+ POST /api/expenses 400 in 84ms (next.js: 4ms, application-code: 80ms)
+ POST /api/expenses 400 in 55ms (next.js: 5ms, application-code: 50ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
- POST /api/expenses 200 in 43ms (next.js: 3ms, application-code: 40ms)
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
- GET /api/gl/reports/trial-balance 200 in 108ms (next.js: 8ms, application-code: 101ms)
- GET /api/gl/reports/hack 404 in 7ms (next.js: 2ms, application-code: 5ms)
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
- POST /api/customers 200 in 15ms (next.js: 2ms, application-code: 13ms)
- GET /api/courses?branch_ID=BR-001 200 in 108ms (next.js: 98ms, application-code: 10ms)
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
- POST /api/customer-courses 200 in 31ms (next.js: 3ms, application-code: 28ms)
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-(node:8360) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
- POST /api/customer-courses/CC-000001/pay 409 in 1267ms (next.js: 1246ms, application-code: 22ms)
- POST /api/customer-courses/CC-000001/pay 200 in 1273ms (next.js: 1247ms, application-code: 25ms)
- GET /api/payments 404 in 32ms (next.js: 6ms, application-code: 26ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/expenses 200 in 118ms (next.js: 4ms, application-code: 114ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ GET /api/gl/reports/trial-balance 200 in 339ms (next.js: 35ms, application-code: 304ms)
+ GET /api/gl/reports/hack 404 in 17ms (next.js: 7ms, application-code: 10ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customers 200 in 53ms (next.js: 11ms, application-code: 42ms)
+ GET /api/courses?branch_ID=BR-001 200 in 541ms (next.js: 492ms, application-code: 49ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customer-courses 200 in 35ms (next.js: 7ms, application-code: 28ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customer-courses/CC-000001/pay 409 in 5.8s (next.js: 5.7s, application-code: 33ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customer-courses/CC-000001/pay 200 in 5.8s (next.js: 5.7s, application-code: 62ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/gl/journal/rebuild 200 in 449ms (next.js: 326ms, application-code: 123ms)
+ GET /api/gl/journal?source=payment 200 in 77ms (next.js: 4ms, application-code: 73ms)
+ POST /api/customer-courses/CC-000001/pay 409 in 210ms (next.js: 152ms, application-code: 58ms)
+ POST /api/auth/login 200 in 391ms (next.js: 61ms, application-code: 330ms)
+ POST /api/customer-courses 403 in 15ms (next.js: 6ms, application-code: 9ms)
+ POST /api/customer-courses 400 in 16ms (next.js: 4ms, application-code: 11ms)
+ POST /api/customer-courses 400 in 19ms (next.js: 4ms, application-code: 15ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customer-courses 200 in 21ms (next.js: 2ms, application-code: 18ms)
+ GET /api/products?branch_ID=BR-001 200 in 402ms (next.js: 388ms, application-code: 14ms)
+ POST /api/stock/receive 400 in 627ms (next.js: 609ms, application-code: 18ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/stock/receive 200 in 158ms (next.js: 4ms, application-code: 154ms)
+ GET /api/ap/bills 200 in 375ms (next.js: 298ms, application-code: 77ms)
+ GET /api/gl/journal?source=stock_receive 200 in 172ms (next.js: 76ms, application-code: 96ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/purchase-orders 200 in 43ms (next.js: 7ms, application-code: 37ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/purchase-orders/PO-00001/receive 200 in 2.1s (next.js: 1975ms, application-code: 98ms)
+ GET /api/gl/journal?source=stock_receive 200 in 49ms (next.js: 3ms, application-code: 47ms)
+ GET /api/stock/items?product_ID=PD-001&branch_ID=BR-001 200 in 128ms (next.js: 114ms, application-code: 14ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'before'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/stock/items/IV-000001/discard 200 in 1786ms (next.js: 1721ms, application-code: 66ms)
+ GET /api/gl/journal?source=stock_discard 200 in 44ms (next.js: 3ms, application-code: 41ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+[notify:stub] 📅 จองคิวใหม่: REGเงิน · 2026-09-10 10:00–10:30 · ห้อง RM-001
+ POST /api/reserves 200 in 23ms (next.js: 3ms, application-code: 20ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/opd 200 in 20ms (next.js: 2ms, application-code: 17ms)
+ POST /api/opd/OPD-000001/addon 400 in 1553ms (next.js: 1542ms, application-code: 11ms)
+ POST /api/opd/OPD-000001/addon 400 in 21ms (next.js: 12ms, application-code: 10ms)
+ POST /api/opd/OPD-000001/course 200 in 1850ms (next.js: 1825ms, application-code: 25ms)
+ POST /api/opd/OPD-000001/addon 200 in 29ms (next.js: 11ms, application-code: 18ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ DELETE /api/opd/OPD-000001/addon?index=0 200 in 20ms (next.js: 3ms, application-code: 17ms)
+ GET /api/customer-courses?HN=HN-2569-0001 200 in 12ms (next.js: 3ms, application-code: 10ms)
+ POST /api/payroll 400 in 53ms (next.js: 3ms, application-code: 50ms)
+ GET /api/payroll?period=2026-06 200 in 16ms (next.js: 3ms, application-code: 13ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/users 200 in 24ms (next.js: 4ms, application-code: 21ms)
+ GET /api/payroll?period=2026-08 200 in 26ms (next.js: 5ms, application-code: 21ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customer-courses/CC-000002/pay 200 in 99ms (next.js: 16ms, application-code: 83ms)
+ PUT /api/opd/OPD-000001 200 in 2.7s (next.js: 2.6s, application-code: 25ms)
+ POST /api/opd/OPD-000001/consent 200 in 1587ms (next.js: 1565ms, application-code: 21ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/opd/OPD-000001/close 409 in 1398ms (next.js: 1369ms, application-code: 29ms)
+ POST /api/opd/OPD-000001/close 200 in 1425ms (next.js: 1370ms, application-code: 55ms)
+ GET /api/earnings?user_ID=all&from=2026-09-10&to=2026-09-10 200 in 25ms (next.js: 5ms, application-code: 20ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customers 200 in 33ms (next.js: 8ms, application-code: 24ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customer-courses 200 in 55ms (next.js: 7ms, application-code: 48ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/gl/journal/rebuild 200 in 321ms (next.js: 5ms, application-code: 316ms)
+ GET /api/gl/journal?source=payment 200 in 114ms (next.js: 8ms, application-code: 106ms)
+ GET /api/receipts?cc=CC-000003 200 in 154ms (next.js: 143ms, application-code: 11ms)
+ POST /api/receipts/RCP-000003/void 400 in 1587ms (next.js: 1576ms, application-code: 10ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+MongooseError: Cannot pass an array to query updates unless the `updatePipeline` option is set.
+    at voidPayment (services\receipts.js:62:26)
+    at async voidReceipt (services\receipts.js:96:17)
+    at async (lib\api.js:17:20)
+  60 |   // คืนยอดค้างของคอร์ส (เงินคอร์สถูกยกเลิก → คอร์สกลับเป็นค้างชำระ)
+  61 |   if (["course_purchase", "installment"].includes(p.type) && p.ref?.customer_course_ID) {
+> 62 |     await CustomerCourse.updateOne(
+     |                          ^
+  63 |       { customer_course_ID: p.ref.customer_course_ID },
+  64 |       [{
+  65 |         $set: {
+ POST /api/receipts/RCP-000003/void 500 in 206ms (next.js: 10ms, application-code: 196ms)
+ GET /api/customer-courses?HN=HN-2569-0002 200 in 11ms (next.js: 2ms, application-code: 8ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/receipts/RCP-000003/void 409 in 10ms (next.js: 2ms, application-code: 8ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/gl/journal/rebuild 200 in 208ms (next.js: 3ms, application-code: 204ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ GET /api/gl/reports/trial-balance 200 in 311ms (next.js: 19ms, application-code: 292ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+[notify:stub] 📅 จองคิวใหม่: REGมัดจำ · 2026-09-20 10:00–10:30 · ห้อง RM-001
+ POST /api/reserves 200 in 53ms (next.js: 9ms, application-code: 44ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/reserves/RS-000002/deposit 200 in 1913ms (next.js: 1846ms, application-code: 66ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/reserves/RS-000002/deposit 409 in 17ms (next.js: 9ms, application-code: 9ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/opd 200 in 17ms (next.js: 3ms, application-code: 14ms)
+ POST /api/opd/OPD-000002/course 200 in 24ms (next.js: 9ms, application-code: 15ms)
+ POST /api/customer-courses/CC-000003/pay 409 in 21ms (next.js: 11ms, application-code: 10ms)
+ GET /api/reserves/RS-000002 200 in 2.1s (next.js: 2.1s, application-code: 9ms)
+ POST /api/customer-courses/CC-000003/pay 409 in 43ms (next.js: 9ms, application-code: 35ms)
+ GET /api/finance/daily-close?date=2026-08-05 200 in 187ms (next.js: 168ms, application-code: 19ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/finance/daily-close 200 in 53ms (next.js: 2ms, application-code: 50ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/finance/daily-close 409 in 16ms (next.js: 3ms, application-code: 13ms)
+ GET /api/gl/journal?source=daily_close 200 in 41ms (next.js: 2ms, application-code: 38ms)
+ GET /api/finance/card-settlement 200 in 183ms (next.js: 143ms, application-code: 40ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/finance/card-settlement 200 in 53ms (next.js: 2ms, application-code: 50ms)
+ POST /api/finance/card-settlement 400 in 9ms (next.js: 3ms, application-code: 6ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ PUT /api/gl/period-lock 200 in 114ms (next.js: 105ms, application-code: 10ms)
+ POST /api/expenses 409 in 31ms (next.js: 2ms, application-code: 29ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/expenses 200 in 38ms (next.js: 1966µs, application-code: 36ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ PUT /api/gl/period-lock 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ PUT /api/opd/OPD-000002 200 in 20ms (next.js: 8ms, application-code: 12ms)
+ POST /api/opd/OPD-000002/consent 200 in 24ms (next.js: 9ms, application-code: 15ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/opd/OPD-000002/close 200 in 61ms (next.js: 17ms, application-code: 44ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/gl/journal/rebuild 200 in 195ms (next.js: 5ms, application-code: 190ms)
+ GET /api/gl/journal?source=revenue_rec 200 in 71ms (next.js: 2ms, application-code: 69ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ GET /api/gl/reports/trial-balance 200 in 298ms (next.js: 12ms, application-code: 286ms)
+ POST /api/auth/login 200 in 72ms (next.js: 4ms, application-code: 68ms)
+ POST /api/auth/login 200 in 70ms (next.js: 3ms, application-code: 67ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customers 200 in 20ms (next.js: 3ms, application-code: 17ms)
+ GET /api/courses?branch_ID=BR-001 200 in 12ms (next.js: 3ms, application-code: 8ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ POST /api/customer-courses 200 in 27ms (next.js: 4ms, application-code: 23ms)
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:30092) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+MongooseError: Cannot pass an array to query updates unless the `updatePipeline` option is set.
+    at voidPayment (services\receipts.js:62:26)
+    at async voidReceipt (services\receipts.js:96:17)
+    at async (lib\api.js:17:20)
+  60 |   // คืนยอดค้างของคอร์ส (เงินคอร์สถูกยกเลิก → คอร์สกลับเป็นค้างชำระ)
+  61 |   if (["course_purchase", "installment"].includes(p.type) && p.ref?.customer_course_ID) {
+> 62 |     await CustomerCourse.updateOne(
+     |                          ^
+  63 |       { customer_course_ID: p.ref.customer_course_ID },
+  64 |       [{
+  65 |         $set: {
+ POST /api/receipts/RCP-000005/void 500 in 148ms (next.js: 9ms, application-code: 139ms)
+ GET /api/customer-courses?HN=HN-2569-0003 200 in 15ms (next.js: 5ms, application-code: 10ms)

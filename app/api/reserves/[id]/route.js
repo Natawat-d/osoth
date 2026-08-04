@@ -72,6 +72,13 @@ export const PUT = apiHandler(async (req, { params }) => {
       );
     rs.status = body.status;
     rs.status_history.push({ status: body.status, at: now, by: auth.user_ID });
+    // ไม่มาตามนัด + มีมัดจำค้าง → ริบมัดจำเป็นรายได้อื่น (Dr 2300 / Cr 4100)
+    if (body.status === "no_show" && rs.deposit_status === "held") {
+      rs.deposit_status = "forfeited";
+      const { ensureCoA, postDepositForfeit } = await import("@/services/gl");
+      await ensureCoA();
+      await postDepositForfeit(rs);
+    }
     await rs.save();
     emitEvent("reserve:changed", { reserve_ID: rs.reserve_ID, date: rs.date, status: rs.status });
     return rs;

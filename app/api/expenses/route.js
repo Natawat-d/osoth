@@ -2,7 +2,7 @@ import Expense from "@/models/Expense";
 import { makeCrud } from "@/lib/crud";
 import { apiHandler, requireRole, assertAmount } from "@/lib/api";
 import { genId, localDate } from "@/services/ids";
-import { postFromExpense, ensureCoA } from "@/services/gl";
+import { postFromExpense, ensureCoA, assertPeriodOpen } from "@/services/gl";
 
 const crud = makeCrud(Expense, {
   idField: "expense_ID",
@@ -28,10 +28,12 @@ export const POST = apiHandler(async (req) => {
   const body = await req.json();
   // ยอดต้อง > 0 เสมอ — เอกสารยอด 0/ติดลบเคยทำ GL rebuild/รายงานพังทั้งระบบ
   const amount = assertAmount(body.amount, "ยอดค่าใช้จ่าย");
+  const date = body.date || localDate();
+  await assertPeriodOpen(date); // งวดที่ปิดแล้วคีย์ย้อนหลังไม่ได้
   const doc = await Expense.create({
     ...body,
     amount,
-    date: body.date || localDate(),
+    date,
     expense_ID: body.expense_ID || (await genId("EX", 5)),
     branch_ID: auth.branch_ID, // ล็อกสาขาตามผู้ใช้
     recorded_by: auth.user_ID,

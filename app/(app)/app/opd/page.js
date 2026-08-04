@@ -176,8 +176,12 @@ function ABtn({ className = "btn btn-primary", disabled, onClick, ok, toast, chi
 }
 
 // ── รับชำระเต็มจำนวน แยกหลายช่องทาง ──
-function SplitPay({ due, confirmLabel, ok, toast, onConfirm }) {
+function SplitPay({ due, confirmLabel, ok, toast, onConfirm, depositAvailable = 0 }) {
   const [lines, setLines] = useState([{ method: "cash", amount: String(due || "") }]);
+  // มัดจำที่วางไว้ตอนจอง — ใช้เป็นบรรทัดจ่ายได้ 1 บรรทัด (ยอดเท่าที่วาง)
+  const methods = depositAvailable > 0
+    ? [...PAY_METHODS, { value: "deposit", label: `มัดจำที่วางไว้ (${depositAvailable}฿)` }]
+    : PAY_METHODS;
   const sum = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0);
   const remain = due - sum;
   const ready = due > 0 && sum === due;
@@ -190,8 +194,10 @@ function SplitPay({ due, confirmLabel, ok, toast, onConfirm }) {
       {lines.map((l, i) => (
         <div className="d-flex gap-2 mb-1" key={i}>
           <select className="form-select form-select-sm" value={l.method}
-                  onChange={(e) => setLines((ls) => ls.map((x, j) => j === i ? { ...x, method: e.target.value } : x))}>
-            {PAY_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  onChange={(e) => setLines((ls) => ls.map((x, j) => j === i
+                    ? { ...x, method: e.target.value, ...(e.target.value === "deposit" ? { amount: String(depositAvailable) } : {}) }
+                    : x))}>
+            {methods.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
           <input type="number" className="form-control form-control-sm" value={l.amount} placeholder="0"
                  onChange={(e) => setLines((ls) => ls.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))} />
@@ -246,6 +252,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
   const [viewConsent, setViewConsent] = useState(null);
   const [customer, setCustomer] = useState(null); // ใช้เติมข้อมูลในหนังสือยินยอม
   const [company, setCompany] = useState(null);
+  const [reserve, setReserve] = useState(null); // มัดจำที่วางไว้ตอนจอง (ใช้จ่ายคอร์สได้)
 
   const reload = useCallback(async () => {
     const o = await api(`/opd/${opd_ID}`);
@@ -261,6 +268,9 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
     api(`/customers/${encodeURIComponent(opd.HN_number)}`).then((r) => setCustomer(r.customer)).catch(() => {});
     api("/setup/state").then((s) => setCompany(s.company)).catch(() => {});
   }, [opd?.HN_number]);
+  useEffect(() => {
+    if (opd?.reserve_ID) api(`/reserves/${opd.reserve_ID}`).then(setReserve).catch(() => {});
+  }, [opd?.reserve_ID, opd?.customer_course_ID, cc?.balance_due]);
 
   useEffect(() => {
     if (!opd?.branch_ID) return;
@@ -322,7 +332,11 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
     setSell({ mode: "new", course_ID: "", existing_id: "" }); setPriceOv("");
     reload(); onChanged();
   };
-  const payLinked = async (payments) => { await api(`/customer-courses/${cc.customer_course_ID}/pay`, { method: "POST", body: { payments } }); reload(); };
+  const payLinked = async (payments) => {
+    await api(`/customer-courses/${cc.customer_course_ID}/pay`, { method: "POST", body: { payments, reserve_ID: opd.reserve_ID } });
+    reload();
+  };
+  const depositHeld = reserve?.deposit_status === "held" ? reserve.deposit : 0;
   const saveVitals = async () => {
     await api(`/opd/${opd_ID}`, { method: "PUT", body: { opd_data: { ...vitals, heart_rate: +vitals.heart_rate || 0, weight_kg: +vitals.weight_kg || 0, height_cm: +vitals.height_cm || 0, fat_mass: +vitals.fat_mass || 0, muscle_mass: +vitals.muscle_mass || 0 } } });
     reload(); onChanged();
@@ -599,12 +613,18 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
             <>
               <div><b>{cc.course_snapshot?.name}</b> · เหลือ {cc.uses_remaining}/{cc.uses_total} · จ่ายแล้ว {money(cc.paid_amount)}/{money(cc.total_price)}฿
                 <span className="badge text-bg-danger ms-2">ค้าง {money(cc.balance_due)}฿</span></div>
-              <SplitPay key={cc.customer_course_ID} due={cc.balance_due} toast={toast}
+              <SplitPay key={`${cc.customer_course_ID}:${depositHeld}`} due={cc.balance_due} toast={toast} depositAvailable={depositHeld}
                         confirmLabel="รับชำระ (เต็มจำนวน)" ok="รับชำระครบแล้ว" onConfirm={payLinked} />
             </>
           ) : (
-            <div><b>{cc.course_snapshot?.name}</b> · เหลือ {cc.uses_remaining}/{cc.uses_total} · จ่ายแล้ว {money(cc.paid_amount)}฿
-              <span className="badge text-bg-success ms-2">ชำระครบ ✓</span></div>
+            <div className="d-flex align-items-center flex-wrap gap-2">
+              <span><b>{cc.course_snapshot?.name}</b> · เหลือ {cc.uses_remaining}/{cc.uses_total} · จ่ายแล้ว {money(cc.paid_amount)}฿
+                <span className="badge text-bg-success ms-2">ชำระครบ ✓</span></span>
+              <a className="btn btn-outline-secondary btn-sm ms-auto" target="_blank" rel="noreferrer"
+                 href={`/app/receipt?cc=${cc.customer_course_ID}`}>
+                <i className="bi bi-receipt me-1" />ใบเสร็จ
+              </a>
+            </div>
           )}
         </StepCard>
       )}
