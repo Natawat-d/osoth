@@ -5,12 +5,12 @@ import DoctorSchedule from "@/models/DoctorSchedule";
 import User from "@/models/User";
 import Promotion from "@/models/Promotion";
 import Course from "@/models/Course";
-import { apiHandler } from "@/lib/api";
+import { apiHandler, publicApiHandler } from "@/lib/api";
 
 // GET /api/public/calendar?branch_ID=..&date=YYYY-MM-DD
 // ปฏิทินหน้าร้าน (privacy) สำหรับลูกค้า — ไม่มีชื่อผู้จอง/เบอร์/ยอด
 // เปิดเฉพาะสาขาที่ storefront_enabled เท่านั้น
-export const GET = apiHandler(async (req) => {
+export const GET = publicApiHandler(async (req) => {
   const sp = new URL(req.url).searchParams;
   const branch_ID = sp.get("branch_ID");
   const date = sp.get("date");

@@ -1,11 +1,11 @@
 import Branch from "@/models/Branch";
 import Reserve from "@/models/Reserve";
-import { apiHandler } from "@/lib/api";
+import { apiHandler, publicApiHandler } from "@/lib/api";
 
 // GET /api/public/month?branch_ID=..&month=YYYY-MM
 // สรุปคิวทั้งเดือนแบบ privacy (สำหรับ month-grid หน้า /calendar ลูกค้า)
 // ต่อวัน: จำนวนคิว + ช่วงเวลา (ไม่มีตัวตนลูกค้า)
-export const GET = apiHandler(async (req) => {
+export const GET = publicApiHandler(async (req) => {
   const sp = new URL(req.url).searchParams;
   const branch_ID = sp.get("branch_ID");
   const month = sp.get("month"); // "YYYY-MM"

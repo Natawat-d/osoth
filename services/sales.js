@@ -41,8 +41,13 @@ export async function purchaseCourse({
           : course.price - promo.discount_value;
     }
   }
-  // ราคาปรับหน้างาน (admin) ทับทุกอย่าง
-  if (price_override != null && Number(price_override) >= 0) total = Number(price_override);
+  // ราคาปรับหน้างาน — เฉพาะ admin/owner (ตรวจ role ที่ route) และต้อง > 0 (ห้ามตั้ง 0 = แจกฟรีเงียบๆ)
+  if (price_override != null && price_override !== "") {
+    const ov = Number(price_override);
+    if (!Number.isFinite(ov) || ov <= 0)
+      throw httpError(400, "ราคาปรับหน้างาน (price_override) ต้องมากกว่า 0");
+    total = ov;
+  }
 
   const now = new Date();
   const expires_at = course.validity_days
@@ -51,17 +56,24 @@ export async function purchaseCourse({
 
   let commission_rate = 0;
   if (sale_ID) {
-    const sale = await User.findOne({ user_ID: sale_ID }).lean();
-    commission_rate = sale?.commission_rate || 0;
+    // sale_ID ต้องเป็นพนักงานที่มีจริง — กันโยกฐานคอมไปคนที่ไม่มีในระบบ
+    const sale = await User.findOne({ user_ID: sale_ID, active: true }).lean();
+    if (!sale) throw httpError(400, `ไม่พบพนักงาน sale_ID ${sale_ID}`);
+    commission_rate = sale.commission_rate || 0;
   }
   const commission_amount = Math.round(total * (commission_rate / 100));
 
   // รวมช่องทางจ่าย: ใช้ payments[] ถ้ามี ไม่งั้น fallback เป็น first_payment ก้อนเดียว
-  const payLines = (payments && payments.length
+  // บรรทัดจ่ายติดลบ/0/ไม่ใช่ตัวเลข = ปฏิเสธทั้งคำขอ (ไม่ตัดทิ้งเงียบๆ — ถือว่า client ส่งข้อมูลผิด)
+  const rawLines = payments && payments.length
     ? payments
-    : first_payment && first_payment.amount ? [first_payment] : []
-  ).map((p) => ({ amount: Number(p.amount) || 0, method: p.method || "cash" }))
-    .filter((p) => p.amount > 0);
+    : first_payment && first_payment.amount ? [first_payment] : [];
+  for (const p of rawLines) {
+    const n = Number(p.amount);
+    if (!Number.isFinite(n) || n <= 0)
+      throw httpError(400, `ยอดชำระแต่ละบรรทัดต้องมากกว่า 0 (พบ ${p.amount})`);
+  }
+  const payLines = rawLines.map((p) => ({ amount: Number(p.amount), method: p.method || "cash" }));
   const paidNow = payLines.reduce((s, p) => s + p.amount, 0);
   // ไม่มีผ่อน — จ่ายเต็มจำนวน หรือ ยังไม่จ่าย (0) เท่านั้น (จ่ายบางส่วนไม่ได้)
   if (paidNow > 0 && paidNow !== total)
@@ -125,16 +137,29 @@ export async function purchaseCourse({
 
 // รับชำระค่าคอร์ส "เต็มยอดคงค้าง" ครั้งเดียว — ไม่มีผ่อน (ผ่อนเป็นเรื่องของบัตร/EDC)
 // แยกช่องทางได้ (สด/โอน/บัตร) แต่รวมต้องเท่ายอดค้างพอดี
+// atomic: จอง (claim) ยอดค้างด้วย findOneAndUpdate แบบมีเงื่อนไขก่อนสร้าง Payment
+// — สอง request พร้อมกัน (double-click) สำเร็จได้แค่ 1 เท่านั้น อีกอันได้ 409
 export async function payCourseFull({ customer_course_ID, payments = [], received_by = "" }) {
-  const cc = await CustomerCourse.findOne({ customer_course_ID });
-  if (!cc) throw httpError(404, "ไม่พบ course ของลูกค้า");
-  if (cc.balance_due <= 0) throw httpError(409, "course นี้จ่ายครบแล้ว");
-  const lines = payments
-    .map((p) => ({ amount: Number(p.amount) || 0, method: p.method || "cash" }))
-    .filter((p) => p.amount > 0);
+  const pre = await CustomerCourse.findOne({ customer_course_ID }).lean();
+  if (!pre) throw httpError(404, "ไม่พบ course ของลูกค้า");
+  if (pre.balance_due <= 0) throw httpError(409, "course นี้จ่ายครบแล้ว");
+  for (const p of payments) {
+    const n = Number(p.amount);
+    if (!Number.isFinite(n) || n <= 0)
+      throw httpError(400, `ยอดชำระแต่ละบรรทัดต้องมากกว่า 0 (พบ ${p.amount})`);
+  }
+  const lines = payments.map((p) => ({ amount: Number(p.amount), method: p.method || "cash" }));
   const sum = lines.reduce((s, p) => s + p.amount, 0);
-  if (sum !== cc.balance_due)
-    throw httpError(400, `ต้องชำระเต็มจำนวน ${cc.balance_due}฿ (รับมา ${sum}฿) — ระบบไม่รองรับผ่อน`);
+  if (sum !== pre.balance_due)
+    throw httpError(400, `ต้องชำระเต็มจำนวน ${pre.balance_due}฿ (รับมา ${sum}฿) — ระบบไม่รองรับผ่อน`);
+
+  // claim ยอดค้างแบบ atomic: เงื่อนไข balance_due ต้องยังเท่ายอดที่กำลังจ่ายพอดี
+  const cc = await CustomerCourse.findOneAndUpdate(
+    { customer_course_ID, balance_due: sum },
+    { $inc: { paid_amount: sum }, $set: { balance_due: 0, payment_status: "paid" } },
+    { new: true }
+  );
+  if (!cc) throw httpError(409, "รายการนี้ถูกชำระไปแล้ว/กำลังประมวลผลอยู่ — รีเฟรชแล้วตรวจสอบยอด");
 
   const now = new Date();
   const created = [];
@@ -151,10 +176,6 @@ export async function payCourseFull({ customer_course_ID, payments = [], receive
       received_by,
     }));
   }
-  await CustomerCourse.updateOne(
-    { customer_course_ID },
-    { $set: { paid_amount: cc.paid_amount + sum, balance_due: 0, payment_status: "paid" } }
-  );
   return { payments: created, payment: created[0] || null, balance_due: 0 };
 }
 
@@ -170,6 +191,9 @@ export async function addAddOn({
   recommended_by = null,
   received_by = "",
 }) {
+  qty = Number(qty);
+  if (!Number.isInteger(qty) || qty < 1 || qty > 99)
+    throw httpError(400, "จำนวน (qty) ต้องเป็นจำนวนเต็ม 1–99");
   const opd = await Opd.findOne({ opd_ID });
   if (!opd) throw httpError(404, "ไม่พบเคส OPD");
   if (opd.status === "closed") throw httpError(409, "เคสปิดแล้ว เพิ่ม add_on ไม่ได้");

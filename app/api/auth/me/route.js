@@ -1,8 +1,8 @@
 import User from "@/models/User";
-import { apiHandler, getAuth } from "@/lib/api";
+import { apiHandler, getAuth, publicApiHandler } from "@/lib/api";
 
 // GET /api/auth/me → ข้อมูลผู้ใช้ปัจจุบัน (จาก JWT) — ใช้ตอนโหลดแอปเพื่อคืน session
-export const GET = apiHandler(async (req) => {
+export const GET = publicApiHandler(async (req) => {
   const auth = getAuth(req);
   if (!auth.user_ID) throw Object.assign(new Error("ยังไม่ได้เข้าสู่ระบบ"), { status: 401 });
   const u = await User.findOne({ user_ID: auth.user_ID }).lean();

@@ -110,6 +110,8 @@ const OpdSchema = new mongoose.Schema(
     },
     closed_by: { type: String, default: null },
     closed_at: { type: Date, default: null },
+    // ธง claim ตอนกำลังปิดเคส — กันปิดซ้ำจาก double-click/สอง request พร้อมกัน
+    closing_at: { type: Date, default: null },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

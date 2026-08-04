@@ -6,7 +6,7 @@ import { apiHandler, requireRole } from "@/lib/api";
 // GET /api/hr/throughput?branch_ID=&from=&to=
 // อัตราการเข้าทำเคสต่อพนักงาน — ใครทำหัตถการอะไรกี่ครั้ง + รายได้
 export const GET = apiHandler(async (req) => {
-  requireRole(req, ["crud"]); // admin/super_admin
+  requireRole(req, ["crud"]); // V3: งานบริหาร HR = owner (super_admin) เท่านั้น
   const sp = new URL(req.url).searchParams;
   const branch_ID = sp.get("branch_ID");
   const from = sp.get("from") || "0000-01-01";

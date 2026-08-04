@@ -8,6 +8,7 @@ const ApBillSchema = new mongoose.Schema(
     supplier_ID: { type: String, default: null, index: true },
     supplier_name: { type: String, default: "" },
     po_ID: { type: String, default: null },
+    lot_ID: { type: String, default: null }, // บิลที่เปิดจากรับของเข้าคลัง (JE มาจากฝั่ง stock แล้ว — rebuild ไม่ตั้งหนี้ซ้ำ)
     description: { type: String, default: "" },
     amount: { type: Number, required: true },
     bill_date: { type: String, required: true },   // "YYYY-MM-DD"

@@ -8,14 +8,18 @@ import { trialBalance, profitLoss, budgetVsActual, rebuildJournal } from "@/serv
 // GET /api/gl/reports/[kind]?from=&to=&year=
 // kind: trial-balance | pnl | ar | ap-aging | budget-vs-actual
 // ก่อนคำนวณ → lazy-sync journal จากธุรกรรมล่าสุดเสมอ (idempotent เร็ว เพราะ post เฉพาะที่ขาด)
+const KINDS = ["trial-balance", "pnl", "ar", "ap-aging", "budget-vs-actual"];
+
 export const GET = apiHandler(async (req, { params }) => {
   requireOwner(req);
   const { kind } = await params;
+  if (!KINDS.includes(kind))
+    throw Object.assign(new Error("ไม่รู้จักรายงานนี้"), { status: 404 });
   const sp = new URL(req.url).searchParams;
   const from = sp.get("from") || "0000-01-01";
   const to = sp.get("to") || "9999-12-31";
 
-  await rebuildJournal(); // journal ครบก่อนออกรายงานเสมอ
+  await rebuildJournal(); // journal ครบก่อนออกรายงานเสมอ (เอกสารเสียถูกข้าม — ไม่ทำรายงานพัง)
 
   if (kind === "trial-balance") return trialBalance({ from, to });
   if (kind === "pnl") return profitLoss({ from, to });

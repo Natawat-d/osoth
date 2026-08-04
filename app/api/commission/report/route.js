@@ -4,6 +4,7 @@ import User from "@/models/User";
 import Opd from "@/models/Opd";
 import CommissionSetting from "@/models/CommissionSetting";
 import { apiHandler, getAuth } from "@/lib/api";
+import { requireOwner } from "@/lib/owner";
 import { localDate } from "@/services/ids";
 
 // คิดคอมขั้นบันไดจากยอดขายรวม
@@ -32,6 +33,7 @@ function computeTier(total, tiers, mode) {
 // GET ?branch_ID=&month=YYYY-MM — สรุปคอม sale ต่อเดือน (tier + add-on)
 export const GET = apiHandler(async (req) => {
   const sp = new URL(req.url).searchParams;
+  requireOwner(req); // ข้อมูลคอม/ยอดขายพนักงานทั้งสาขา = owner เท่านั้น
   const branch_ID = sp.get("branch_ID") || getAuth(req).branch_ID;
   const month = sp.get("month") || localDate().slice(0, 7);
   const setting = await CommissionSetting.findOne({ branch_ID }).lean();

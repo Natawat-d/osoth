@@ -53,8 +53,13 @@ const r2 = (n) => Math.round(n * 100) / 100;
 const METHOD_ACC = { cash: "1000", transfer: "1010", card: "1020" };
 const EXPENSE_ACC = { rent: "6100", salary: "6000", utility: "6200", other: "6300" };
 
-// ── post journal entry (ตรวจสมดุล debit=credit) ──
+// ── post journal entry (ตรวจสมดุล debit=credit + ห้ามบรรทัดติดลบ/ไม่ใช่ตัวเลข) ──
 export async function postJE({ date, memo = "", lines, source_type = "manual", source_ID = null, posted_by = "" }) {
+  for (const l of lines) {
+    const d = l.debit || 0, c = l.credit || 0;
+    if (!Number.isFinite(d) || !Number.isFinite(c) || d < 0 || c < 0)
+      throw Object.assign(new Error(`บรรทัดบัญชี ${l.account_code} มียอดติดลบ/ไม่ถูกต้อง (Dr ${d} / Cr ${c})`), { status: 400 });
+  }
   const dr = r2(lines.reduce((s, l) => s + (l.debit || 0), 0));
   const cr = r2(lines.reduce((s, l) => s + (l.credit || 0), 0));
   if (dr !== cr || dr === 0)
@@ -171,37 +176,95 @@ export async function postStockAdjust({ adjust_ID, date, value, note }) {
   });
 }
 
+// ทิ้งขวด (discard) — ตัดมูลค่าที่เหลือของขวดออกจากคลัง: Dr สูญเสีย(6300) / Cr 1200
+// มูลค่าตามสัดส่วน cc ที่เหลือจริง (ขวดเปิดแล้วไม่คิดเต็มขวด — COGS ส่วนที่ใช้ถูกตัดไปแล้วตอนปิดเคส)
+export async function postFromDiscard({ item, lot, product }) {
+  const subUnit = product?.sub_unit_size || 1;
+  const value = r2(((lot?.cost_price_per_unit || 0) * (item.cc_remaining || 0)) / subUnit);
+  if (value <= 0) return null;
+  return postJE({
+    date: localDate(),
+    memo: `ทิ้งขวด ${item.item_ID} (${item.product_ID}) เหลือ ${item.cc_remaining}cc`,
+    lines: [
+      { account_code: "6300", debit: value, credit: 0 },
+      { account_code: "1200", debit: 0, credit: value },
+    ],
+    source_type: "stock_discard", source_ID: item.item_ID,
+  });
+}
+
+// เงินเดือนงวดที่จ่ายแล้ว — post จาก PayrollRun (ใช้ทั้งตอนกดจ่าย และตอน rebuild กู้ journal)
+export async function postFromPayrollRun(run, posted_by = "") {
+  const rows = run.rows || [];
+  const totalNet = r2(rows.reduce((s, r) => s + r.net, 0));
+  const ssoEmployee = r2(rows.reduce((s, r) => s + r.sso, 0));
+  const ssoEmployer = run.sso_employer ?? ssoEmployee;
+  const totalTax = r2(rows.reduce((s, r) => s + r.tax, 0));
+  const totalSalary = r2(rows.reduce((s, r) => s + r.salary + r.additions - r.deduction, 0));
+  const totalEarn = r2(rows.reduce((s, r) => s + r.earnings, 0));
+  const lines = [
+    { account_code: "6000", debit: totalSalary, credit: 0, note: "เงินเดือน+เพิ่มเติม-หักอื่น" },
+    ...(totalEarn > 0 ? [{ account_code: "2100", debit: totalEarn, credit: 0, note: "เคลียร์ค่ามือ/คอมค้างจ่าย" }] : []),
+    { account_code: "6010", debit: ssoEmployer, credit: 0, note: "สปส.นายจ้าง" },
+    { account_code: run.method === "cash" ? "1000" : "1010", debit: 0, credit: totalNet, note: "จ่ายสุทธิ" },
+    { account_code: "2050", debit: 0, credit: r2(ssoEmployee + ssoEmployer), note: "สปส.รอนำส่ง" },
+    ...(totalTax > 0 ? [{ account_code: "2060", debit: 0, credit: totalTax, note: "ภาษีรอนำส่ง" }] : []),
+  ].filter((l) => l.debit > 0 || l.credit > 0);
+  if (!lines.length) return null;
+  return postJE({
+    date: `${run.period}-28`, // จ่ายสิ้นเดือน (มาตรฐานงวดเดือน)
+    memo: `เงินเดือนงวด ${run.period} (${rows.length} คน)`,
+    lines,
+    source_type: "payroll", source_ID: run.payroll_ID, posted_by,
+  });
+}
+
 // ── rebuild: สแกนธุรกรรมทั้งหมด post ที่ยังไม่เคย post (idempotent ทั้งก้อน) ──
+// ทนต่อเอกสารเสีย: เอกสารใดโพสต์ไม่ผ่าน (ยอด 0/ติดลบ/ผังบัญชีหาย) ให้ "ข้าม" พร้อมรายงาน
+// — ห้ามพังทั้งรายงานเพราะ record เดียว (เคยเกิด: expense 0 บาททำ trial balance ตอบ 400 ทั้งระบบ)
 export async function rebuildJournal() {
   await ensureCoA();
-  const [payments, opds, earnings, expenses, lots, bills] = await Promise.all([
+  const PayrollRun = (await import("@/models/PayrollRun")).default;
+  const [payments, opds, earnings, expenses, lots, bills, payrolls] = await Promise.all([
     Payment.find({}).lean(),
     Opd.find({ status: "closed" }).lean(),
     StaffEarning.find({}).lean(),
     Expense.find({}).lean(),
     StockLot.find({}).lean(),
     ApBill.find({}).lean(),
+    PayrollRun.find({ status: "paid" }).lean(),
   ]);
   let posted = 0;
+  const skipped = [];
+  const tryPost = async (label, fn) => {
+    try {
+      if (await fn()) posted++;
+    } catch (e) {
+      skipped.push({ source: label, error: e.message });
+    }
+  };
   for (const b of bills)
-    if (!b.po_ID && (await postJE({
-      date: b.bill_date,
-      memo: `ตั้งหนี้ ${b.supplier_name || ""} · ${b.description || b.bill_ID}`,
-      lines: [
-        { account_code: b.expense_account || "1200", debit: b.amount, credit: 0 },
-        { account_code: "2000", debit: 0, credit: b.amount },
-      ],
-      source_type: "ap_bill", source_ID: b.bill_ID,
-    }))) posted++;
-  for (const p of payments) if (await postFromPayment(p)) posted++;
-  for (const o of opds) if (await postFromOpdCogs(o)) posted++;
-  for (const e of earnings) if (await postFromEarning(e)) posted++;
-  for (const x of expenses) if (await postFromExpense(x)) posted++;
-  for (const l of lots) if (await postFromStockLot(l)) posted++;
+    // ตั้งหนี้เฉพาะบิลที่คีย์มือ — บิลจาก PO/รับของเข้า (มี po_ID/lot_ID) JE ถูก post จากฝั่ง stock แล้ว
+    if (!b.po_ID && !b.lot_ID)
+      await tryPost(`ap_bill:${b.bill_ID}`, () => postJE({
+        date: b.bill_date,
+        memo: `ตั้งหนี้ ${b.supplier_name || ""} · ${b.description || b.bill_ID}`,
+        lines: [
+          { account_code: b.expense_account || "1200", debit: b.amount, credit: 0 },
+          { account_code: "2000", debit: 0, credit: b.amount },
+        ],
+        source_type: "ap_bill", source_ID: b.bill_ID,
+      }));
+  for (const p of payments) await tryPost(`payment:${p.payment_ID}`, () => postFromPayment(p));
+  for (const o of opds) await tryPost(`cogs:${o.opd_ID}`, () => postFromOpdCogs(o));
+  for (const e of earnings) await tryPost(`earning:${e.earning_ID}`, () => postFromEarning(e));
+  for (const x of expenses) await tryPost(`expense:${x.expense_ID}`, () => postFromExpense(x));
+  for (const l of lots) await tryPost(`stock_receive:${l.lot_ID}`, () => postFromStockLot(l));
   for (const b of bills)
     for (let i = 0; i < (b.payments || []).length; i++)
-      if (await postFromApPayment(b, b.payments[i], i)) posted++;
-  return { posted };
+      await tryPost(`ap_payment:${b.bill_ID}:${i}`, () => postFromApPayment(b, b.payments[i], i));
+  for (const pr of payrolls) await tryPost(`payroll:${pr.payroll_ID}`, () => postFromPayrollRun(pr));
+  return { posted, skipped };
 }
 
 // ── รายงาน ──

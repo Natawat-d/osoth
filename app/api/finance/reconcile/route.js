@@ -11,6 +11,8 @@ export const GET = apiHandler(async (req) => {
   const sp = new URL(req.url).searchParams;
   const branch_ID = sp.get("branch_ID");
   const date = sp.get("date");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || ""))
+    throw Object.assign(new Error("ต้องระบุ date (YYYY-MM-DD)"), { status: 400 });
   const bFilter = branch_ID && branch_ID !== "all" ? { branch_ID } : {};
 
   const payments = await Payment.find({

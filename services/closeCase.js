@@ -14,23 +14,44 @@ import CommissionSetting from "@/models/CommissionSetting";
 // 1. ตัด inventory ตาม FIFO ตาม course_snapshot.products (+ add_on ที่ตัด stock)
 // 2. อัปเดต uses/cc/state ของขวด + usage_log
 // 3. customer_course.uses_remaining-- (ครบ → completed)
-// 4. สร้าง staff_earning ค่ามือหมอ/BT ตาม procedures_done
+// 4. สร้าง staff_earning ค่ามือหมอ/BT ตาม procedures_done (ค่ามือ lookup จาก catalog เสมอ)
 // 5. reserve.status → done
-// ใช้ MongoDB transaction ถ้า server รองรับ (replica set) — ถ้าไม่ ก็รันตามลำดับ
+// ความปลอดภัย (Mongo standalone ไม่มี transaction):
+// - claim ธง closing_at แบบ atomic ก่อน — สอง request พร้อมกันปิดสำเร็จได้แค่ 1
+// - "วางแผน" ตัด stock ทุกสินค้าแบบอ่านอย่างเดียวให้ครบก่อน แล้วค่อยเริ่มเขียน
+//   → stock ไม่พอ = fail สะอาดโดยยังไม่ได้ตัดอะไรเลย (ไม่มี partial cut ค้าง)
 export async function closeCase({ opd_ID, closed_by }) {
-  const session = await startSessionIfSupported();
+  // claim: เคสต้องยังไม่ปิด และไม่มีใครกำลังปิดอยู่
+  const claimed = await Opd.findOneAndUpdate(
+    { opd_ID, status: { $ne: "closed" }, closing_at: null },
+    { $set: { closing_at: new Date() } },
+    { new: true }
+  );
+  if (!claimed) {
+    const cur = await Opd.findOne({ opd_ID }).lean();
+    if (!cur) throw httpError(404, "ไม่พบเคส OPD");
+    throw httpError(409, cur.status === "closed" ? "เคสนี้ปิดไปแล้ว" : "เคสนี้กำลังถูกปิดอยู่ — รอสักครู่แล้วรีเฟรช");
+  }
   try {
-    let result;
-    if (session) {
-      await session.withTransaction(async () => {
-        result = await doCloseCase({ opd_ID, closed_by, session });
-      });
-    } else {
-      result = await doCloseCase({ opd_ID, closed_by, session: null });
+    const session = await startSessionIfSupported();
+    try {
+      let result;
+      if (session) {
+        await session.withTransaction(async () => {
+          result = await doCloseCase({ opd_ID, closed_by, session });
+        });
+      } else {
+        result = await doCloseCase({ opd_ID, closed_by, session: null });
+      }
+      return result;
+    } finally {
+      if (session) await session.endSession();
     }
-    return result;
-  } finally {
-    if (session) await session.endSession();
+  } catch (e) {
+    // ปิดไม่สำเร็จ — ปล่อยธงให้ลองใหม่ได้ · stock ไม่พอ = ข้อขัดแย้งเชิงธุรกิจ (409) ไม่ใช่ server error
+    await Opd.updateOne({ opd_ID }, { $set: { closing_at: null } });
+    if (e.code === "OUT_OF_STOCK" && !e.status) e.status = 409;
+    throw e;
   }
 }
 
@@ -80,19 +101,41 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
   if (!opd.consents || opd.consents.length === 0)
     throw httpError(400, "ต้องแนบใบยินยอมการทำหัตถการก่อนปิดเคส (อัปโหลด/เซ็นบนจอ)");
 
-  // ---- 1+2. ตัด stock FIFO (ใช้กับทั้งสูตร course และ add-on ที่เป็นสินค้าคลัง) ----
-  const stockUsed = [];
-  const cutStock = async (product_ID, cc_needed) => {
-    if (!cc_needed || cc_needed <= 0) return;
+  // ---- 1. รวมความต้องการตัด stock ต่อสินค้า (สูตร course + add-on) ----
+  const needs = new Map(); // product_ID → cc รวม
+  const addNeed = (pid, cc_needed) => {
+    if (!pid || !cc_needed || cc_needed <= 0) return;
+    needs.set(pid, (needs.get(pid) || 0) + cc_needed);
+  };
+  for (const p of cc.course_snapshot?.products || []) addNeed(p.product_ID, p.sub_unit_per_use);
+  // add-on ที่เป็นสินค้าคลัง → ตัด addon_sub_unit_per_use × qty (add-on หัตถการล้วนข้าม)
+  for (const a of opd.add_ons || []) {
+    if (!a.product_ID) continue;
+    const pd = await Product.findOne({ product_ID: a.product_ID }, null, opt);
+    if (!pd) continue;
+    const per = pd.addon_sub_unit_per_use || pd.sub_unit_size || 1;
+    addNeed(a.product_ID, per * (a.qty || 1));
+  }
+
+  // ---- 1a. dry-run: วางแผน FIFO "ทุกสินค้า" ให้ครบก่อน (อ่านอย่างเดียว) ----
+  // สินค้าไหนไม่พอ → throw ตรงนี้ โดยยังไม่ได้เขียนอะไรเลย — ไม่มีตัดครึ่งทางค้าง
+  const plans = [];
+  for (const [product_ID, cc_needed] of needs) {
     const productDoc = await Product.findOne({ product_ID }, null, opt);
-    const subUnitSize = productDoc?.sub_unit_size || 1;
     const picks = await pickItemsFIFO({ branch_ID: opd.branch_ID, product_ID, cc_needed });
+    plans.push({ product_ID, productDoc, picks });
+  }
+
+  // ---- 2. ตัดจริงตามแผน + บันทึกต้นทุน (COGS) ----
+  const stockUsed = [];
+  for (const { product_ID, productDoc, picks } of plans) {
+    const subUnitSize = productDoc?.sub_unit_size || 1;
+    const shelfDays = productDoc?.shelf_life_after_open_days || 0;
     for (const { item, lot, cc_take } of picks) {
       const newCc = item.cc_remaining - cc_take;
       const newUses = Math.max(0, item.uses_remaining - 1);
       const nowEmpty = newCc <= 0;
       const openingNow = item.state === "unused";
-      const shelfDays = productDoc?.shelf_life_after_open_days || 0;
       await InventoryItem.updateOne(
         { item_ID: item.item_ID },
         {
@@ -114,16 +157,6 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
         cc_used: cc_take, cost_of_goods: Math.round(costOfGoods * 100) / 100,
       });
     }
-  };
-  // สูตร course
-  for (const p of cc.course_snapshot?.products || []) await cutStock(p.product_ID, p.sub_unit_per_use);
-  // add-on ที่เป็นสินค้าคลัง → ตัด addon_sub_unit_per_use × qty (add-on หัตถการล้วนข้าม)
-  for (const a of opd.add_ons || []) {
-    if (!a.product_ID) continue;
-    const pd = await Product.findOne({ product_ID: a.product_ID }, null, opt);
-    if (!pd) continue;
-    const per = pd.addon_sub_unit_per_use || pd.sub_unit_size || 1;
-    await cutStock(a.product_ID, per * (a.qty || 1));
   }
 
   // ---- 3. นับครั้ง course ----
@@ -140,10 +173,16 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
   );
 
   // ---- 4. ค่ามือหมอ/BT ----
+  // ค่ามือ lookup จาก catalog (MedicalProcedure.cost) เสมอ — ห้ามเชื่อตัวเลขที่ client ส่งมา
+  // (กันหมอ/BT ตั้งค่ามือตัวเองผ่าน PUT procedures_done)
+  const MedicalProcedure = (await import("@/models/MedicalProcedure")).default;
   const earnings = [];
   for (const proc of opd.procedures_done || []) {
     if (!proc.performed_by) continue;
     const performer = await User.findOne({ user_ID: proc.performed_by }, null, opt);
+    const catalogProc = proc.medical_procedure_ID
+      ? await MedicalProcedure.findOne({ medical_procedure_ID: proc.medical_procedure_ID }, null, opt)
+      : null;
     const earning = {
       earning_ID: await genId("EN", 6),
       branch_ID: opd.branch_ID,
@@ -152,7 +191,7 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
       type: "procedure_fee",
       ref: { opd_ID, customer_course_ID: null },
       medical_procedure_ID: proc.medical_procedure_ID,
-      amount: proc.cost || 0,
+      amount: catalogProc?.cost || 0,
       date: opd.date,
     };
     // ต้องส่งเป็น array เสมอเมื่อมี options — ไม่งั้น mongoose ตีความ options เป็น doc
@@ -221,6 +260,7 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
         outcome: "treated",
         closed_by,
         closed_at: now,
+        closing_at: null, // ปลดธง claim
       },
     },
     opt

@@ -1,12 +1,12 @@
 import User from "@/models/User";
 import Company from "@/models/Company";
-import { apiHandler } from "@/lib/api";
+import { apiHandler, publicApiHandler } from "@/lib/api";
 
 // GET /api/setup/state → บอกสถานะ first-run
 //   needs_owner: ยังไม่มี super_admin → ต้องไปหน้า /register (สมัคร owner คนแรก)
 //   has_company: มีข้อมูลบริษัทแล้วหรือยัง
 // ใช้ตัดสินใจ redirect หน้าแรก (root → register หรือ about_me/login)
-export const GET = apiHandler(async () => {
+export const GET = publicApiHandler(async () => {
   const ownerCount = await User.countDocuments({ role: "super_admin" });
   const company = await Company.findOne({});
   return {

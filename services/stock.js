@@ -16,8 +16,12 @@ export async function receiveStock({
 }) {
   const product = await Product.findOne({ product_ID }).lean();
   if (!product) throw Object.assign(new Error("ไม่พบสินค้า"), { status: 404 });
-  if (quantity_received < 1)
-    throw Object.assign(new Error("จำนวนรับเข้าต้องอย่างน้อย 1"), { status: 400 });
+  quantity_received = Number(quantity_received);
+  if (!Number.isInteger(quantity_received) || quantity_received < 1)
+    throw Object.assign(new Error("จำนวนรับเข้าต้องเป็นจำนวนเต็มอย่างน้อย 1"), { status: 400 });
+  cost_price_per_unit = Number(cost_price_per_unit) || 0;
+  if (!Number.isFinite(cost_price_per_unit) || cost_price_per_unit < 0)
+    throw Object.assign(new Error("ราคาทุนต่อหน่วยต้องไม่ติดลบ"), { status: 400 });
 
   const lot = await StockLot.create({
     lot_ID: await genId("LOT", 5),

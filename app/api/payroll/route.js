@@ -5,11 +5,13 @@ import Attendance from "@/models/Attendance";
 import { apiHandler } from "@/lib/api";
 import { requireOwner } from "@/lib/owner";
 import { genId } from "@/services/ids";
-import { postJE, ensureCoA } from "@/services/gl";
+import { ensureCoA, postFromPayrollRun } from "@/services/gl";
 
 const r2 = (n) => Math.round(n * 100) / 100;
-// ประกันสังคมมาตรฐาน: 5% ของฐานเงินเดือน · ฐานขั้นต่ำ 1,650 / เพดาน 15,000 → หัก 83–750 บาท
-const ssoOf = (salary) => (salary <= 0 ? 0 : r2(Math.min(Math.max(salary, 1650), 15000) * 0.05));
+// ประกันสังคมมาตรฐาน: 5% ของฐานเงินเดือน · ฐานขั้นต่ำ 1,650 / เพดาน 15,000
+// เงินสมทบปัดเป็น "บาทเต็ม" ตามแนวปฏิบัติ สปส. → หักจริง 83–750 บาท
+const ssoOf = (salary) =>
+  salary <= 0 ? 0 : Math.round(Math.min(Math.max(salary, 1650), 15000) * 0.05);
 
 // คำนวณงวด: ฐานเงินเดือน (เดือนแรก prorate ตามวันเช็คอินจริง × เงินเดือน/30) + ค่ามือ/คอมเดือน + สปส.อัตโนมัติ
 async function computeDraft(period) {
@@ -26,8 +28,10 @@ async function computeDraft(period) {
   return users.map((u) => {
     let salary = u.salary || 0;
     let prorated_days = null;
+    // ยังไม่เริ่มงานในงวดนี้ (start_date อยู่เดือนถัดไป) → เงินเดือน 0 (กันจ่ายล่วงหน้าให้คนยังไม่เข้า)
+    if (u.start_date && u.start_date.slice(0, 7) > period) salary = 0;
     // เดือนแรก (เดือนของ start_date) → เงินเดือน = วันเช็คอินจริง × (เงินเดือน/30)
-    if (salary > 0 && u.start_date && u.start_date.slice(0, 7) === period) {
+    else if (salary > 0 && u.start_date && u.start_date.slice(0, 7) === period) {
       prorated_days = attDays[u.user_ID] || 0;
       salary = r2(prorated_days * (salary / 30));
     }
@@ -70,17 +74,32 @@ export const POST = apiHandler(async (req) => {
   if (existing?.status === "paid")
     throw Object.assign(new Error("งวดนี้จ่ายแล้ว แก้ไขไม่ได้"), { status: 409 });
 
+  // ตรวจช่องที่กรอกมา "ก่อน" บันทึกอะไรทั้งสิ้น — ติดลบ/NaN ปฏิเสธทั้งคำขอ (เคยหลุดเข้า GL)
+  const numField = (v, label, user_ID) => {
+    if (v === undefined || v === null || v === "") return null; // ไม่ส่งมา = ใช้ค่าเดิม/อัตโนมัติ
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0)
+      throw Object.assign(new Error(`${label} ของ ${user_ID} ต้องเป็นตัวเลขไม่ติดลบ (พบ ${v})`), { status: 400 });
+    return r2(n);
+  };
+  for (const r of body.rows || []) {
+    numField(r.additions, "เงินเพิ่ม", r.user_ID);
+    numField(r.tax, "ภาษี", r.user_ID);
+    numField(r.deduction, "หักอื่น", r.user_ID);
+    numField(r.sso, "สปส.", r.user_ID);
+  }
+
   // base จาก draft ปัจจุบัน (salary/earnings/sso สดเสมอ) + ทับด้วยช่องที่กรอกมา
   const base = await computeDraft(period);
   const edits = Object.fromEntries((body.rows || []).map((r) => [r.user_ID, r]));
   const prevRows = Object.fromEntries((existing?.rows || []).map((r) => [r.user_ID, r]));
   const rows = base.map((r) => {
     const e = edits[r.user_ID] || {};
-    const additions = Number(e.additions) || 0;
-    const tax = Number(e.tax) || 0;
-    const deduction = Number(e.deduction) || 0;
+    const additions = numField(e.additions, "เงินเพิ่ม", r.user_ID) ?? 0;
+    const tax = numField(e.tax, "ภาษี", r.user_ID) ?? 0;
+    const deduction = numField(e.deduction, "หักอื่น", r.user_ID) ?? 0;
     // สปส. แก้เลขเองได้ต่อคน (ไม่ส่งมา = ใช้ค่าคำนวณอัตโนมัติ)
-    const sso = e.sso !== undefined && e.sso !== null && e.sso !== "" ? Number(e.sso) || 0 : r.sso;
+    const sso = numField(e.sso, "สปส.", r.user_ID) ?? r.sso;
     const prev = prevRows[r.user_ID] || {};
     return {
       ...r, additions, tax, deduction, sso, note: e.note || r.note || "",
@@ -105,22 +124,8 @@ export const POST = apiHandler(async (req) => {
   );
 
   if (action === "pay") {
-    const lines = [
-      { account_code: "6000", debit: totalSalary, credit: 0, note: "เงินเดือน+เพิ่มเติม-หักอื่น" },
-      ...(totalEarn > 0 ? [{ account_code: "2100", debit: totalEarn, credit: 0, note: "เคลียร์ค่ามือ/คอมค้างจ่าย" }] : []),
-      { account_code: "6010", debit: ssoEmployer, credit: 0, note: "สปส.นายจ้าง" },
-      { account_code: method === "cash" ? "1000" : "1010", debit: 0, credit: totalNet, note: "จ่ายสุทธิ" },
-      { account_code: "2050", debit: 0, credit: r2(ssoEmployee + ssoEmployer), note: "สปส.รอนำส่ง" },
-      ...(totalTax > 0 ? [{ account_code: "2060", debit: 0, credit: totalTax, note: "ภาษีรอนำส่ง" }] : []),
-    ].filter((l) => l.debit > 0 || l.credit > 0);
-    await postJE({
-      date: `${period}-28`, // จ่ายสิ้นเดือน (มาตรฐานงวดเดือน)
-      memo: `เงินเดือนงวด ${period} (${rows.length} คน)`,
-      lines,
-      source_type: "payroll",
-      source_ID: doc.payroll_ID,
-      posted_by: auth.user_ID,
-    });
+    // JE รวมศูนย์ที่ services/gl.js (postFromPayrollRun) — rebuild ก็ post ชุดเดียวกันได้ (กู้ journal)
+    await postFromPayrollRun(doc, auth.user_ID);
     doc.status = "paid";
     doc.paid_at = new Date();
     doc.paid_by = auth.user_ID;

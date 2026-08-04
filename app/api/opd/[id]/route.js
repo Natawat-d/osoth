@@ -36,7 +36,19 @@ export const PUT = apiHandler(async (req, { params }) => {
   if (body.BT_ID !== undefined) opd.BT_ID = body.BT_ID;
   if (body.doctor_ID !== undefined) opd.doctor_ID = body.doctor_ID;
   if (body.sale_ID !== undefined) opd.sale_ID = body.sale_ID; // sale ดูแลเคส (คิดคอม)
-  if (body.procedures_done) opd.procedures_done = body.procedures_done;
+  if (body.procedures_done) {
+    // ค่ามือ (cost) เป็นตัวเลขของ server เท่านั้น — lookup จาก catalog ทับค่าที่ client ส่งมาเสมอ
+    // (กันหมอ/BT แก้ค่ามือตัวเอง — ตอนปิดเคสก็ lookup ซ้ำอีกชั้นใน closeCase)
+    const MedicalProcedure = (await import("@/models/MedicalProcedure")).default;
+    const sanitized = [];
+    for (const p of body.procedures_done) {
+      const cat = p.medical_procedure_ID
+        ? await MedicalProcedure.findOne({ medical_procedure_ID: p.medical_procedure_ID }).lean()
+        : null;
+      sanitized.push({ ...p, cost: cat?.cost || 0 });
+    }
+    opd.procedures_done = sanitized;
+  }
   if (body.status) {
     const order = ["open", "measuring", "bt_stage", "doctor_stage"];
     if (!order.includes(body.status))
