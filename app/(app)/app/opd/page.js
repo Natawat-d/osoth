@@ -320,7 +320,6 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
   const paidReady = hasCourse && paid;
   const hasConsent = (opd.consents || []).length > 0;
   const hasHealth = !!cc?.health_record?.signature; // ประวัติสุขภาพประจำคอร์ส (บังคับครั้งแรก)
-  const needHealth = firstVisit && hasCourse && !hasHealth;
 
   const stockNeed = (snap?.products || []).map((p) => {
     const row = stockRows.find((r) => r.product?.product_ID === p.product_ID);
@@ -335,6 +334,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
   const btDone = (opd.procedures_done || []).some((p) => p.type === "BT");
   const drDone = (opd.procedures_done || []).some((p) => p.type === "doctor");
   const firstVisit = opd.session_no === 1;
+  const needHealth = firstVisit && hasCourse && !hasHealth; // ครั้งแรกของคอร์สต้องเซ็นประวัติสุขภาพก่อนปิด
   const isAdmin = canManage;
   const userMap = Object.fromEntries([...bts, ...doctors, ...sales].map((u) => [u.user_ID, u.full_name]));
 
