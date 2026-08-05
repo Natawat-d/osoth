@@ -12,6 +12,13 @@ import {
 const bp = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const MONTHS_TH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const DOW_TH = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+const M_ABBR = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+// 2026-10-03 → 3 ต.ค. 2569 (แสดงผลอย่างเดียว)
+const thShort = (s) => {
+  if (!s) return "";
+  const [y, m, d] = s.split("-").map(Number);
+  return Number.isFinite(y) ? `${d} ${M_ABBR[m - 1]} ${y + 543}` : s;
+};
 const pad2 = (n) => String(n).padStart(2, "0");
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
 
@@ -79,7 +86,7 @@ export default function CustomerCalendarPage() {
   }, [dayData]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f4f6f9" }}>
+    <div className="d-flex flex-column bg-body-tertiary" style={{ minHeight: "100vh" }}>
       {/* Navbar */}
       <nav className="navbar navbar-expand navbar-dark" style={{ background: "#1560a3" }}>
         <div className="container-fluid px-3">
@@ -89,22 +96,26 @@ export default function CustomerCalendarPage() {
             <span className="fw-normal small opacity-75 d-none d-sm-inline">· ปฏิทินคิวสำหรับลูกค้า</span>
           </span>
           <div className="ms-auto d-flex gap-2">
-            <Link href="/about_me" className="btn btn-outline-light btn-sm">← หน้าแรก</Link>
-            <Link href="/login" className="btn btn-light btn-sm fw-semibold">เข้าสู่ระบบพนักงาน</Link>
+            <Link href="/about_me" className="btn btn-outline-light btn-sm">
+              <i className="bi bi-house me-1" /> หน้าแรก
+            </Link>
+            <Link href="/login" className="btn btn-light btn-sm fw-semibold">
+              <i className="bi bi-box-arrow-in-right me-1" /> เข้าสู่ระบบ
+            </Link>
           </div>
         </div>
       </nav>
 
       {/* Content header (สไตล์ AdminLTE) */}
-      <div className="container-fluid px-3 pt-3">
+      <div className="container-fluid px-3 pt-3 flex-grow-1">
         <div className="d-flex align-items-center mb-2">
-          <h4 className="fw-bold mb-0">ปฏิทินคิว</h4>
-          <nav className="ms-auto small text-muted">หน้าแรก / <span className="text-body">ปฏิทิน</span></nav>
+          <h4 className="fw-bold mb-0 text-body">ปฏิทินคิว</h4>
+          <nav className="ms-auto small text-body-secondary">หน้าแรก / <span className="text-body">ปฏิทิน</span></nav>
         </div>
 
         <div className="row g-3 pb-4">
-          {/* ── คอลัมน์ซ้าย (ref: Draggable Events) ── */}
-          <div className="col-lg-3">
+          {/* ── คอลัมน์ซ้าย (ref: Draggable Events) — บนมือถือย้ายไปหลังปฏิทิน ── */}
+          <div className="col-lg-3 order-2 order-lg-1">
             <div className="card shadow-sm mb-3">
               <div className="card-header fw-semibold py-2">สถานะคิว</div>
               <div className="card-body py-2">
@@ -120,15 +131,17 @@ export default function CustomerCalendarPage() {
 
             <div className="card shadow-sm mb-3">
               <div className="card-header fw-semibold py-2"><i className="bi bi-telephone me-1 text-primary" />จองคิว ติดต่อเรา</div>
-              <div className="card-body py-2 d-grid gap-2">
-                {branch?.phone && <a className="btn btn-primary btn-sm" href={`tel:${branch.phone}`}><i className="bi bi-telephone-fill me-1" /> โทร {branch.phone}</a>}
-                {branch?.line_id && (
-                  <a className="btn btn-success btn-sm" target="_blank" rel="noreferrer"
-                     href={`https://line.me/R/ti/p/~${encodeURIComponent(branch.line_id.replace(/^@?/, "@"))}`}>
-                    <i className="bi bi-chat-dots-fill me-1" /> LINE {branch.line_id}
-                  </a>
-                )}
-                {branch?.address && <div className="text-muted small"><i className="bi bi-geo-alt me-1" />{branch.address}</div>}
+              <div className="card-body py-2">
+                <div className="d-flex flex-wrap gap-2">
+                  {branch?.phone && <a className="btn btn-primary btn-sm px-3" href={`tel:${branch.phone}`}><i className="bi bi-telephone-fill me-1" /> โทร {branch.phone}</a>}
+                  {branch?.line_id && (
+                    <a className="btn btn-success btn-sm px-3" target="_blank" rel="noreferrer"
+                       href={`https://line.me/R/ti/p/~${encodeURIComponent(branch.line_id.replace(/^@?/, "@"))}`}>
+                      <i className="bi bi-chat-dots-fill me-1" /> LINE {branch.line_id}
+                    </a>
+                  )}
+                </div>
+                {branch?.address && <div className="text-muted small mt-2"><i className="bi bi-geo-alt me-1" />{branch.address}</div>}
               </div>
             </div>
 
@@ -145,7 +158,12 @@ export default function CustomerCalendarPage() {
                     </div>
                   </li>
                 ))}
-                {!dayData?.roster?.length && <li className="list-group-item text-muted py-2">— ไม่มีหมอลงตาราง —</li>}
+                {!dayData?.roster?.length && (
+                  <li className="list-group-item text-muted py-3 text-center">
+                    <i className="bi bi-calendar-x d-block mb-1" style={{ fontSize: 18 }} />
+                    ไม่มีหมอลงตารางวันนี้
+                  </li>
+                )}
               </ul>
             </div>
 
@@ -155,14 +173,16 @@ export default function CustomerCalendarPage() {
                 {p.banner_image && <img src={p.banner_image} className="card-img-top" alt={p.name} style={{ height: 110, objectFit: "cover" }} />}
                 <div className="card-body py-2">
                   <div className="fw-semibold small">{p.name}</div>
-                  <span className="badge bg-primary-subtle text-primary mt-1">ถึง {p.date_end}</span>
+                  <span className="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle mt-1">
+                    <i className="bi bi-clock-history me-1" />ถึง {thShort(p.date_end)}
+                  </span>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* ── คอลัมน์ขวา: ปฏิทินรายเดือน (ref: FullCalendar card) ── */}
-          <div className="col-lg-9">
+          {/* ── คอลัมน์ขวา: ปฏิทินรายเดือน (ref: FullCalendar card) — บนมือถือขึ้นก่อน ── */}
+          <div className="col-lg-9 order-1 order-lg-2">
             <div className="card shadow-sm">
               <div className="card-header d-flex align-items-center flex-wrap gap-2 py-2">
                 <div className="btn-group">
@@ -174,7 +194,9 @@ export default function CustomerCalendarPage() {
                   {MONTHS_TH[ym.m]} {ym.y + 543}
                   {loadingMonth && <span className="spinner-border spinner-border-sm text-primary ms-2" />}
                 </h5>
-                <span className="badge text-bg-light border">เดือนนี้ {(monthData?.days || []).reduce((s, d) => s + d.count, 0)} คิว</span>
+                <span className="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle">
+                  เดือนนี้ {(monthData?.days || []).reduce((s, d) => s + d.count, 0)} คิว
+                </span>
               </div>
 
               {/* month grid */}
@@ -219,13 +241,19 @@ export default function CustomerCalendarPage() {
               <div className="card-header d-flex align-items-center py-2">
                 <span className="fw-semibold">
                   <i className="bi bi-calendar-event me-1 text-primary" />
-                  คิววันที่ {selected.split("-").reverse().join("/")}
+                  คิววันที่ {(() => { const [y, m, d] = selected.split("-").map(Number); return `${d} ${MONTHS_TH[m - 1]} ${y + 543}`; })()}
                 </span>
                 <span className="badge text-bg-primary ms-2">{dayData?.events?.length ?? 0} คิว</span>
                 {loadingDay && <span className="spinner-border spinner-border-sm text-primary ms-2" />}
               </div>
               <div className="card-body">
-                {(dayData?.rooms || []).length === 0 && <div className="text-muted small">— ไม่มีข้อมูลห้อง —</div>}
+                {(dayData?.rooms || []).length === 0 && (
+                  <div className="text-center text-muted py-4">
+                    <i className="bi bi-door-closed d-block mb-2" style={{ fontSize: 28 }} />
+                    <div className="fw-semibold">ยังไม่มีข้อมูลห้องของวันนี้</div>
+                    <small>เลือกวันอื่นในปฏิทิน หรือโทรสอบถามคิวได้เลย</small>
+                  </div>
+                )}
                 <div className="row g-3">
                   {(dayData?.rooms || []).map((room) => {
                     const evs = dayByRoom[room.room_ID] || [];
@@ -233,7 +261,7 @@ export default function CustomerCalendarPage() {
                     return (
                       <div className="col-md-4" key={room.room_ID}>
                         <div className="border rounded-3 h-100">
-                          <div className="px-3 py-2 border-bottom bg-light rounded-top-3 d-flex align-items-center">
+                          <div className="px-3 py-2 border-bottom bg-body-tertiary rounded-top-3 d-flex align-items-center">
                             <b className="small">{room.name}</b>
                             {doc && (
                               <span className="ms-auto small text-muted d-flex align-items-center gap-1">
@@ -264,8 +292,11 @@ export default function CustomerCalendarPage() {
         </div>
       </div>
 
-      <footer className="text-center text-muted py-3 border-top bg-body">
-        <small>© {new Date().getFullYear()} {setup?.company?.name || brand.display_name}</small>
+      <footer className="text-center py-4 border-top bg-body">
+        <small className="text-body-secondary">
+          © {new Date().getFullYear()} {setup?.company?.name || brand.display_name}
+          {branch?.phone ? ` · โทร ${branch.phone}` : ""}
+        </small>
       </footer>
     </div>
   );

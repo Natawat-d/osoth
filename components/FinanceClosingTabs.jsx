@@ -5,6 +5,8 @@ import { api } from "@/lib/client";
 
 const money = (n) => Number(n || 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const METHOD_TH = { cash: "เงินสด", transfer: "โอน/QR", card: "บัตร", credit: "บัตร", promptpay: "โอน/QR" };
+const methodTH = (m) => METHOD_TH[m] || m;
 
 // ── ใบเสร็จ: รายการตามวัน + พิมพ์ + ยกเลิก (void) ──
 export function ReceiptsTab() {
@@ -29,7 +31,7 @@ export function ReceiptsTab() {
       <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap">
         <span className="fw-semibold"><i className="bi bi-receipt me-1 text-primary" />ใบเสร็จรับเงิน</span>
         <input type="date" className="form-control form-control-sm" style={{ width: 150 }} value={date} onChange={(e) => setDate(e.target.value)} />
-        <span className="badge text-bg-success ms-auto">รวม {money(total)}฿ · {rows.length} ใบ</span>
+        <span className={`badge ms-auto ${total > 0 ? "text-bg-success" : "bg-body-tertiary text-muted border"}`}>รวม {money(total)}฿ · {rows.length} ใบ</span>
       </div>
       <div className="card-body p-0" style={{ overflowX: "auto" }}>
         {err && <div className="alert alert-danger py-2 m-2">{err}</div>}
@@ -45,7 +47,7 @@ export function ReceiptsTab() {
                 <td className="small">{r.customer_name || r.HN_number || "—"}</td>
                 <td className="small text-muted">{(r.items || []).map((i) => i.description).join(", ")}</td>
                 <td className="text-end fw-semibold">{money(r.total)}</td>
-                <td className="small">{(r.payments || []).map((p) => p.method).join("+")}</td>
+                <td className="small">{(r.payments || []).map((p) => methodTH(p.method)).join(" + ")}</td>
                 <td>{r.status === "voided" ? <span className="badge text-bg-danger">ยกเลิก</span> : <span className="badge text-bg-success">ใช้ได้</span>}</td>
                 <td className="text-end pe-2">
                   <a className="btn btn-outline-secondary btn-sm me-1" href={`/app/receipt?id=${r.receipt_ID}`} target="_blank" rel="noreferrer" title="พิมพ์">
@@ -59,7 +61,15 @@ export function ReceiptsTab() {
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan={8} className="text-center text-muted py-4">— ไม่มีใบเสร็จวันนี้ —</td></tr>}
+            {!rows.length && (
+              <tr>
+                <td colSpan={8} className="text-center text-muted py-5">
+                  <i className="bi bi-receipt fs-2 d-block mb-2 opacity-50" />
+                  <div className="fw-semibold">ไม่มีใบเสร็จของวันที่เลือก</div>
+                  <div className="small">ใบเสร็จออกอัตโนมัติเมื่อรับเงิน (คอร์ส / add-on / มัดจำ) — ลองเลือกวันอื่นจากช่องด้านบน</div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -93,14 +103,23 @@ export function ClosingTab() {
   return (
     <div className="row g-3">
       {msg && <div className="col-12"><div className={`alert py-2 mb-0 ${msg.startsWith("✗") ? "alert-danger" : "alert-success"}`}>{msg}</div></div>}
+      <div className="col-12">
+        <div className="text-muted small"><i className="bi bi-signpost-2 me-1" />ลำดับงาน: <b>1</b> นับเงินสดทุกสิ้นวัน → <b>2</b> เคลียร์เงินบัตรเมื่อธนาคารโอนเข้า → <b>3</b> ล็อกงวดเมื่อปิดบัญชีสิ้นเดือน</div>
+      </div>
 
       {/* นับเงินสดสิ้นวัน */}
       <div className="col-lg-4">
         <div className="card shadow-sm h-100">
-          <div className="card-header py-2 fw-semibold"><i className="bi bi-cash-coin me-1 text-primary" />ปิดยอดสิ้นวัน (นับเงินสดจริง)</div>
+          <div className="card-header py-2 fw-semibold d-flex align-items-center">
+            <span className="badge rounded-pill text-bg-primary me-2">1</span>
+            <i className="bi bi-cash-coin me-1 text-primary" />ปิดยอดสิ้นวัน (นับเงินสดจริง)
+          </div>
           <div className="card-body">
             <input type="date" className="form-control form-control-sm mb-2" value={date} onChange={(e) => setDate(e.target.value)} />
-            <div className="small mb-2">เงินสดที่ควรมีตามระบบ: <b>{money(dc?.expected_cash || 0)}฿</b></div>
+            <div className="rounded-3 bg-body-tertiary border px-3 py-2 mb-2">
+              <div className="text-muted" style={{ fontSize: 11 }}>เงินสดที่ควรมีตามระบบ</div>
+              <div className="fw-bold fs-5 lh-sm">{money(dc?.expected_cash || 0)} ฿</div>
+            </div>
             {dc?.closed ? (
               <div className={`alert py-2 small ${dc.record.diff === 0 ? "alert-success" : "alert-warning"}`}>
                 ปิดแล้ว · นับได้ {money(dc.record.counted_cash)}฿
@@ -125,9 +144,15 @@ export function ClosingTab() {
       {/* เคลียร์เงินบัตร */}
       <div className="col-lg-4">
         <div className="card shadow-sm h-100">
-          <div className="card-header py-2 fw-semibold"><i className="bi bi-credit-card me-1 text-primary" />เคลียร์เงินบัตรเข้าธนาคาร</div>
+          <div className="card-header py-2 fw-semibold d-flex align-items-center">
+            <span className="badge rounded-pill text-bg-primary me-2">2</span>
+            <i className="bi bi-credit-card me-1 text-primary" />เคลียร์เงินบัตรเข้าธนาคาร
+          </div>
           <div className="card-body">
-            <div className="small mb-2">ยอดบัตรรอเคลียร์ (บัญชี 1020): <b className="text-warning">{money(cs?.pending_1020 || 0)}฿</b></div>
+            <div className="rounded-3 bg-body-tertiary border px-3 py-2 mb-2">
+              <div className="text-muted" style={{ fontSize: 11 }}>ยอดบัตรรอเคลียร์ (บัญชี 1020)</div>
+              <div className="fw-bold fs-5 lh-sm text-warning-emphasis">{money(cs?.pending_1020 || 0)} ฿</div>
+            </div>
             <label className="form-label small mb-1">ยอดที่เคลียร์ (เต็ม ก่อนหักค่าธรรมเนียม)</label>
             <input type="number" className="form-control form-control-sm mb-2" value={settle.amount} onChange={(e) => setSettle((s) => ({ ...s, amount: e.target.value }))} />
             <label className="form-label small mb-1">ค่าธรรมเนียมบัตร (MDR)</label>
@@ -149,7 +174,10 @@ export function ClosingTab() {
       {/* ล็อกงวดบัญชี */}
       <div className="col-lg-4">
         <div className="card shadow-sm h-100">
-          <div className="card-header py-2 fw-semibold"><i className="bi bi-lock me-1 text-primary" />ปิดงวดบัญชี (ล็อกย้อนหลัง)</div>
+          <div className="card-header py-2 fw-semibold d-flex align-items-center">
+            <span className="badge rounded-pill text-bg-primary me-2">3</span>
+            <i className="bi bi-lock me-1 text-primary" />ปิดงวดบัญชี (ล็อกย้อนหลัง)
+          </div>
           <div className="card-body">
             <div className="small text-muted mb-2">
               เอกสารเงินที่ลงวันที่ ≤ วันที่ล็อก จะบันทึกใหม่ไม่ได้ (ค่าใช้จ่ายย้อนหลัง/JE มือ/จ่ายเงินเดือนงวดเก่า)

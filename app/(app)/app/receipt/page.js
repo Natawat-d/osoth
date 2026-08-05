@@ -39,6 +39,11 @@ function ReceiptInner() {
           <button className="btn btn-outline-secondary" onClick={() => history.back()}>← กลับ</button>
         </div>
         {err && <div className="alert alert-danger py-2">{err}</div>}
+        {!r && !err && (
+          <div className="text-center text-muted py-5 d-print-none">
+            <span className="spinner-border spinner-border-sm me-2" />กำลังโหลดใบเสร็จ…
+          </div>
+        )}
 
         {r && (
           <div className="card shadow-sm rc-doc position-relative">
@@ -101,6 +106,12 @@ function ReceiptInner() {
         )}
       </div>
       <style jsx global>{`
+        /* ใบเสร็จ = กระดาษ: พื้นขาวตัวดำเสมอ แม้ระบบอยู่ dark mode (กันพิมพ์/บันทึก PDF พื้นดำ) */
+        .rc-doc, .rc-doc .card-body { background: #fff !important; color: #1a1a1a !important; }
+        .rc-doc .text-muted { color: #6c757d !important; }
+        .rc-doc .table { --bs-table-color: #1a1a1a; --bs-table-bg: transparent; --bs-table-border-color: #dee2e6; color: #1a1a1a; }
+        .rc-doc .table-light { --bs-table-color: #1a1a1a; --bs-table-bg: #f8f9fa; }
+        .rc-doc .border-bottom { border-color: #dee2e6 !important; }
         @media print {
           .app-sidebar, .app-header, .app-footer, .d-print-none { display: none !important; }
           .app-main { margin: 0 !important; }

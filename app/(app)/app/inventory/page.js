@@ -3,6 +3,7 @@
 // data ผ่าน RTK Query — รับของ/ปรับยอด → invalidate Stock/PO/Journal อัตโนมัติ
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
+import InfoBox from "@/components/InfoBox";
 import {
   useGetStockSummaryQuery, useReceiveStockMutation, useAdjustStockMutation,
   useGetPOsQuery, useCreatePOMutation, useReceivePOMutation,
@@ -28,7 +29,7 @@ export default function InventoryPage() {
 
   return (
     <div className="app-content">
-      <div className="container-fluid pt-3">
+      <div className="container-fluid pt-3 inv-wrap">
         <div className="d-flex align-items-center mb-3">
           <h4 className="mb-0 fw-bold">คลังสินค้า (Inventory)</h4>
         </div>
@@ -48,6 +49,15 @@ export default function InventoryPage() {
         {tab === "count" && <CountTab />}
         {tab === "report" && <ReportTab />}
       </div>
+      <style jsx global>{`
+        .inv-wrap table { font-variant-numeric: tabular-nums; }
+        /* กันหัวตารางขาวจ้าใน dark mode — ใช้สีพื้นตามธีมแทน */
+        .inv-wrap .table-light {
+          --bs-table-bg: var(--bs-tertiary-bg);
+          --bs-table-color: var(--bs-body-color);
+          --bs-table-border-color: var(--bs-border-color);
+        }
+      `}</style>
     </div>
   );
 }
@@ -66,6 +76,7 @@ function SummaryTab() {
     <div className="card shadow-sm">
       <div className="card-header d-flex align-items-center">
         <span className="fw-semibold">สต๊อกคงเหลือต่อสินค้า</span>
+        <span className="badge bg-body-tertiary border text-muted ms-2">{rows.length} รายการ</span>
         {isFetching && <div className="spinner-border spinner-border-sm text-primary ms-2" />}
       </div>
       <div className="card-body p-0" style={{ overflowX: "auto" }}>
@@ -77,8 +88,12 @@ function SummaryTab() {
                 <td><b>{r.product.name}</b> <span className="text-muted small">{r.product.product_ID}</span></td>
                 <td className="text-end">{r.unused}</td>
                 <td className="text-end">{r.in_use}</td>
-                <td className="text-end">{money(r.total_cc_remaining)}</td>
-                <td>{[...new Map(r.warnings.map((w) => [w.type, w])).values()].map((w, i) => <span key={i}>{warnBadge(w)}</span>)}</td>
+                <td className="text-end fw-semibold">{money(r.total_cc_remaining)}</td>
+                <td>
+                  {r.warnings.length
+                    ? [...new Map(r.warnings.map((w) => [w.type, w])).values()].map((w, i) => <span key={i}>{warnBadge(w)}</span>)
+                    : <span className="text-success small"><i className="bi bi-check2-circle me-1" />ปกติ</span>}
+                </td>
               </tr>
             ))}
             {!rows.length && <tr><td colSpan={5} className="text-center text-muted py-4">— ยังไม่มีสินค้า — เพิ่มสินค้าที่ Setup แล้วรับของเข้า</td></tr>}
@@ -123,7 +138,7 @@ function PoTab() {
     try { await receivePO(po.po_ID).unwrap(); } catch (e) { setErr(e.message); }
   }
 
-  const STATUS_TH = { draft: ["ร่าง", "text-bg-light"], ordered: ["สั่งแล้ว", "text-bg-info"], received: ["รับแล้ว", "text-bg-success"], cancelled: ["ยกเลิก", "text-bg-secondary"] };
+  const STATUS_TH = { draft: ["ร่าง", "bg-body-tertiary text-body-secondary border"], ordered: ["สั่งแล้ว", "text-bg-info"], received: ["รับแล้ว", "text-bg-success"], cancelled: ["ยกเลิก", "text-bg-secondary"] };
 
   return (
     <div className="row g-3">
@@ -137,7 +152,7 @@ function PoTab() {
               <tbody>
                 {pos.map((po) => {
                   const total = po.items.reduce((s, i) => s + i.qty * i.cost_price_per_unit, 0);
-                  const [label, cls] = STATUS_TH[po.status] || [po.status, "text-bg-light"];
+                  const [label, cls] = STATUS_TH[po.status] || [po.status, "bg-body-tertiary text-body-secondary border"];
                   return (
                     <tr key={po.po_ID}>
                       <td className="font-monospace small">{po.po_ID}</td>
@@ -151,7 +166,7 @@ function PoTab() {
                     </tr>
                   );
                 })}
-                {!pos.length && <tr><td colSpan={6} className="text-center text-muted py-4">— ยังไม่มีใบสั่งซื้อ —</td></tr>}
+                {!pos.length && <tr><td colSpan={6} className="text-center text-muted py-4">— ยังไม่มีใบสั่งซื้อ — สร้างใบแรกจากฟอร์มด้านขวา</td></tr>}
               </tbody>
             </table>
           </div>
@@ -304,13 +319,13 @@ function ReportTab() {
   return (
     <div className="row g-3">
       <div className="col-md-4">
-        <div className="card text-bg-primary shadow-sm"><div className="card-body"><div className="fs-3 fw-bold">{money(totalUnits)}</div><div>ชิ้นในคลัง (unused + in use)</div></div></div>
+        <InfoBox ico="bi-boxes" label="ชิ้นในคลัง (unused + in use)" value={money(totalUnits)} color="primary" />
       </div>
       <div className="col-md-4">
-        <div className="card text-bg-warning shadow-sm"><div className="card-body"><div className="fs-3 fw-bold">{expiring.length}</div><div>ชิ้นใกล้หมดอายุ (30 วัน)</div></div></div>
+        <InfoBox ico="bi-hourglass-split" label="ชิ้นใกล้หมดอายุ (30 วัน)" value={expiring.length} color={expiring.length ? "warning" : "secondary"} />
       </div>
       <div className="col-md-4">
-        <div className="card text-bg-danger shadow-sm"><div className="card-body"><div className="fs-3 fw-bold">{low.length}</div><div>สินค้าต่ำกว่าจุดสั่งซื้อ</div></div></div>
+        <InfoBox ico="bi-exclamation-triangle" label="สินค้าต่ำกว่าจุดสั่งซื้อ" value={low.length} color={low.length ? "danger" : "secondary"} />
       </div>
       <div className="col-lg-6">
         <div className="card shadow-sm">
@@ -319,7 +334,7 @@ function ReportTab() {
             <table className="table table-sm mb-0">
               <tbody>
                 {expiring.slice(0, 12).map((e, i) => <tr key={i}><td>{e.name}</td><td className="text-end text-warning">{e.expiry_date}</td></tr>)}
-                {!expiring.length && <tr><td className="text-center text-muted py-3">— ไม่มี —</td></tr>}
+                {!expiring.length && <tr><td className="text-center text-muted py-4"><i className="bi bi-check2-circle text-success me-1" />ไม่มีของใกล้หมดอายุใน 30 วัน</td></tr>}
               </tbody>
             </table>
           </div>
@@ -332,7 +347,7 @@ function ReportTab() {
             <table className="table table-sm mb-0">
               <tbody>
                 {openPo.map((p) => <tr key={p.po_ID}><td className="font-monospace small">{p.po_ID}</td><td>{p.supplier || "-"}</td><td className="text-end">{money(p.items.reduce((s, i) => s + i.qty * i.cost_price_per_unit, 0))}</td></tr>)}
-                {!openPo.length && <tr><td className="text-center text-muted py-3">— ไม่มี —</td></tr>}
+                {!openPo.length && <tr><td className="text-center text-muted py-4"><i className="bi bi-check2-circle text-success me-1" />ไม่มี PO ค้างรับ — รับของครบแล้ว</td></tr>}
               </tbody>
             </table>
           </div>

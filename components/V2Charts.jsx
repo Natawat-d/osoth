@@ -6,8 +6,11 @@ export const V2_PALETTE = [
   "#1560a3", "#198754", "#dc3545", "#fd7e14", "#6f42c1", "#20c997", "#6c757d", "#0dcaf0",
 ];
 
-const AXIS = "#adb5bd";
-const GRID = "#e9ecef";
+// สี axis/grid อิง CSS var ของ Bootstrap — รอด dark mode อัตโนมัติ
+const AXIS = "var(--bs-secondary-color)";
+const GRID = "var(--bs-border-color)";
+const BG = "var(--bs-body-bg)";
+const FG = "var(--bs-body-color)";
 
 function niceMax(v) {
   const pow = Math.pow(10, Math.floor(Math.log10(Math.max(1, v))));
@@ -22,7 +25,12 @@ export function shortNum(v) {
 }
 
 function Empty({ label = "ไม่มีข้อมูลในช่วงนี้" }) {
-  return <div className="text-center text-muted py-4 small"><i className="bi bi-graph-up me-1" />{label}</div>;
+  return (
+    <div className="text-center text-muted py-4">
+      <i className="bi bi-bar-chart d-block mb-1 opacity-50" style={{ fontSize: 26 }} />
+      <span className="small">{label}</span>
+    </div>
+  );
 }
 
 export function Legend({ items }) {
@@ -173,11 +181,11 @@ export function DonutChart({ data = [], size = 170, unit = "" }) {
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img">
         {segs.map((s, i) => (
           s.frac >= 0.999
-            ? <g key={i}><circle cx={cx} cy={cy} r={R} fill={s.color} /><circle cx={cx} cy={cy} r={r} fill="#fff" /></g>
-            : <path key={i} d={s.path} fill={s.color} stroke="#fff" strokeWidth="1.5" />
+            ? <g key={i}><circle cx={cx} cy={cy} r={R} fill={s.color} /><circle cx={cx} cy={cy} r={r} fill={BG} /></g>
+            : <path key={i} d={s.path} fill={s.color} stroke={BG} strokeWidth="1.5" />
         ))}
-        <circle cx={cx} cy={cy} r={r} fill="#fff" />
-        <text x={cx} y={cy - 2} textAnchor="middle" fontSize="15" fontWeight="700" fill="#212529">{shortNum(total)}</text>
+        <circle cx={cx} cy={cy} r={r} fill={BG} />
+        <text x={cx} y={cy - 2} textAnchor="middle" fontSize="15" fontWeight="700" fill={FG}>{shortNum(total)}</text>
         <text x={cx} y={cy + 15} textAnchor="middle" fontSize="10" fill={AXIS}>รวม</text>
       </svg>
       <div className="d-flex flex-column gap-1 small" style={{ minWidth: 150 }}>

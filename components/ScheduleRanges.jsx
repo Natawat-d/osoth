@@ -129,13 +129,19 @@ export default function ScheduleRanges() {
       {/* ขวา: ช่วงเวร + ยกเว้นรายวัน */}
       <div className="col-lg-9">
         {!doctor_ID ? (
-          <div className="card shadow-sm"><div className="card-body text-center text-muted py-5">← เลือกหมอเพื่อลงเวร</div></div>
+          <div className="card shadow-sm">
+            <div className="card-body text-center text-muted py-5">
+              <i className="bi bi-person-badge fs-2 d-block mb-2 opacity-50" />
+              <div className="fw-semibold">เลือกหมอจากรายชื่อด้านซ้าย</div>
+              <div className="small">เพื่อดู/ลงช่วงเวร และตั้งวันลา-สลับห้องรายวัน</div>
+            </div>
+          </div>
         ) : (
           <>
             <div className="card shadow-sm mb-3">
               <div className="card-header py-2 d-flex align-items-center">
                 <span className="fw-semibold"><i className="bi bi-calendar-range me-1 text-primary" />ช่วงเวรของ {doctor?.full_name}</span>
-                <span className="badge text-bg-light border ms-2">{assignments.length} ช่วง</span>
+                <span className="badge bg-body-tertiary text-body-secondary border ms-2">{assignments.length} ช่วง</span>
               </div>
               <div className="card-body py-3">
                 {/* ฟอร์มเพิ่มช่วง: วันไหน–ถึงวันไหน เวลา ห้อง */}
@@ -182,7 +188,7 @@ export default function ScheduleRanges() {
                         <td><b>{fmtD(a.date_start)}</b> → <b>{fmtD(a.date_end)}</b>{a.date_end < todayStr() && <span className="badge text-bg-secondary ms-2">ผ่านแล้ว</span>}</td>
                         <td className="text-center">{days(a)} วัน</td>
                         <td>{a.time_start}–{a.time_end}</td>
-                        <td><span className="badge text-bg-light border">{roomName(a.room_ID)}</span></td>
+                        <td><span className="badge bg-body-tertiary text-body-secondary border">{roomName(a.room_ID)}</span></td>
                         <td className="text-end">
                           <button className="btn btn-outline-danger btn-sm" disabled={busy} onClick={() => removeRange(i)} title="ลบช่วงนี้">
                             <i className="bi bi-trash" />
@@ -241,7 +247,8 @@ export default function ScheduleRanges() {
                   {overrides.map((o, i) => (
                     <span key={i} className={`badge d-inline-flex align-items-center gap-1 ${o.type === "leave" ? "text-bg-warning" : "text-bg-info"}`}>
                       {fmtD(o.date)} · {o.type === "leave" ? "ลา" : `${roomName(o.room_ID)} ${o.time_start}–${o.time_end}`}
-                      <button className="btn btn-sm p-0 border-0 text-white" style={{ lineHeight: 1 }} onClick={() => removeOverride(i)}>×</button>
+                      <button className="border-0 bg-transparent p-0 ms-1" style={{ lineHeight: 1, color: "inherit", cursor: "pointer" }}
+                              title="ลบรายการนี้" onClick={() => removeOverride(i)}><i className="bi bi-x-lg" style={{ fontSize: 10 }} /></button>
                     </span>
                   ))}
                   {!overrides.length && <span className="text-muted small">— ไม่มี —</span>}

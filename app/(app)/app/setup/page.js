@@ -12,16 +12,32 @@ import {
 
 const money = (n) => Number(n || 0).toLocaleString("th-TH");
 
-const TABS = [
-  { key: "company", label: "บริษัท & แบรนด์", ico: "bi-building" },
-  { key: "services", label: "บริการ (หัตถการ)", ico: "bi-stars" },
-  { key: "products", label: "สินค้า", ico: "bi-box" },
-  { key: "courses", label: "คอร์ส", ico: "bi-grid-3x3-gap" },
-  { key: "bt", label: "BT — ค่าตัว/ค่ามือ", ico: "bi-person-heart" },
-  { key: "doctor", label: "หมอ — ค่าตัว/DF", ico: "bi-heart-pulse" },
-  { key: "incentive", label: "Sale incentive", ico: "bi-cash-coin" },
-  { key: "promotions", label: "โปรโมชั่น", ico: "bi-tags" },
-  { key: "system", label: "ระบบ/ห้อง", ico: "bi-gear" },
+// จัดกลุ่มแท็บ 9 อันตามเรื่อง — เดิมเรียงแถวเดียวล้นจอต้อง scroll หา
+const TAB_GROUPS = [
+  {
+    label: "ธุรกิจ & ระบบ",
+    tabs: [
+      { key: "company", label: "บริษัท & แบรนด์", ico: "bi-building" },
+      { key: "system", label: "ระบบ/ห้อง", ico: "bi-gear" },
+    ],
+  },
+  {
+    label: "แคตตาล็อก & ราคา",
+    tabs: [
+      { key: "services", label: "บริการ (หัตถการ)", ico: "bi-stars" },
+      { key: "products", label: "สินค้า", ico: "bi-box" },
+      { key: "courses", label: "คอร์ส", ico: "bi-grid-3x3-gap" },
+      { key: "promotions", label: "โปรโมชั่น", ico: "bi-tags" },
+    ],
+  },
+  {
+    label: "ค่าตอบแทนทีม",
+    tabs: [
+      { key: "bt", label: "BT — ค่าตัว/ค่ามือ", ico: "bi-person-heart" },
+      { key: "doctor", label: "หมอ — ค่าตัว/DF", ico: "bi-heart-pulse" },
+      { key: "incentive", label: "Sale incentive", ico: "bi-cash-coin" },
+    ],
+  },
 ];
 
 export default function SetupPage() {
@@ -33,19 +49,28 @@ export default function SetupPage() {
 
   return (
     <div className="app-content">
-      <div className="container-fluid pt-3">
+      <div className="container-fluid pt-3 setup-wrap">
         <div className="d-flex align-items-center mb-3">
           <h4 className="mb-0 fw-bold">ตั้งค่าธุรกิจ (Setup)</h4>
         </div>
-        <ul className="nav nav-tabs mb-3 flex-nowrap" style={{ overflowX: "auto" }}>
-          {TABS.map((t) => (
-            <li className="nav-item" key={t.key}>
-              <button className={`nav-link text-nowrap ${tab === t.key ? "active fw-semibold" : ""}`} onClick={() => setTab(t.key)}>
-                <i className={`bi ${t.ico} me-1`} />{t.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="card shadow-sm mb-3">
+          <div className="card-body py-2 d-flex flex-wrap align-items-start column-gap-4 row-gap-2">
+            {TAB_GROUPS.map((g) => (
+              <div key={g.label} className="setup-tab-group">
+                <div className="text-muted text-uppercase fw-semibold mb-1" style={{ fontSize: 10.5, letterSpacing: ".05em" }}>{g.label}</div>
+                <div className="d-flex flex-wrap gap-1">
+                  {g.tabs.map((t) => (
+                    <button key={t.key} type="button"
+                            className={`btn btn-sm d-inline-flex align-items-center text-nowrap ${tab === t.key ? "btn-primary" : "btn-link text-body text-decoration-none"}`}
+                            onClick={() => setTab(t.key)}>
+                      <i className={`bi ${t.ico} me-1 ${tab === t.key ? "" : "text-primary"}`} />{t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {tab === "company" && <CompanyTab />}
         {tab === "services" && <CatalogTab res="procedures" tag="Procedures" idField="medical_procedure_ID"
@@ -91,6 +116,21 @@ export default function SetupPage() {
           cols={[["name", "ชื่อ"], ["type", "ประเภท"], ["date_start", "เริ่ม"], ["date_end", "ถึง"]]} />}
         {tab === "system" && <div className="lgc"><SystemSettings /></div>}
       </div>
+      <style jsx global>{`
+        .setup-wrap .btn-link.text-body:hover { background: var(--bs-tertiary-bg); border-radius: var(--bs-border-radius); }
+        .setup-wrap table { font-variant-numeric: tabular-nums; }
+        /* กันหัวตารางขาวจ้าใน dark mode — ใช้สีพื้นตามธีมแทน */
+        .setup-wrap .table-light {
+          --bs-table-bg: var(--bs-tertiary-bg);
+          --bs-table-color: var(--bs-body-color);
+          --bs-table-border-color: var(--bs-border-color);
+        }
+        /* เส้นคั่นกลุ่มแท็บ */
+        .setup-tab-group + .setup-tab-group { border-left: 1px solid var(--bs-border-color); padding-left: 1.25rem; }
+        @media (max-width: 767.98px) {
+          .setup-tab-group + .setup-tab-group { border-left: 0; padding-left: 0; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -326,7 +366,7 @@ function CourseTab() {
   }
 
   const listEditor = (key, options, labelOf, extra) => (
-    <div className="border rounded p-2 mb-2 bg-light">
+    <div className="border rounded p-2 mb-2 bg-body-tertiary">
       {(editing[key] || []).map((row, i) => (
         <div className="d-flex gap-2 mb-1 align-items-center" key={i}>
           <select className="form-select form-select-sm" value={row.product_ID ?? row.medical_procedure_ID ?? ""}
@@ -568,7 +608,13 @@ function IncentiveTab() {
             </div>
           </div>
         ) : (
-          <div className="card shadow-sm"><div className="card-body text-center text-muted py-5">← เลือกพนักงานขายเพื่อตั้งขั้นบันได</div></div>
+          <div className="card shadow-sm">
+            <div className="card-body text-center text-muted py-5">
+              <i className="bi bi-cash-coin fs-2 d-block mb-2 opacity-50" />
+              <div className="fw-semibold">เลือกพนักงานขายจากรายชื่อด้านซ้าย</div>
+              <div className="small">เพื่อตั้งขั้นบันได incentive ตามยอดขาย/เดือน</div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -6,9 +6,11 @@ import { useDispatch } from "react-redux";
 import { pushToast } from "@/store/uiSlice";
 import { api } from "@/lib/client";
 import { exportCsv } from "@/lib/exportCsv";
+import { HEALTH_ITEMS, ageFromBirth } from "@/lib/healthItems";
 
 const money = (n) => Number(n || 0).toLocaleString("th-TH");
 const fmtDate = (d) => (d ? String(d).slice(0, 10).split("-").reverse().join("/") : "—");
+const CC_STATUS_TH = { active: "ใช้งานอยู่", completed: "ครบคอร์ส", expired: "หมดอายุ", cancelled: "ยกเลิก" };
 
 function CustomersInner() {
   const dispatch = useDispatch();
@@ -19,6 +21,8 @@ function CustomersInner() {
   };
   const [q, setQ] = useState("");
   const [rows, setRows] = useState([]);
+  const [searched, setSearched] = useState(false); // เคยกดค้นหาแล้วหรือยัง (ไว้แสดง empty state)
+  const [searching, setSearching] = useState(false);
   const [profile, setProfile] = useState(null);
   const [consents, setConsents] = useState([]);
   const [viewConsent, setViewConsent] = useState(null);
@@ -39,9 +43,13 @@ function CustomersInner() {
 
   const search = async () => {
     setProfile(null);
-    const r = await api(`/customers?q=${encodeURIComponent(q)}`);
-    setRows(r);
-    if (r.length === 0) toast.info("ไม่พบลูกค้า");
+    setSearching(true);
+    try {
+      const r = await api(`/customers?q=${encodeURIComponent(q)}`);
+      setRows(r);
+      setSearched(true);
+      if (r.length === 0) toast.info("ไม่พบลูกค้า");
+    } finally { setSearching(false); }
   };
 
   const payFull = async () => {
@@ -98,6 +106,22 @@ function CustomersInner() {
     consent: consents.filter((c) => c.opd_ID === o.opd_ID).length,
   }));
 
+  // สรุปข้อมูลสุขภาพ 9 ข้อจากแบบฟอร์ม (ถ้าเคยกรอก)
+  const cust = profile?.customer;
+  const health = cust?.health_info || null;
+  const healthFlagged = health
+    ? HEALTH_ITEMS.filter(({ key }) => health[key]?.has === true).map(({ key, label }) => ({ label, detail: health[key].detail }))
+    : [];
+  const healthClearCount = health ? HEALTH_ITEMS.filter(({ key }) => health[key]?.has === false).length : 0;
+  const age = ageFromBirth(cust?.birth_date);
+
+  const InfoRow = ({ icon, label, children }) => (
+    <div className="d-flex gap-2 py-1">
+      <span className="text-muted flex-shrink-0" style={{ width: 108 }}><i className={`bi ${icon} me-1`} />{label}</span>
+      <span className="text-body">{children}</span>
+    </div>
+  );
+
   return (
     <div className="app-content">
       <div className="container-fluid pt-3">
@@ -109,53 +133,153 @@ function CustomersInner() {
         <div className="card shadow-sm mb-3">
           <div className="card-body py-3">
             <div className="input-group" style={{ maxWidth: 520 }}>
+              <span className="input-group-text bg-body-tertiary"><i className="bi bi-search text-muted" /></span>
               <input className="form-control" value={q} placeholder="HN / ชื่อ / เบอร์โทร"
                      onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
-              <button className="btn btn-primary" onClick={search}><i className="bi bi-search me-1" />ค้นหา</button>
+              <button className="btn btn-primary px-4" disabled={searching} onClick={search}>
+                {searching ? <span className="spinner-border spinner-border-sm me-1" /> : <i className="bi bi-search me-1" />}ค้นหา
+              </button>
             </div>
+
+            {!searched && !profile && (
+              <div className="text-center text-muted py-4">
+                <i className="bi bi-person-vcard d-block mb-2" style={{ fontSize: 34, opacity: 0.4 }} />
+                <div className="small">พิมพ์ HN, ชื่อ, ชื่อเล่น หรือเบอร์โทร แล้วกดค้นหา — เว้นว่างเพื่อดูลูกค้าล่าสุด</div>
+              </div>
+            )}
+
+            {searched && rows.length === 0 && !profile && (
+              <div className="text-center text-muted py-4">
+                <i className="bi bi-search-heart d-block mb-2" style={{ fontSize: 34, opacity: 0.4 }} />
+                <div>ไม่พบลูกค้าที่ตรงกับ &ldquo;{q}&rdquo;</div>
+                <div className="small mt-1">ลองค้นบางส่วนของชื่อหรือเบอร์ · ลูกค้าใหม่สร้าง HN ได้ที่หน้า ปฏิทิน (รับลูกค้า)</div>
+              </div>
+            )}
+
             {rows.length > 0 && !profile && (
-              <table className="table table-sm table-hover mt-3 mb-0">
-                <thead className="table-light"><tr><th>HN</th><th>ชื่อ</th><th>เบอร์</th><th /></tr></thead>
-                <tbody>
-                  {rows.map((c) => (
-                    <tr key={c.HN_number}>
-                      <td className="font-monospace">{c.HN_number}</td>
-                      <td>{c.full_name} ({c.nick_name})</td>
-                      <td>{c.phone}</td>
-                      <td className="text-end"><button className="btn btn-outline-primary btn-sm" onClick={() => open(c.HN_number)}>เปิด</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <>
+                <div className="text-muted small mt-3 mb-1">พบ {rows.length} ราย{rows.length >= 50 ? " (แสดง 50 รายแรก — พิมพ์ให้เจาะจงขึ้น)" : ""} · กดที่แถวเพื่อเปิดโปรไฟล์</div>
+                <div className="table-responsive">
+                  <table className="table table-sm table-hover align-middle mb-0">
+                    <thead>
+                      <tr className="small text-muted">
+                        <th className="fw-semibold" style={{ width: 150 }}>HN</th>
+                        <th className="fw-semibold">ชื่อ</th>
+                        <th className="fw-semibold" style={{ width: 140 }}>เบอร์โทร</th>
+                        <th style={{ width: 70 }} />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((c) => (
+                        <tr key={c.HN_number} role="button" onClick={() => open(c.HN_number)}>
+                          <td className="font-monospace text-primary">{c.HN_number}</td>
+                          <td>{c.full_name} {c.sure_name || ""}{c.nick_name ? <span className="text-muted"> ({c.nick_name})</span> : null}</td>
+                          <td>{c.phone || <span className="text-muted">—</span>}</td>
+                          <td className="text-end"><button className="btn btn-outline-primary btn-sm" onClick={(e) => { e.stopPropagation(); open(c.HN_number); }}>เปิด</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
+
+        {profile && rows.length > 0 && (
+          <button className="btn btn-link btn-sm px-0 mb-2 text-decoration-none" onClick={() => setProfile(null)}>
+            <i className="bi bi-arrow-left me-1" />กลับไปผลค้นหา ({rows.length} ราย)
+          </button>
+        )}
 
         {profile && (
           <div className="row g-3">
             <div className="col-lg-7">
               {/* โปรไฟล์ */}
               <div className="card shadow-sm mb-3">
-                <div className="card-header py-2 d-flex align-items-center">
-                  <b>{profile.customer.HN_number} — {profile.customer.full_name} {profile.customer.sure_name}</b>
-                  <a className="btn btn-outline-primary btn-sm ms-auto" target="_blank" rel="noreferrer"
-                     href={`/app/history-form?hn=${encodeURIComponent(profile.customer.HN_number)}`}>
+                <div className="card-header py-2 d-flex align-items-center flex-wrap gap-2">
+                  <span className="d-inline-flex align-items-center justify-content-center rounded-circle text-bg-primary flex-shrink-0 fw-bold"
+                        style={{ width: 34, height: 34 }}>
+                    {(cust.nick_name || cust.full_name || "?").replace(/^คุณ/, "").trim().charAt(0) || "?"}
+                  </span>
+                  <div className="me-auto">
+                    <div className="fw-bold">
+                      {cust.prefix ? `${cust.prefix} ` : ""}{cust.full_name} {cust.sure_name || ""}
+                      {cust.nick_name && <span className="text-muted fw-normal"> ({cust.nick_name})</span>}
+                    </div>
+                    <div className="small text-muted font-monospace">
+                      {cust.HN_number}
+                      {cust.gender && <span className="font-sans-serif"> · {cust.gender}</span>}
+                      {age && <span className="font-sans-serif"> · {age} ปี</span>}
+                    </div>
+                  </div>
+                  <a className="btn btn-outline-primary btn-sm" target="_blank" rel="noreferrer"
+                     href={`/app/history-form?hn=${encodeURIComponent(cust.HN_number)}`}>
                     <i className="bi bi-file-earmark-person me-1" />ประวัติผู้ใช้บริการ (PDF)
                   </a>
-                  {!editing && <button className="btn btn-outline-secondary btn-sm ms-2" onClick={startEdit}><i className="bi bi-pencil me-1" />แก้ไข</button>}
+                  {!editing && <button className="btn btn-outline-secondary btn-sm" onClick={startEdit}><i className="bi bi-pencil me-1" />แก้ไข</button>}
                 </div>
                 <div className="card-body py-3">
                   {!editing ? (
                     <div className="small">
-                      <div className="mb-1"><span className="text-muted">เบอร์:</span> {profile.customer.phone || "—"}</div>
-                      <div className="mb-1">
-                        <span className="text-muted">แพ้ยา:</span>{" "}
-                        {profile.customer.drug_allergies?.length
-                          ? <span className="badge text-bg-danger">{profile.customer.drug_allergies.join(", ")}</span>
-                          : "—"}
+                      <div className="row g-3">
+                        {/* กลุ่มติดต่อ */}
+                        <div className="col-md-6">
+                          <div className="text-muted fw-semibold mb-1" style={{ fontSize: 12, letterSpacing: 0.3 }}>การติดต่อ</div>
+                          <InfoRow icon="bi-telephone" label="เบอร์โทร">{cust.phone || "—"}</InfoRow>
+                          {cust.line_id && <InfoRow icon="bi-chat-dots" label="LINE">{cust.line_id}</InfoRow>}
+                          {cust.email && <InfoRow icon="bi-envelope" label="อีเมล">{cust.email}</InfoRow>}
+                          {cust.address && <InfoRow icon="bi-geo-alt" label="ที่อยู่">{cust.address}</InfoRow>}
+                          {cust.emergency?.name && (
+                            <InfoRow icon="bi-person-exclamation" label="ฉุกเฉิน">
+                              {cust.emergency.name}{cust.emergency.relation ? ` (${cust.emergency.relation})` : ""}{cust.emergency.phone ? ` · ${cust.emergency.phone}` : ""}
+                            </InfoRow>
+                          )}
+                        </div>
+                        {/* กลุ่มความปลอดภัย */}
+                        <div className="col-md-6">
+                          <div className="text-muted fw-semibold mb-1" style={{ fontSize: 12, letterSpacing: 0.3 }}>ข้อควรระวัง</div>
+                          <InfoRow icon="bi-capsule" label="แพ้ยา">
+                            {cust.drug_allergies?.length
+                              ? cust.drug_allergies.map((a) => <span key={a} className="badge text-bg-danger me-1">{a}</span>)
+                              : <span className="text-muted">ไม่มี</span>}
+                          </InfoRow>
+                          <InfoRow icon="bi-heart-pulse" label="โรคประจำตัว">
+                            {cust.chronic_diseases?.length ? cust.chronic_diseases.join(", ") : <span className="text-muted">ไม่มี</span>}
+                          </InfoRow>
+                          {cust.note && <InfoRow icon="bi-sticky" label="หมายเหตุ">{cust.note}</InfoRow>}
+                        </div>
+                        {/* สรุปแบบฟอร์มสุขภาพ 9 ข้อ */}
+                        <div className="col-12">
+                          <div className="border rounded-3 bg-body-tertiary p-2 px-3">
+                            <div className="d-flex align-items-center flex-wrap gap-2">
+                              <span className="text-muted fw-semibold" style={{ fontSize: 12, letterSpacing: 0.3 }}>
+                                <i className="bi bi-clipboard2-pulse me-1" />ข้อมูลสุขภาพ (แบบฟอร์ม 9 ข้อ)
+                              </span>
+                              {health ? (
+                                <span className="badge bg-body-secondary text-body border ms-auto fw-normal">ตอบแล้ว {healthFlagged.length + healthClearCount}/9 · กรอกเมื่อ {fmtDate(cust.history_date)}</span>
+                              ) : (
+                                <span className="badge text-bg-warning ms-auto">ยังไม่ได้กรอกแบบฟอร์ม</span>
+                              )}
+                            </div>
+                            {health ? (
+                              healthFlagged.length ? (
+                                <div className="d-flex flex-wrap gap-1 mt-2">
+                                  {healthFlagged.map((it) => (
+                                    <span key={it.label} className="badge text-bg-warning fw-normal" title={it.detail}>
+                                      {it.label}{it.detail ? `: ${it.detail}` : ""}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-success mt-1"><i className="bi bi-check-circle me-1" />ไม่พบข้อควรระวังจากแบบฟอร์ม (ตอบ &ldquo;ไม่มี&rdquo; ทุกข้อ)</div>
+                              )
+                            ) : (
+                              <div className="text-muted mt-1">ลูกค้าเก่าก่อนมีแบบฟอร์ม — ข้อมูลสุขภาพ 9 ข้อจะถูกบันทึกเมื่อกรอกแบบฟอร์มประวัติผู้ใช้บริการ</div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mb-1"><span className="text-muted">โรคประจำตัว:</span> {profile.customer.chronic_diseases?.join(", ") || "—"}</div>
-                      {profile.customer.note && <div><span className="text-muted">หมายเหตุ:</span> {profile.customer.note}</div>}
                     </div>
                   ) : (
                     <>
@@ -180,10 +304,10 @@ function CustomersInner() {
                         </div>
                       </div>
                       <div className="d-flex gap-2 mt-3">
-                        <button className="btn btn-primary btn-sm" disabled={busy} onClick={saveEdit}>
+                        <button className="btn btn-outline-secondary btn-sm ms-auto" onClick={() => setEditing(null)}>ยกเลิก</button>
+                        <button className="btn btn-primary btn-sm px-4" disabled={busy} onClick={saveEdit}>
                           {busy && <span className="spinner-border spinner-border-sm me-1" />}บันทึก
                         </button>
-                        <button className="btn btn-outline-secondary btn-sm" onClick={() => setEditing(null)}>ยกเลิก</button>
                       </div>
                     </>
                   )}
@@ -193,30 +317,49 @@ function CustomersInner() {
               {/* คอร์สที่ถือ + ชำระ */}
               <div className="card shadow-sm mb-3">
                 <div className="card-header py-2 fw-semibold"><i className="bi bi-grid-3x3-gap me-1 text-primary" />คอร์สที่ถือ</div>
-                <div className="card-body p-0">
-                  <table className="table table-sm table-hover mb-0">
-                    <thead className="table-light"><tr><th>คอร์ส</th><th className="text-center">เหลือ</th><th>หมดอายุ</th><th className="text-end">ชำระ</th><th /></tr></thead>
+                <div className="card-body p-0 table-responsive">
+                  <table className="table table-sm table-hover align-middle mb-0">
+                    <thead>
+                      <tr className="small text-muted">
+                        <th className="fw-semibold">คอร์ส</th><th className="fw-semibold text-center">คงเหลือ</th>
+                        <th className="fw-semibold">หมดอายุ</th><th className="fw-semibold text-end">ชำระแล้ว</th>
+                        <th className="fw-semibold text-center">สถานะ</th><th style={{ width: 48 }} />
+                      </tr>
+                    </thead>
                     <tbody>
                       {profile.courses.map((cc) => (
                         <tr key={cc.customer_course_ID}>
                           <td>{cc.course_snapshot?.name}</td>
-                          <td className="text-center">{cc.uses_remaining}/{cc.uses_total}</td>
+                          <td className="text-center"><b>{cc.uses_remaining}</b><span className="text-muted">/{cc.uses_total}</span></td>
                           <td className="small">{cc.expires_at ? fmtDate(cc.expires_at) : "—"}</td>
                           <td className="text-end small">
                             {money(cc.paid_amount)}/{money(cc.total_price)}฿
-                            {cc.balance_due > 0 && <span className="badge text-bg-warning ms-1">ค้าง {money(cc.balance_due)}</span>}
+                            {cc.balance_due > 0 && <span className="badge text-bg-warning ms-1">ค้าง {money(cc.balance_due)}฿</span>}
                           </td>
-                          <td><span className={`badge text-bg-${{ active: "success", completed: "info", expired: "warning", cancelled: "secondary" }[cc.status] || "light"}`}>{cc.status}</span></td>
+                          <td className="text-center"><span className={`badge text-bg-${{ active: "success", completed: "info", expired: "warning", cancelled: "secondary" }[cc.status] || "light"}`}>{CC_STATUS_TH[cc.status] || cc.status}</span></td>
+                          <td className="text-end">
+                            {cc.paid_amount > 0 && (
+                              <a className="btn btn-outline-secondary btn-sm" title="เปิดใบเสร็จล่าสุดของคอร์สนี้" target="_blank" rel="noreferrer"
+                                 href={`/app/receipt?cc=${encodeURIComponent(cc.customer_course_ID)}`} onClick={(e) => e.stopPropagation()}>
+                                <i className="bi bi-receipt" />
+                              </a>
+                            )}
+                          </td>
                         </tr>
                       ))}
-                      {!profile.courses.length && <tr><td colSpan={5} className="text-center text-muted py-3">— ไม่มีคอร์ส —</td></tr>}
+                      {!profile.courses.length && (
+                        <tr><td colSpan={6} className="text-center text-muted py-4">
+                          <i className="bi bi-bag d-block mb-1" style={{ fontSize: 24, opacity: 0.4 }} />
+                          ยังไม่มีคอร์ส — ขายคอร์สได้จากหน้า OPD / หน้าห้อง
+                        </td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
                 {profile.courses.some((c) => c.balance_due > 0) && (
-                  <div className="card-footer py-2 d-flex gap-2 flex-wrap align-items-end">
+                  <div className="card-footer py-2 d-flex gap-2 flex-wrap align-items-end bg-body-tertiary">
                     <div style={{ minWidth: 240, flex: 1 }}>
-                      <label className="form-label small mb-1">ชำระค่าคอร์ส (เต็มจำนวน)</label>
+                      <label className="form-label small mb-1"><i className="bi bi-cash-coin me-1 text-warning" />ชำระค่าคอร์ส (เต็มจำนวน)</label>
                       <select className="form-select form-select-sm" value={pay.customer_course_ID} onChange={(e) => setPay((p) => ({ ...p, customer_course_ID: e.target.value }))}>
                         <option value="">— เลือกคอร์สที่ค้าง —</option>
                         {profile.courses.filter((c) => c.balance_due > 0).map((c) => (
@@ -230,15 +373,18 @@ function CustomersInner() {
                         <option value="cash">เงินสด</option><option value="transfer">โอน</option><option value="card">บัตร</option>
                       </select>
                     </div>
-                    <button className="btn btn-primary btn-sm" disabled={!pay.customer_course_ID || busy} onClick={payFull}>ชำระเต็มจำนวน</button>
+                    <button className="btn btn-primary btn-sm px-3" disabled={!pay.customer_course_ID || busy} onClick={payFull}>
+                      {busy && <span className="spinner-border spinner-border-sm me-1" />}ชำระเต็มจำนวน
+                    </button>
                   </div>
                 )}
               </div>
 
               {/* ใบยินยอมย้อนหลัง */}
               <div className="card shadow-sm mb-3">
-                <div className="card-header py-2 fw-semibold">
-                  <i className="bi bi-file-earmark-medical me-1 text-primary" />ใบยินยอมทั้งหมด ({consents.length})
+                <div className="card-header py-2 fw-semibold d-flex align-items-center">
+                  <i className="bi bi-file-earmark-medical me-1 text-primary" />ใบยินยอมทั้งหมด
+                  <span className="badge text-bg-secondary ms-2">{consents.length}</span>
                 </div>
                 <ul className="list-group list-group-flush">
                   {consents.map((c, i) => (
@@ -246,10 +392,15 @@ function CustomersInner() {
                       <i className={`bi ${c.kind === "signature" ? "bi-pen" : "bi-file-earmark-check"} text-success`} />
                       <span>{fmtDate(c.date)} · เคส {c.opd_ID}</span>
                       <span className="text-muted">{c.kind === "signature" ? "ลายเซ็นบนจอ" : c.filename || "ไฟล์แนบ"}</span>
-                      <button className="btn btn-outline-secondary btn-sm ms-auto" onClick={() => setViewConsent(c)}>ดู</button>
+                      <button className="btn btn-outline-secondary btn-sm ms-auto" onClick={() => setViewConsent(c)}><i className="bi bi-eye me-1" />ดู</button>
                     </li>
                   ))}
-                  {!consents.length && <li className="list-group-item text-muted small py-3 text-center">— ยังไม่มีใบยินยอม —</li>}
+                  {!consents.length && (
+                    <li className="list-group-item text-muted small py-4 text-center">
+                      <i className="bi bi-file-earmark d-block mb-1" style={{ fontSize: 24, opacity: 0.4 }} />
+                      ยังไม่มีใบยินยอม — ลูกค้าเซ็นบนจอได้ในหน้า OPD ก่อนทำหัตถการ
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>
@@ -259,14 +410,16 @@ function CustomersInner() {
               <div className="card shadow-sm">
                 <div className="card-header py-2 d-flex align-items-center">
                   <span className="fw-semibold"><i className="bi bi-clock-history me-1 text-primary" />Timeline ประวัติ</span>
-                  <button className="btn btn-outline-secondary btn-sm ms-auto" onClick={exportHistory}><i className="bi bi-download me-1" />CSV</button>
+                  <span className="badge text-bg-secondary ms-2">{timeline.length}</span>
+                  <button className="btn btn-outline-secondary btn-sm ms-auto" disabled={!timeline.length} onClick={exportHistory}><i className="bi bi-download me-1" />CSV</button>
                 </div>
                 <div className="card-body py-3">
                   <ul className="list-unstyled mb-0">
                     {timeline.map((t, i) => (
                       <li key={t.opd_ID} className="d-flex gap-2 pb-3 position-relative">
-                        <span className={`d-inline-flex align-items-center justify-content-center rounded-circle ${t.status === "closed" ? "text-bg-success" : "text-bg-warning"}`}
-                              style={{ width: 30, height: 30, fontSize: 13, zIndex: 1 }}>
+                        <span className={`d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0 ${t.status === "closed" ? "text-bg-success" : "text-bg-warning"}`}
+                              style={{ width: 30, height: 30, fontSize: 13, zIndex: 1 }}
+                              title={t.status === "closed" ? "ปิดเคสแล้ว" : "เคสยังไม่ปิด"}>
                           <i className={`bi ${t.status === "closed" ? "bi-check2" : "bi-hourglass-split"}`} />
                         </span>
                         {i < timeline.length - 1 && <span className="position-absolute bg-secondary-subtle" style={{ left: 14, top: 30, width: 2, bottom: -6 }} />}
@@ -279,7 +432,12 @@ function CustomersInner() {
                         </div>
                       </li>
                     ))}
-                    {!timeline.length && <li className="text-muted small text-center py-3">— ยังไม่มีประวัติ —</li>}
+                    {!timeline.length && (
+                      <li className="text-muted small text-center py-4">
+                        <i className="bi bi-clock-history d-block mb-1" style={{ fontSize: 24, opacity: 0.4 }} />
+                        ยังไม่มีประวัติการใช้บริการ
+                      </li>
+                    )}
                   </ul>
                 </div>
               </div>
@@ -289,7 +447,7 @@ function CustomersInner() {
 
         {/* ดูไฟล์ consent */}
         {viewConsent && (
-          <div className="modal fade show d-block" style={{ background: "rgba(0,0,0,.5)" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setViewConsent(null); }}>
+          <div className="modal fade show d-block" style={{ background: "rgba(0,0,0,.5)", zIndex: 2000 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setViewConsent(null); }}>
             <div className="modal-dialog modal-lg modal-dialog-centered">
               <div className="modal-content">
                 <div className="modal-header py-2">
@@ -302,7 +460,7 @@ function CustomersInner() {
                 <div className="modal-body text-center" style={{ maxHeight: "75vh", overflow: "auto" }}>
                   {viewConsent.mime === "application/pdf"
                     ? <iframe src={viewConsent.file} title="consent" style={{ width: "100%", height: "70vh", border: 0 }} />
-                    : <img src={viewConsent.file} alt="consent" style={{ maxWidth: "100%" }} />}
+                    : <img src={viewConsent.file} alt="consent" style={{ maxWidth: "100%", background: "#fff" }} />}
                 </div>
               </div>
             </div>

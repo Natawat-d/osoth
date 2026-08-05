@@ -7,7 +7,7 @@ import { api } from "@/lib/client";
 import InfoBox from "@/components/InfoBox";
 
 const TYPE_TH = { personal: ["ลากิจ", "info"], sick: ["ลาป่วย", "danger"] };
-const STATUS_TH = { pending: ["รออนุมัติ", "warning"], approved: ["อนุมัติแล้ว", "success"], rejected: ["ไม่อนุมัติ", "secondary"] };
+const STATUS_TH = { pending: ["รออนุมัติ", "warning"], approved: ["อนุมัติแล้ว", "success"], rejected: ["ไม่อนุมัติ", "danger"] };
 const fmtD = (d) => (d ? String(d).split("-").reverse().join("/") : "—");
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000) + 1;
@@ -102,15 +102,12 @@ function MyLeaves({ auth }) {
             <div className="card-header py-2 fw-semibold"><i className="bi bi-journal-plus me-1 text-primary" />ยื่นคำขอลา</div>
             <div className="card-body py-3">
               <div className="row g-2 mb-2">
-                <div className="col-6">
-                  <label className="form-label small mb-1">ประเภท</label>
+                <div className="col-12">
+                  <label className="form-label small mb-1">ประเภทการลา</label>
                   <select className="form-select form-select-sm" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>
                     <option value="personal">ลากิจ</option>
                     <option value="sick">ลาป่วย</option>
                   </select>
-                </div>
-                <div className="col-6 d-flex align-items-end">
-                  <span className={`badge fs-6 ${days > 0 ? "text-bg-primary" : "text-bg-secondary"}`}>{days > 0 ? `${days} วัน` : "—"}</span>
                 </div>
                 <div className="col-6">
                   <label className="form-label small mb-1">ตั้งแต่วันที่</label>
@@ -122,9 +119,15 @@ function MyLeaves({ auth }) {
                   <input type="date" className="form-control form-control-sm" value={form.date_to} min={form.date_from}
                          onChange={(e) => setForm((f) => ({ ...f, date_to: e.target.value }))} />
                 </div>
+                <div className="col-12">
+                  <span className="text-muted small">รวมวันลา </span>
+                  <span className={`badge ${days > 0 ? "text-bg-primary" : "text-bg-secondary"}`}>{days > 0 ? `${days} วัน` : "—"}</span>
+                </div>
               </div>
               <label className="form-label small mb-1">เหตุผล</label>
-              <textarea className="form-control form-control-sm mb-2" rows={2} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
+              <textarea className="form-control form-control-sm mb-2" rows={2} value={form.reason}
+                        placeholder={form.type === "sick" ? "อาการ/สาเหตุ เช่น ไข้หวัด ปวดท้อง" : "เช่น ติดต่อราชการ ธุระครอบครัว"}
+                        onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
               {form.type === "sick" && (
                 <div className="mb-2">
                   <label className="form-label small mb-1">
@@ -154,22 +157,42 @@ function MyLeaves({ auth }) {
         {/* คำขอของฉัน (inbox style) */}
         <div className="col-lg-7">
           <div className="card shadow-sm">
-            <div className="card-header py-2 fw-semibold"><i className="bi bi-inbox me-1 text-primary" />คำขอของฉัน</div>
+            <div className="card-header py-2 d-flex align-items-center">
+              <span className="fw-semibold"><i className="bi bi-inbox me-1 text-primary" />คำขอของฉัน</span>
+              {rows.length > 0 && <span className="badge bg-body-tertiary text-body-secondary border ms-2">{rows.length} รายการ</span>}
+            </div>
             <div className="list-group list-group-flush" style={{ maxHeight: "60vh", overflowY: "auto" }}>
               {rows.map((r) => {
                 const [tl, tc] = TYPE_TH[r.type] || [r.type, "light"];
                 const [sl, sc] = STATUS_TH[r.status] || [r.status, "light"];
                 return (
-                  <div key={r.leave_ID} className="list-group-item d-flex align-items-center gap-2 flex-wrap">
-                    <span className={`badge text-bg-${tc}`}>{tl}</span>
-                    <span className="small"><b>{fmtD(r.date_from)}</b> → <b>{fmtD(r.date_to)}</b> · {r.days} วัน</span>
-                    {r.reason && <span className="text-muted small text-truncate" style={{ maxWidth: 220 }}>· {r.reason}</span>}
-                    {r.medical_cert && <a className="badge text-bg-light border text-decoration-none" href={r.medical_cert} target="_blank" rel="noreferrer">📎 ใบรับรอง</a>}
-                    <span className={`badge text-bg-${sc} ms-auto`}>{sl}</span>
+                  <div key={r.leave_ID} className="list-group-item py-2">
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      <span className={`badge text-bg-${tc}`}>{tl}</span>
+                      <span className="small fw-semibold">{fmtD(r.date_from)} – {fmtD(r.date_to)}</span>
+                      <span className="text-muted small">· {r.days} วัน</span>
+                      {r.medical_cert && (
+                        <a className="badge bg-body-tertiary text-body-secondary border text-decoration-none" href={r.medical_cert} target="_blank" rel="noreferrer">
+                          <i className="bi bi-paperclip" /> ใบรับรอง
+                        </a>
+                      )}
+                      <span className={`badge text-bg-${sc} ms-auto`}>{sl}</span>
+                    </div>
+                    {r.reason && (
+                      <div className="text-muted small mt-1">
+                        <i className="bi bi-chat-left-text me-1" />{r.reason}
+                      </div>
+                    )}
                   </div>
                 );
               })}
-              {!rows.length && <div className="list-group-item text-center text-muted py-4">— ยังไม่มีคำขอ —</div>}
+              {!rows.length && (
+                <div className="list-group-item text-center text-muted py-5">
+                  <i className="bi bi-inbox fs-3 d-block mb-1" />
+                  ยังไม่มีคำขอลา
+                  <div className="small">ยื่นคำขอได้จากฟอร์ม "ยื่นคำขอลา"</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -217,7 +240,7 @@ function PendingApprovals({ auth }) {
                 <b>{users[r.user_ID]?.full_name || r.user_ID}</b>
                 <span className={`badge text-bg-${tc}`}>{tl}</span>
                 <span className="small text-muted">{fmtD(r.date_from)} → {fmtD(r.date_to)} · {r.days} วัน</span>
-                {r.medical_cert && <a className="badge text-bg-light border text-decoration-none" href={r.medical_cert} target="_blank" rel="noreferrer">📎 ใบรับรองแพทย์</a>}
+                {r.medical_cert && <a className="badge bg-body-tertiary text-body-secondary border text-decoration-none" href={r.medical_cert} target="_blank" rel="noreferrer"><i className="bi bi-paperclip" /> ใบรับรองแพทย์</a>}
                 <span className="ms-auto d-flex gap-2">
                   <button className="btn btn-success btn-sm" disabled={busy === r.leave_ID} onClick={() => review(r.leave_ID, "approved")}>
                     <i className="bi bi-check2 me-1" />อนุมัติ
@@ -302,7 +325,7 @@ function LeaveSummary({ auth }) {
       </div>
       <div className="card-body p-0">
         <table className="table table-sm table-hover mb-0">
-          <thead className="table-light"><tr><th>พนักงาน</th><th className="text-end">ลาป่วย (วัน)</th><th className="text-end">ลากิจ (วัน)</th><th className="text-end">รวม</th><th className="text-end">จำนวนครั้ง</th></tr></thead>
+          <thead><tr><th className="bg-body-tertiary">พนักงาน</th><th className="bg-body-tertiary text-end">ลาป่วย (วัน)</th><th className="bg-body-tertiary text-end">ลากิจ (วัน)</th><th className="bg-body-tertiary text-end">รวม</th><th className="bg-body-tertiary text-end">จำนวนครั้ง</th></tr></thead>
           <tbody>
             {byUser.map((u) => (
               <tr key={u.user_ID}>

@@ -14,6 +14,7 @@ import { api } from "@/lib/client";
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const STATUS_TH = {
   booked: ["จองแล้ว", "secondary"], arrived: ["มาถึง", "info"], ready: ["พร้อมทำ", "primary"],
+  consulting: ["ปรึกษาหมอ", "primary"], consult_no_sale: ["ปรึกษา-ไม่ซื้อ", "secondary"],
   bt_stage: ["BT ทำ", "warning"], doctor_stage: ["หมอทำ", "danger"], done: ["เสร็จ", "success"],
 };
 const SBadge = ({ s }) => { const [l, c] = STATUS_TH[s] || [s, "light"]; return <span className={`badge text-bg-${c}`}>{l}</span>; };
@@ -79,12 +80,17 @@ export default function ReceptionPage() {
     opened: events.filter((e) => e.opd_ID).length,
   }), [events]);
 
+  // legend: สถานะหลักโชว์เสมอ · สถานะพิเศษโชว์เมื่อมีคิวสถานะนั้นจริงในวัน
+  const legendItems = useMemo(() => {
+    const used = new Set(events.map((e) => e.status));
+    return Object.entries(STATUS_META).filter(([k]) => !["consulting", "consult_no_sale"].includes(k) || used.has(k));
+  }, [events]);
+
   return (
     <div className="app-content">
       <div className="container-fluid pt-3">
         <div className="d-flex align-items-center mb-2 flex-wrap gap-2">
           <h4 className="fw-bold mb-0">ปฏิทิน (รับลูกค้า)</h4>
-          <span className="text-muted small">คลิกคิวเพื่อรับเข้า / เปิดเคส</span>
           <input type="date" className="form-control form-control-sm ms-auto" style={{ width: 150 }}
                  value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
@@ -97,7 +103,7 @@ export default function ReceptionPage() {
         <div className="row g-3">
           <div className="col-lg-8">
             <MonthCalendar value={date} onSelect={setDate} onMonthChange={loadMonth} events={monthEvents} compact
-              headerExtra={<span className="badge text-bg-light border">คิววันที่เลือก {events.length}</span>} />
+              headerExtra={<span className="badge bg-body-tertiary text-body border">คิววันที่เลือก {events.length}</span>} />
 
             <div className="card shadow-sm mt-3">
               <div className="card-header py-2 d-flex align-items-center">
@@ -105,24 +111,35 @@ export default function ReceptionPage() {
                 <span className="text-muted small ms-2">คลิกคิวเพื่อรับเข้า/เปิดเคส</span>
               </div>
               <div className="card-body p-2">
-                <DayRoomGrid rooms={rooms} events={events} roomDoctor={roomDoctor} selectedId={selected?.reserve_ID}
+                <DayRoomGrid rooms={rooms} events={events} roomDoctor={roomDoctor} selectedId={selected?.reserve_ID} date={date}
                              onEventClick={setSelected} />
+              </div>
+              <div className="card-footer py-1 d-flex gap-3 flex-wrap justify-content-center bg-body">
+                {legendItems.map(([k, v]) => (
+                  <span key={k} className="d-inline-flex align-items-center gap-1 small text-muted">
+                    <span style={{ width: 9, height: 9, borderRadius: 3, background: v.color, display: "inline-block" }} />{v.label}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
 
           <div className="col-lg-4">
-            {selected
-              ? <ReceptionPanel r={selected} opd={opds.find((o) => o.opd_ID === selected.opd_ID)}
-                                roomName={roomName} toast={toast} onDone={loadEvents} onClear={() => setSelected(null)} />
-              : (
-                <div className="card shadow-sm">
-                  <div className="card-body text-center text-muted py-5">
-                    <i className="bi bi-bell fs-1 d-block mb-2" />
-                    เลือกคิวลูกค้าจากปฏิทิน<br />เพื่อรับเข้า / เปิดเคส
+            <div className="sticky-lg-top" style={{ top: "4.75rem", zIndex: 1 }}>
+              {selected
+                ? <ReceptionPanel r={selected} opd={opds.find((o) => o.opd_ID === selected.opd_ID)}
+                                  roomName={roomName} toast={toast} onDone={loadEvents} onClear={() => setSelected(null)} />
+                : (
+                  <div className="card shadow-sm">
+                    <div className="card-body text-center py-5">
+                      <i className="bi bi-bell fs-1 d-block mb-2 text-muted opacity-50" />
+                      <div className="fw-semibold">ยังไม่ได้เลือกคิว</div>
+                      <div className="text-muted small mt-1">คลิกคิวลูกค้าในตารางห้อง<br />เพื่อรับเข้า / เปิดเคส</div>
+                      {counts.waiting > 0 && <span className="badge bg-body-tertiary text-body border mt-3">วันนี้รอรับอีก {counts.waiting} คิว</span>}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+            </div>
           </div>
         </div>
       </div>
@@ -159,21 +176,27 @@ function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
   const stepIdx = FLOW.indexOf(r.status);
 
   return (
-    <div className="card shadow-sm">
-      <div className="card-header py-2 d-flex align-items-center gap-2">
+    <div className="card shadow-sm border-primary-subtle">
+      <div className="card-header py-2 d-flex align-items-center gap-2 bg-primary-subtle">
+        <i className="bi bi-person-circle text-primary" />
         <b>{r.contact?.nick_name || r.HN_number || "ลูกค้าใหม่"}</b>
         <span className="text-muted small">{roomName(r.room_ID)} · {r.time_start}–{r.time_end}{r.is_walk_in ? " · Walk-in" : ""}</span>
         <span className="ms-auto"><SBadge s={r.status} /></span>
-        <button className="btn-close" onClick={onClear} />
+        <button className="btn-close" aria-label="ปิด" onClick={onClear} />
       </div>
       <div className="card-body py-3">
-        {/* step flow */}
+        {/* step flow — ผ่านแล้ว = ฟ้าอ่อน+เช็ค · ขั้นปัจจุบัน = น้ำเงินเข้ม · ที่เหลือ = จาง */}
         <div className="d-flex flex-wrap gap-1 mb-3">
           {FLOW.map((s, i) => {
             const [l] = STATUS_TH[s] || [s];
+            const cls = i < stepIdx
+              ? "bg-primary-subtle text-primary-emphasis border border-primary-subtle"
+              : i === stepIdx
+                ? "text-bg-primary"
+                : "bg-body-tertiary text-body-secondary border";
             return (
-              <span key={s} className={`badge rounded-pill ${i <= stepIdx ? "text-bg-primary" : "text-bg-light border text-muted"}`}>
-                {i <= stepIdx ? "✓ " : ""}{l}
+              <span key={s} className={`badge rounded-pill ${cls}`}>
+                {i < stepIdx && <i className="bi bi-check2 me-1" />}{l}
               </span>
             );
           })}
@@ -192,11 +215,11 @@ function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
             <div className="text-muted" style={{ fontSize: 11 }}>ลูกค้าเดิม — ใช้ข้อมูลชุดเดิม ไม่ต้องกรอกใหม่แม้คนละคอร์ส</div>
           </div>
         )}
-        {r.customer_course_ID && <div className="text-muted small mb-2">🎴 มีคอร์สผูกกับการจอง · ชำระที่ OPD</div>}
+        {r.customer_course_ID && <div className="text-muted small mb-2"><i className="bi bi-ticket-perforated me-1" />มีคอร์สผูกกับการจอง · ชำระที่ OPD</div>}
 
         {opened ? (
           <div className={`alert ${closed ? "alert-success" : "alert-info"} py-2`}>
-            <b>{closed ? "✓ เคสปิดแล้ว" : "เปิดเคสแล้ว"} · {r.opd_ID}</b>
+            <b>{closed && <i className="bi bi-check2-circle me-1" />}{closed ? "เคสปิดแล้ว" : "เปิดเคสแล้ว"} · {r.opd_ID}</b>
             <Link href="/app/opd" className="btn btn-primary btn-sm d-block ms-auto px-4 mt-2">→ ไปที่ห้องทำเคส (OPD)</Link>
           </div>
         ) : (

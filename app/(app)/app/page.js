@@ -44,11 +44,12 @@ export default function DashboardPage() {
       label: METHOD_TH[k] || k, value: v, color: [V2_PALETTE[0], V2_PALETTE[1], V2_PALETTE[3]][i % 3],
     })), [data]);
 
+  // bar ใช้สีเดียวต่อการ์ด (สีสลับหลายสีไม่สื่อความหมาย — แดงชวนเข้าใจผิดว่าแย่)
   const courseBars = useMemo(() =>
-    (data?.sales_by_course || []).slice(0, 7).map((c) => ({ label: c.name, value: c.revenue, hint: `${c.count} คอร์ส` })), [data]);
+    (data?.sales_by_course || []).slice(0, 7).map((c) => ({ label: c.name, value: c.revenue, hint: `${c.count} คอร์ส`, color: "#1560a3" })), [data]);
 
   const staffBars = useMemo(() =>
-    (data?.top_staff || []).slice(0, 7).map((s) => ({ label: s.name, value: s.total, hint: ROLE_TH[s.role] || s.role })), [data]);
+    (data?.top_staff || []).slice(0, 7).map((s) => ({ label: s.name, value: s.total, hint: ROLE_TH[s.role] || s.role, color: "#fd7e14" })), [data]);
 
   const costDonut = useMemo(() => t ? [
     { label: "ต้นทุนยา (COGS)", value: t.cogs, color: "#dc3545" },
@@ -63,13 +64,14 @@ export default function DashboardPage() {
 
   if (auth.user && !isOwner) return null;
 
+  // KPI: การ์ดพื้นกลาง + ไอคอนชิปสี (แทนการ์ดสีทึบ 6 สี — อ่านง่ายขึ้น รอด dark mode)
   const kpis = [
-    { label: "รายรับ", value: t ? money(t.income) : "—", sub: t ? `${t.tx} ธุรกรรม · เฉลี่ย ${money(t.avg_tx)}฿` : "", ico: "bi-cash-stack", bg: "text-bg-primary" },
-    { label: "กำไรสุทธิ", value: t ? money(t.net) : "—", sub: t && t.income > 0 ? `margin ${Math.round((t.net / t.income) * 100)}%` : "", ico: "bi-graph-up-arrow", bg: (t?.net ?? 0) >= 0 ? "text-bg-success" : "text-bg-danger" },
-    { label: "ต้นทุนรวม", value: t ? money(t.cogs + t.labor + t.expense) : "—", sub: t ? `ยา ${money(t.cogs)} · ค่ามือ ${money(t.labor)}` : "", ico: "bi-basket", bg: "text-bg-secondary" },
-    { label: "เคสปิด", value: t ? money(t.cases) : "—", sub: "ช่วงที่เลือก", ico: "bi-clipboard2-check", bg: "text-bg-info" },
-    { label: "คอร์สขายได้", value: t ? money(t.courses_sold) : "—", sub: "ช่วงที่เลือก", ico: "bi-bag-check", bg: "text-bg-dark" },
-    { label: "ลูกหนี้ค้างชำระ", value: ar ? money(ar.total) : "—", sub: ar ? `${ar.rows.length} รายการ` : "", ico: "bi-hourglass-split", bg: "text-bg-warning" },
+    { label: "รายรับ", value: t ? `${money(t.income)}฿` : null, sub: t ? `${t.tx} ธุรกรรม · เฉลี่ย ${money(t.avg_tx)}฿` : "", ico: "bi-cash-stack", bg: "text-bg-primary" },
+    { label: "กำไรสุทธิ", value: t ? `${money(t.net)}฿` : null, sub: t && t.income > 0 ? `margin ${Math.round((t.net / t.income) * 100)}%` : "", ico: "bi-graph-up-arrow", bg: (t?.net ?? 0) >= 0 ? "text-bg-success" : "text-bg-danger" },
+    { label: "ต้นทุนรวม", value: t ? `${money(t.cogs + t.labor + t.expense)}฿` : null, sub: t ? `ยา ${money(t.cogs)} · ค่ามือ ${money(t.labor)}` : "", ico: "bi-basket", bg: "text-bg-secondary" },
+    { label: "เคสปิด", value: t ? money(t.cases) : null, sub: "ช่วงที่เลือก", ico: "bi-clipboard2-check", bg: "text-bg-info" },
+    { label: "คอร์สขายได้", value: t ? money(t.courses_sold) : null, sub: "ช่วงที่เลือก", ico: "bi-bag-check", chipStyle: { background: "#6f42c1", color: "#fff" } },
+    { label: "ลูกหนี้ค้างชำระ", value: ar ? `${money(ar.total)}฿` : null, sub: ar ? `${ar.rows.length} รายการ` : "", ico: "bi-hourglass-split", bg: "text-bg-warning" },
   ];
 
   return (
@@ -97,16 +99,19 @@ export default function DashboardPage() {
         <div className="row g-2 mb-3">
           {kpis.map((k) => (
             <div className="col-xl-2 col-md-4 col-6" key={k.label}>
-              <div className={`card border-0 shadow-sm h-100 ${k.bg}`}>
-                <div className="card-body py-2 px-3">
-                  <div className="d-flex align-items-center gap-2">
-                    <i className={`bi ${k.ico} fs-4 opacity-75`} />
-                    <div className="min-w-0">
-                      <div className="fs-5 fw-bold lh-1">{k.value}</div>
-                      <div className="small opacity-75 text-truncate">{k.label}</div>
-                    </div>
+              <div className="card border-0 shadow-sm h-100">
+                <div className="card-body py-2 px-3 d-flex align-items-center gap-2">
+                  <span className={`d-inline-flex flex-shrink-0 align-items-center justify-content-center rounded-3 ${k.bg || ""}`}
+                        style={{ width: 42, height: 42, ...k.chipStyle }}>
+                    <i className={`bi ${k.ico} fs-5`} />
+                  </span>
+                  <div className="min-w-0 flex-grow-1">
+                    <div className="text-muted text-truncate" style={{ fontSize: 12 }}>{k.label}</div>
+                    {k.value === null
+                      ? <div className="placeholder-glow"><span className="placeholder rounded" style={{ width: 70 }} /></div>
+                      : <div className="fs-5 fw-bold lh-sm text-truncate">{k.value}</div>}
+                    {k.sub && <div className="text-muted text-truncate" style={{ fontSize: 11 }}>{k.sub}</div>}
                   </div>
-                  {k.sub && <div className="opacity-75 mt-1 text-truncate" style={{ fontSize: 11 }}>{k.sub}</div>}
                 </div>
               </div>
             </div>
@@ -203,7 +208,11 @@ export default function DashboardPage() {
                     <span className="badge text-bg-warning ms-auto">ใกล้หมดอายุ</span>
                   </li>
                 ))}
-                {!lowStock.length && !expiring.length && <li className="list-group-item text-muted py-3 text-center">✓ สต๊อกปกติ</li>}
+                {!lowStock.length && !expiring.length && (
+                  <li className="list-group-item text-muted py-4 text-center">
+                    <i className="bi bi-check-circle text-success d-block mb-1 fs-5" />สต๊อกปกติ ไม่มีรายการต้องจัดการ
+                  </li>
+                )}
               </ul>
             </div>
           </div>
@@ -223,7 +232,11 @@ export default function DashboardPage() {
                     <div className="text-muted" style={{ fontSize: 11 }}>{r.course} · ค้าง {r.days} วัน</div>
                   </li>
                 ))}
-                {!ar?.rows?.length && <li className="list-group-item text-muted py-3 text-center">✓ ไม่มีค้างชำระ</li>}
+                {!ar?.rows?.length && (
+                  <li className="list-group-item text-muted py-4 text-center">
+                    <i className="bi bi-check-circle text-success d-block mb-1 fs-5" />ไม่มีลูกหนี้ค้างชำระ
+                  </li>
+                )}
               </ul>
             </div>
           </div>
@@ -241,7 +254,11 @@ export default function DashboardPage() {
                     <b className="ms-auto">{money(p.items.reduce((s, i) => s + i.qty * i.cost_price_per_unit, 0))}฿</b>
                   </li>
                 ))}
-                {!openPo.length && <li className="list-group-item text-muted py-3 text-center">✓ ไม่มี PO ค้าง</li>}
+                {!openPo.length && (
+                  <li className="list-group-item text-muted py-4 text-center">
+                    <i className="bi bi-check-circle text-success d-block mb-1 fs-5" />ไม่มี PO ค้างรับ
+                  </li>
+                )}
               </ul>
             </div>
           </div>
@@ -256,16 +273,20 @@ export default function DashboardPage() {
             { href: "/app/hr", ico: "bi-people", label: "บุคคล (HR)" },
           ].map((m) => (
             <div className="col-md-3 col-6" key={m.href}>
-              <Link href={m.href} className="card shadow-sm text-decoration-none text-body">
+              <Link href={m.href} className="card shadow-sm text-decoration-none text-body quick-card h-100">
                 <div className="card-body text-center py-3">
                   <i className={`bi ${m.ico} fs-3 text-primary`} />
-                  <div className="fw-semibold small mt-1">{m.label}</div>
+                  <div className="fw-semibold small mt-1">{m.label} <i className="bi bi-arrow-right-short text-muted" /></div>
                 </div>
               </Link>
             </div>
           ))}
         </div>
       </div>
+      <style jsx global>{`
+        .quick-card { transition: transform 0.12s ease, box-shadow 0.12s ease; }
+        .quick-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important; }
+      `}</style>
     </div>
   );
 }

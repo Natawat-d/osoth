@@ -46,11 +46,19 @@ export default function LoginPage() {
             <div className="osoth-logo-box mx-auto mb-2">
               <img src={`${bp}${brand.logo}`} alt="logo" />
             </div>
-            <h4 className="fw-bold mb-0">{brand.display_name}</h4>
-            <small className="text-muted">Healthcare Operator System — เข้าสู่ระบบพนักงาน</small>
+            <h4 className="fw-bold mb-1">{brand.display_name}</h4>
+            <span className="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold">
+              <i className="bi bi-person-badge me-1" />สำหรับพนักงาน
+            </span>
+            <div className="text-muted small mt-1">Healthcare Operator System</div>
           </div>
 
-          {error && <div className="alert alert-danger py-2">{error}</div>}
+          {error && (
+            <div className="alert alert-danger py-2 d-flex align-items-center gap-2" role="alert">
+              <i className="bi bi-exclamation-triangle-fill" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={submit}>
             <div className="mb-3">
@@ -74,8 +82,15 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="text-center mt-3">
-            <Link href="/about_me" className="text-decoration-none small">← กลับหน้าแรก</Link>
+          <hr className="my-3" />
+          <div className="d-flex justify-content-center gap-3 small">
+            <Link href="/about_me" className="text-decoration-none">
+              <i className="bi bi-house me-1" />หน้าแรก
+            </Link>
+            <span className="text-body-tertiary">·</span>
+            <Link href="/calendar" className="text-decoration-none">
+              <i className="bi bi-calendar-check me-1" />ลูกค้าดูคิว / จอง
+            </Link>
           </div>
         </div>
       </div>

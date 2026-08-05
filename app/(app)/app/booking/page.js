@@ -19,6 +19,7 @@ const addMinutes = (hhmm, mins) => {
 };
 const STATUS_TH = {
   booked: ["จองแล้ว", "secondary"], arrived: ["มาถึง", "info"], ready: ["พร้อมทำ", "primary"],
+  consulting: ["ปรึกษาหมอ", "primary"], consult_no_sale: ["ปรึกษา-ไม่ซื้อ", "secondary"],
   bt_stage: ["BT ทำ", "warning"], doctor_stage: ["หมอทำ", "danger"], done: ["เสร็จ", "success"],
   cancelled: ["ยกเลิก", "dark"], no_show: ["ไม่มา", "dark"],
 };
@@ -149,12 +150,22 @@ export default function BookingPage() {
     done: events.filter((e) => e.status === "done").length,
   }), [events]);
 
+  // legend: สถานะหลักโชว์เสมอ · สถานะพิเศษ (ปรึกษาหมอ ฯลฯ) โชว์เมื่อมีคิวสถานะนั้นจริงในวัน
+  const legendItems = useMemo(() => {
+    const used = new Set(events.map((e) => e.status));
+    return Object.entries(STATUS_META).filter(([k]) => !["consulting", "consult_no_sale"].includes(k) || used.has(k));
+  }, [events]);
+
+  // เลือกคิวแล้วเลื่อนจอไปที่การ์ดจัดการ (การ์ดอยู่ใต้ตารางซึ่งสูง — กันผู้ใช้หาไม่เจอ)
+  useEffect(() => {
+    if (selected) setTimeout(() => document.getElementById("booking-manage-card")?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60);
+  }, [selected?.reserve_ID]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="app-content">
       <div className="container-fluid pt-3">
         <div className="d-flex align-items-center mb-2 flex-wrap gap-2">
           <h4 className="fw-bold mb-0">ปฏิทิน (จองคิว)</h4>
-          <span className="text-muted small">คลิกช่องว่าง = เลือกห้อง/เวลา · คลิกคิว = จัดการ</span>
           <input type="date" className="form-control form-control-sm ms-auto" style={{ width: 150 }}
                  value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
@@ -170,34 +181,35 @@ export default function BookingPage() {
           <div className="col-lg-8">
             {/* ปฏิทินเดือน (ref AdminLTE) → คลิกวัน → ตารางแยกห้องด้านล่าง */}
             <MonthCalendar value={date} onSelect={setDate} onMonthChange={loadMonth} events={monthEvents} compact
-              headerExtra={<span className="badge text-bg-light border">คิววันที่เลือก {events.length}</span>} />
+              headerExtra={<span className="badge bg-body-tertiary text-body border">คิววันที่เลือก {events.length}</span>} />
 
             <div className="card shadow-sm mt-3">
               <div className="card-header py-2 d-flex align-items-center flex-wrap gap-2">
                 <span className="fw-semibold"><i className="bi bi-columns-gap me-1 text-primary" />ตารางห้อง · {date.split("-").reverse().join("/")}</span>
                 <span className="text-muted small">คลิกช่องว่าง = เลือกห้อง/เวลา · คลิกคิว = จัดการ</span>
-                <span className="ms-auto d-flex gap-2 flex-wrap">
-                  {Object.entries(STATUS_META).filter(([k]) => k !== "consulting").map(([k, v]) => (
-                    <span key={k} className="d-inline-flex align-items-center gap-1 small text-muted">
-                      <span style={{ width: 9, height: 9, borderRadius: 3, background: v.color, display: "inline-block" }} />{v.label}
-                    </span>
-                  ))}
-                </span>
               </div>
               <div className="card-body p-2">
-                <DayRoomGrid rooms={rooms} events={events} roomDoctor={roomDoctor} selectedId={selected?.reserve_ID}
+                <DayRoomGrid rooms={rooms} events={events} roomDoctor={roomDoctor} selectedId={selected?.reserve_ID} date={date}
                              onEventClick={setSelected}
                              onSlotClick={(room_ID, time) => { setForm((f) => ({ ...f, room_ID })); setStart(time); }} />
+              </div>
+              <div className="card-footer py-1 d-flex gap-3 flex-wrap justify-content-center bg-body">
+                {legendItems.map(([k, v]) => (
+                  <span key={k} className="d-inline-flex align-items-center gap-1 small text-muted">
+                    <span style={{ width: 9, height: 9, borderRadius: 3, background: v.color, display: "inline-block" }} />{v.label}
+                  </span>
+                ))}
               </div>
             </div>
 
             {selected && (
-              <div className="card shadow-sm mt-3">
-                <div className="card-header py-2 d-flex align-items-center gap-2">
+              <div className="card shadow-sm mt-3 border-primary-subtle" id="booking-manage-card">
+                <div className="card-header py-2 d-flex align-items-center gap-2 bg-primary-subtle">
+                  <i className="bi bi-person-circle text-primary" />
                   <b>{selected.contact?.nick_name || selected.HN_number || selected.reserve_ID}</b>
-                  <span className="text-muted small">{roomName(selected.room_ID)} · {selected.time_start}–{selected.time_end}</span>
+                  <span className="text-muted small">{roomName(selected.room_ID)} · {selected.time_start}–{selected.time_end}{selected.contact?.phone ? ` · โทร ${selected.contact.phone}` : ""}</span>
                   <span className="ms-auto"><SBadge s={selected.status} /></span>
-                  <button className="btn-close" onClick={() => { setSelected(null); setResched(null); }} />
+                  <button className="btn-close" aria-label="ปิด" onClick={() => { setSelected(null); setResched(null); }} />
                 </div>
                 <div className="card-body py-3">
                   {selected.payment_slip && (
@@ -227,30 +239,35 @@ export default function BookingPage() {
                   </div>
 
                   {/* มัดจำการจอง — กัน no-show · ริบอัตโนมัติเมื่อไม่มา · หักเข้าค่าคอร์สตอนจ่ายที่ OPD */}
-                  <div className="d-flex gap-2 flex-wrap align-items-center border-top pt-2 mt-2">
-                    <span className="text-muted small"><i className="bi bi-shield-check me-1" />มัดจำ:</span>
-                    {selected.deposit_status === "held" ? (
-                      <>
-                        <span className="badge text-bg-success">วางแล้ว {selected.deposit}฿</span>
-                        <button className="btn btn-outline-secondary btn-sm" onClick={async () => {
-                          if (!confirm(`คืนมัดจำ ${selected.deposit}฿?`)) return;
-                          try { await api(`/reserves/${selected.reserve_ID}/deposit?method=cash`, { method: "DELETE" }); toast.success("คืนมัดจำแล้ว"); loadEvents(); setSelected(null); }
-                          catch (e) { toast.error(e.message); }
-                        }}>คืนมัดจำ</button>
-                      </>
-                    ) : selected.deposit_status === "applied" ? (
-                      <span className="badge text-bg-info">หักเข้าค่าคอร์สแล้ว ({selected.deposit}฿)</span>
-                    ) : selected.deposit_status === "forfeited" ? (
-                      <span className="badge text-bg-dark">ริบแล้ว ({selected.deposit}฿ · ไม่มาตามนัด)</span>
-                    ) : ["booked", "arrived"].includes(selected.status) ? (
-                      <DepositForm reserve={selected} toast={toast} onDone={() => { loadEvents(); setSelected(null); }} />
-                    ) : (
-                      <span className="text-muted small">—</span>
+                  <div className="border-top pt-2 mt-3">
+                    <div className="d-flex gap-2 flex-wrap align-items-center">
+                      <span className="small fw-semibold"><i className="bi bi-shield-check me-1 text-primary" />มัดจำกันคิว</span>
+                      {selected.deposit_status === "held" ? (
+                        <>
+                          <span className="badge text-bg-success"><i className="bi bi-check2 me-1" />วางแล้ว {money(selected.deposit)}฿</span>
+                          <button className="btn btn-outline-secondary btn-sm" onClick={async () => {
+                            if (!confirm(`คืนมัดจำ ${selected.deposit}฿?`)) return;
+                            try { await api(`/reserves/${selected.reserve_ID}/deposit?method=cash`, { method: "DELETE" }); toast.success("คืนมัดจำแล้ว"); loadEvents(); setSelected(null); }
+                            catch (e) { toast.error(e.message); }
+                          }}>คืนมัดจำ</button>
+                        </>
+                      ) : selected.deposit_status === "applied" ? (
+                        <span className="badge text-bg-info">หักเข้าค่าคอร์สแล้ว ({money(selected.deposit)}฿)</span>
+                      ) : selected.deposit_status === "forfeited" ? (
+                        <span className="badge text-bg-dark">ริบแล้ว ({money(selected.deposit)}฿ · ไม่มาตามนัด)</span>
+                      ) : ["booked", "arrived"].includes(selected.status) ? (
+                        <DepositForm reserve={selected} toast={toast} onDone={() => { loadEvents(); setSelected(null); }} />
+                      ) : (
+                        <span className="text-muted small">ไม่มีมัดจำ</span>
+                      )}
+                    </div>
+                    {!selected.deposit_status && ["booked", "arrived"].includes(selected.status) && (
+                      <div className="text-muted mt-1" style={{ fontSize: 11 }}>ริบอัตโนมัติเมื่อไม่มาตามนัด · หักเข้าค่าคอร์สตอนชำระที่ OPD</div>
                     )}
                   </div>
 
                   {resched && (
-                    <div className="border rounded-3 p-3 mt-3 bg-light">
+                    <div className="border rounded-3 p-3 mt-3 bg-body-tertiary">
                       <b className="small">เลื่อนนัด — เลือกวัน/เวลา/ห้องใหม่</b>
                       <div className="row g-2 mt-1 align-items-end">
                         <div className="col-md-3"><label className="form-label small mb-1">วันใหม่</label>
@@ -282,13 +299,24 @@ export default function BookingPage() {
                          onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
                   <button className="btn btn-primary" onClick={search}>ค้นหา</button>
                 </div>
-                {foundCustomers.map((c) => (
-                  <button key={c.HN_number}
-                          className={`btn btn-sm d-block ms-auto px-4 text-start mb-1 ${pickedCustomer?.HN_number === c.HN_number ? "btn-primary" : "btn-outline-secondary"}`}
-                          onClick={() => pickCustomer(c)}>
-                    <b>{c.HN_number}</b> · {c.full_name} <span className="opacity-75">({c.nick_name})</span>
-                  </button>
-                ))}
+                {foundCustomers.length > 0 && (
+                  <div className="list-group list-group-flush border rounded-3 overflow-hidden">
+                    {foundCustomers.map((c) => {
+                      const active = pickedCustomer?.HN_number === c.HN_number;
+                      return (
+                        <button key={c.HN_number} type="button"
+                                className={`list-group-item list-group-item-action py-2 ${active ? "active" : ""}`}
+                                onClick={() => pickCustomer(c)}>
+                          <div className="d-flex align-items-center gap-2">
+                            <b className="small">{c.nick_name}</b>
+                            <span className={`small ${active ? "" : "text-muted"}`}>{c.full_name}</span>
+                            <span className={`badge ms-auto ${active ? "text-bg-light" : "bg-body-tertiary text-body-secondary border"}`}>{c.HN_number}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {pickedCustomer && custCourses.length > 0 && (
                   <div className="mt-2 small">
                     <div className="text-muted mb-1">คอร์สค้างของ {pickedCustomer.nick_name}:</div>
@@ -311,7 +339,18 @@ export default function BookingPage() {
             <div className="card shadow-sm">
               <div className="card-header py-2 fw-semibold"><i className="bi bi-calendar-plus me-1 text-primary" />จองคิว + เลือกคอร์ส</div>
               <div className="card-body py-3">
-                {!pickedCustomer && (
+                {/* 1) ลูกค้า */}
+                <div className="text-secondary small fw-semibold mb-1"><i className="bi bi-person me-1" />ลูกค้า</div>
+                {pickedCustomer ? (
+                  <div className="d-flex align-items-center gap-2 small bg-body-tertiary border rounded-3 px-2 py-2 mb-2">
+                    <span className="badge text-bg-primary">{pickedCustomer.HN_number}</span>
+                    <span className="text-truncate">{pickedCustomer.nick_name} · {pickedCustomer.full_name}</span>
+                    <button type="button" className="btn btn-link btn-sm p-0 ms-auto text-decoration-none"
+                            onClick={() => { setPickedCustomer(null); setCustCourses([]); setForm((f) => ({ ...f, customer_course_ID: "", nick_name: "", phone: "" })); }}>
+                      เปลี่ยน
+                    </button>
+                  </div>
+                ) : (
                   <div className="row g-2 mb-2">
                     <div className="col-6"><label className="form-label small mb-1">ชื่อเล่น (ลูกค้าใหม่)</label>
                       <input className="form-control form-control-sm" value={form.nick_name} onChange={(e) => setForm((f) => ({ ...f, nick_name: e.target.value }))} /></div>
@@ -319,7 +358,10 @@ export default function BookingPage() {
                       <input className="form-control form-control-sm" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
                   </div>
                 )}
-                <label className="form-label small mb-1">คอร์ส (ผูกกับการจอง — ขายตอนจองได้)</label>
+
+                {/* 2) คอร์ส */}
+                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3"><i className="bi bi-ticket-perforated me-1" />คอร์ส</div>
+                <label className="form-label small mb-1">ผูกกับการจอง — ขายตอนจองได้</label>
                 <select className="form-select form-select-sm mb-2"
                         value={form.customer_course_ID ? `cc:${form.customer_course_ID}` : form.sell_course_ID ? `sell:${form.sell_course_ID}` : ""}
                         onChange={(e) => {
@@ -342,6 +384,8 @@ export default function BookingPage() {
                     {courses.map((c) => <option key={c.course_ID} value={`sell:${c.course_ID}`}>{c.name} · {money(c.price)}฿ · {c.quantity_used} ครั้ง</option>)}
                   </optgroup>
                 </select>
+                {/* 3) เวลา & ห้อง */}
+                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3"><i className="bi bi-clock me-1" />เวลา & ห้อง</div>
                 <div className="row g-2 mb-2">
                   <div className="col-6"><label className="form-label small mb-1">ห้อง *</label>
                     <select className="form-select form-select-sm" value={form.room_ID} onChange={(e) => setForm((f) => ({ ...f, room_ID: e.target.value }))}>
@@ -362,13 +406,24 @@ export default function BookingPage() {
                   <input type="checkbox" className="form-check-input" id="walkin" checked={form.is_walk_in} onChange={(e) => setForm((f) => ({ ...f, is_walk_in: e.target.checked }))} />
                   <label className="form-check-label small" htmlFor="walkin">Walk-in (ไม่ได้จองล่วงหน้า)</label>
                 </div>
-                <div className="lgc mb-2">
+                {/* 4) หลักฐาน (ถ้ามี) */}
+                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3"><i className="bi bi-receipt me-1" />สลิป (ถ้ามี)</div>
+                <div className="lgc mb-1">
                   <ImageInput label="แนบสลิปจ่ายเงินจอง (ถ้ามี)" value={form.payment_slip} onChange={(v) => setForm((f) => ({ ...f, payment_slip: v }))} />
                 </div>
                 <div className="text-muted mb-2" style={{ fontSize: 11 }}>จองไม่ต้องจ่าย · จ่ายค่าคอร์สเต็มจำนวนก่อนทำหัตถการที่ OPD</div>
-                <button className="btn btn-primary d-block ms-auto px-4" disabled={!form.room_ID} onClick={book}>
-                  <i className="bi bi-calendar-check me-1" /> จองคิว
-                </button>
+
+                {/* สรุป + ปุ่มจอง */}
+                <div className="d-flex align-items-center gap-2 border-top pt-3 mt-3">
+                  <span className="small text-muted text-truncate">
+                    {form.room_ID
+                      ? <><i className="bi bi-check-circle text-success me-1" />{date.split("-").reverse().join("/")} · {form.time_start}–{form.time_end} · {roomName(form.room_ID)}</>
+                      : <><i className="bi bi-info-circle me-1" />เลือกห้องก่อนจอง</>}
+                  </span>
+                  <button className="btn btn-primary ms-auto px-4 flex-shrink-0" disabled={!form.room_ID} onClick={book}>
+                    <i className="bi bi-calendar-check me-1" /> จองคิว
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -384,13 +439,14 @@ function DepositForm({ reserve, toast, onDone }) {
   const [method, setMethod] = useState("cash");
   const [busy, setBusy] = useState(false);
   return (
-    <span className="d-flex gap-1 align-items-center">
-      <input type="number" className="form-control form-control-sm" style={{ width: 90 }}
+    <span className="input-group input-group-sm" style={{ width: "auto" }}>
+      <span className="input-group-text">฿</span>
+      <input type="number" className="form-control" style={{ maxWidth: 90 }}
              placeholder="เช่น 199" value={amount} onChange={(e) => setAmount(e.target.value)} />
-      <select className="form-select form-select-sm" style={{ width: 90 }} value={method} onChange={(e) => setMethod(e.target.value)}>
+      <select className="form-select" style={{ maxWidth: 95 }} value={method} onChange={(e) => setMethod(e.target.value)}>
         <option value="cash">เงินสด</option><option value="transfer">โอน</option><option value="card">บัตร</option>
       </select>
-      <button className="btn btn-outline-primary btn-sm" disabled={!(Number(amount) > 0) || busy} onClick={async () => {
+      <button className="btn btn-outline-primary" disabled={!(Number(amount) > 0) || busy} onClick={async () => {
         setBusy(true);
         try {
           const r = await api(`/reserves/${reserve.reserve_ID}/deposit`, { method: "POST", body: { amount: Number(amount), method } });

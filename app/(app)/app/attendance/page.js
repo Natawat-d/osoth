@@ -11,6 +11,7 @@ const hhmm = (d) => (d ? new Date(d).toLocaleTimeString("th-TH", { hour: "2-digi
 const fmtD = (d) => (d ? String(d).split("-").reverse().join("/") : "—");
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const hoursOf = (r) => (r?.check_in && r?.check_out ? ((new Date(r.check_out) - new Date(r.check_in)) / 3600000) : null);
+const wd = (d) => (d ? new Date(d).toLocaleDateString("th-TH", { weekday: "short" }) : "");
 const ROLE_TH = { super_admin: "เจ้าของ", admin: "แอดมิน", sale: "ฝ่ายขาย", doctor: "แพทย์", BT: "BT" };
 
 export default function AttendancePage() {
@@ -87,25 +88,39 @@ function MyAttendance() {
       <div className="row g-3">
         {/* การ์ดลงเวลา */}
         <div className="col-lg-4">
-          <div className="card shadow-sm text-center">
+          <div className={`card shadow-sm text-center border-${state[1]}`}>
             <div className="card-body py-4">
-              <div className="display-6 fw-bold font-monospace mb-1">{clock || "--:--:--"}</div>
-              <div className="text-muted small mb-3">{fmtD(today)}</div>
+              <span className={`badge text-bg-${state[1]} mb-3`}>
+                <i className={`bi ${state[2]} me-1`} />{state[0]}
+              </span>
+              <div className="display-5 fw-bold font-monospace mb-1">{clock || "--:--:--"}</div>
+              <div className="text-muted small mb-3">
+                {new Date().toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </div>
               {!todayRec?.check_in && (
-                <button className="btn btn-success btn-lg px-5" disabled={busy} onClick={() => check("in")}>
-                  {busy && <span className="spinner-border spinner-border-sm me-2" />}
-                  <i className="bi bi-box-arrow-in-right me-2" />เข้างาน
-                </button>
+                <>
+                  <button className="btn btn-success btn-lg px-5" disabled={busy} onClick={() => check("in")}>
+                    {busy && <span className="spinner-border spinner-border-sm me-2" />}
+                    <i className="bi bi-box-arrow-in-right me-2" />เข้างาน
+                  </button>
+                  <div className="text-muted small mt-2">แตะปุ่มเพื่อบันทึกเวลาเข้างานวันนี้</div>
+                </>
               )}
               {todayRec?.check_in && !todayRec?.check_out && (
-                <button className="btn btn-danger btn-lg px-5" disabled={busy} onClick={() => check("out")}>
-                  {busy && <span className="spinner-border spinner-border-sm me-2" />}
-                  <i className="bi bi-box-arrow-right me-2" />ออกงาน
-                </button>
+                <>
+                  <button className="btn btn-danger btn-lg px-5" disabled={busy} onClick={() => check("out")}>
+                    {busy && <span className="spinner-border spinner-border-sm me-2" />}
+                    <i className="bi bi-box-arrow-right me-2" />ออกงาน
+                  </button>
+                  <div className="text-muted small mt-2">
+                    <i className="bi bi-box-arrow-in-right me-1 text-success" />เข้างานเมื่อ {hhmm(todayRec.check_in)}
+                  </div>
+                </>
               )}
               {todayRec?.check_out && (
                 <div className="alert alert-success mb-0 py-2">
-                  <i className="bi bi-check2-circle me-1" />ลงเวลาครบแล้ววันนี้ ({hhmm(todayRec.check_in)} – {hhmm(todayRec.check_out)})
+                  <i className="bi bi-check2-circle me-1" />ลงเวลาครบแล้ววันนี้<br />
+                  <span className="small">{hhmm(todayRec.check_in)} – {hhmm(todayRec.check_out)} · รวม {workedToday ? workedToday.toFixed(1) : "—"} ชม.</span>
                 </div>
               )}
             </div>
@@ -115,25 +130,46 @@ function MyAttendance() {
         {/* ประวัติ */}
         <div className="col-lg-8">
           <div className="card shadow-sm">
-            <div className="card-header py-2 fw-semibold"><i className="bi bi-clock-history me-1 text-primary" />ประวัติลงเวลา</div>
+            <div className="card-header py-2 d-flex align-items-center">
+              <span className="fw-semibold"><i className="bi bi-clock-history me-1 text-primary" />ประวัติลงเวลา</span>
+              {rows.length > 0 && <span className="badge bg-body-tertiary text-body-secondary border ms-2">{rows.length} วัน</span>}
+            </div>
             <div className="card-body p-0" style={{ maxHeight: "55vh", overflowY: "auto" }}>
-              <table className="table table-sm table-hover mb-0">
-                <thead className="table-light" style={{ position: "sticky", top: 0 }}>
-                  <tr><th>วันที่</th><th className="text-center">เข้างาน</th><th className="text-center">ออกงาน</th><th className="text-end">ชั่วโมง</th></tr>
+              <table className="table table-sm table-hover mb-0 align-middle">
+                <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                  <tr>
+                    <th className="bg-body-tertiary">วันที่</th>
+                    <th className="bg-body-tertiary text-center">เข้างาน</th>
+                    <th className="bg-body-tertiary text-center">ออกงาน</th>
+                    <th className="bg-body-tertiary text-end">ชั่วโมง</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => {
                     const h = hoursOf(r);
+                    const isToday = r.date === today;
                     return (
-                      <tr key={r.att_ID} className={r.date === today ? "table-primary" : ""}>
-                        <td>{fmtD(r.date)}</td>
+                      <tr key={r.att_ID} className={isToday ? "table-primary" : ""}>
+                        <td className={isToday ? "fw-semibold" : ""}>
+                          {fmtD(r.date)} <span className="text-muted small">({wd(r.date)})</span>
+                        </td>
                         <td className="text-center">{hhmm(r.check_in)}</td>
-                        <td className="text-center">{hhmm(r.check_out)}</td>
+                        <td className="text-center">
+                          {!r.check_out && r.check_in && isToday
+                            ? <span className="badge text-bg-success">กำลังทำงาน</span>
+                            : hhmm(r.check_out)}
+                        </td>
                         <td className="text-end">{h ? h.toFixed(1) : "—"}</td>
                       </tr>
                     );
                   })}
-                  {!rows.length && <tr><td colSpan={4} className="text-center text-muted py-4">— ยังไม่มีประวัติ —</td></tr>}
+                  {!rows.length && (
+                    <tr><td colSpan={4} className="text-center text-muted py-5">
+                      <i className="bi bi-calendar2-week fs-3 d-block mb-1" />
+                      ยังไม่มีประวัติลงเวลา
+                      <div className="small">กดปุ่ม "เข้างาน" เพื่อเริ่มบันทึกวันแรกของคุณ</div>
+                    </td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -160,18 +196,16 @@ function TeamAttendance({ auth }) {
   return (
     <>
       <div className="row g-2 mb-3">
-        <div className="col-md-3 col-6"><InfoBox ico="bi-people" label="มาทำงาน" value={rows.length} color="primary" /></div>
-        <div className="col-md-3 col-6"><InfoBox ico="bi-person-workspace" label="กำลังทำงาน" value={working} color="success" /></div>
-        <div className="col-md-3 col-6"><InfoBox ico="bi-house-check" label="ออกแล้ว" value={done} color="secondary" /></div>
-        <div className="col-md-3 col-6">
-          <input type="date" className="form-control" value={date} onChange={(e) => setDate(e.target.value)} />
-        </div>
+        <div className="col-md-4 col-6"><InfoBox ico="bi-people" label="มาทำงาน" value={rows.length} color="primary" /></div>
+        <div className="col-md-4 col-6"><InfoBox ico="bi-person-workspace" label="กำลังทำงาน" value={working} color="success" /></div>
+        <div className="col-md-4 col-12"><InfoBox ico="bi-house-check" label="ออกแล้ว" value={done} color="secondary" /></div>
       </div>
       <div className="card shadow-sm">
-        <div className="card-header py-2 d-flex align-items-center">
+        <div className="card-header py-2 d-flex align-items-center gap-2 flex-wrap">
           <span className="fw-semibold"><i className="bi bi-people me-1 text-primary" />ทีมวันที่ {fmtD(date)}</span>
+          <input type="date" className="form-control form-control-sm ms-auto" style={{ width: 150 }} value={date} onChange={(e) => setDate(e.target.value)} />
           {rows.length > 0 && (
-            <button className="btn btn-outline-secondary btn-sm ms-auto" onClick={() => exportCsv(`ลงเวลา_${date}`, [
+            <button className="btn btn-outline-secondary btn-sm" onClick={() => exportCsv(`ลงเวลา_${date}`, [
               { label: "พนักงาน", value: (r) => users[r.user_ID]?.full_name || r.user_ID },
               { label: "ตำแหน่ง", value: (r) => ROLE_TH[users[r.user_ID]?.role] || "" },
               { label: "เข้างาน", value: (r) => hhmm(r.check_in) },
@@ -181,7 +215,7 @@ function TeamAttendance({ auth }) {
         </div>
         <div className="card-body p-0">
           <table className="table table-sm table-hover mb-0 align-middle">
-            <thead className="table-light"><tr><th>พนักงาน</th><th>ตำแหน่ง</th><th className="text-center">เข้างาน</th><th className="text-center">ออกงาน</th><th className="text-end">ชั่วโมง</th></tr></thead>
+            <thead><tr><th className="bg-body-tertiary">พนักงาน</th><th className="bg-body-tertiary">ตำแหน่ง</th><th className="bg-body-tertiary text-center">เข้างาน</th><th className="bg-body-tertiary text-center">ออกงาน</th><th className="bg-body-tertiary text-end">ชั่วโมง</th></tr></thead>
             <tbody>
               {rows.map((r) => {
                 const u = users[r.user_ID];
@@ -189,14 +223,20 @@ function TeamAttendance({ auth }) {
                 return (
                   <tr key={r.att_ID}>
                     <td className="fw-semibold">{u?.full_name || r.user_ID}</td>
-                    <td><span className="badge text-bg-light border">{ROLE_TH[u?.role] || "-"}</span></td>
+                    <td><span className="badge bg-body-tertiary text-body-secondary border">{ROLE_TH[u?.role] || "-"}</span></td>
                     <td className="text-center">{hhmm(r.check_in)}</td>
                     <td className="text-center">{r.check_out ? hhmm(r.check_out) : <span className="badge text-bg-success">กำลังทำงาน</span>}</td>
                     <td className="text-end">{h ? h.toFixed(1) : "—"}</td>
                   </tr>
                 );
               })}
-              {!rows.length && <tr><td colSpan={5} className="text-center text-muted py-4">— วันนี้ยังไม่มีคนลงเวลา —</td></tr>}
+              {!rows.length && (
+                <tr><td colSpan={5} className="text-center text-muted py-5">
+                  <i className="bi bi-people fs-3 d-block mb-1" />
+                  ยังไม่มีคนลงเวลาในวันนี้
+                  <div className="small">เลือกวันที่อื่นได้จากช่องมุมขวาบน</div>
+                </td></tr>
+              )}
             </tbody>
           </table>
         </div>

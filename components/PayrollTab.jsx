@@ -112,18 +112,18 @@ export default function PayrollTab() {
       </div>
 
       <div className="card shadow-sm">
-        <div className="card-body p-0" style={{ overflowX: "auto" }}>
+        <div className="card-body p-0 pay-scroll">
           <table className="table table-sm table-hover align-middle mb-0" style={{ minWidth: 900 }}>
             <thead className="table-light">
               <tr>
                 <th>พนักงาน</th>
-                <th className="text-end">เงินเดือน</th>
-                <th className="text-end">ค่ามือ/คอม</th>
-                <th className="text-end" style={{ width: 110 }}>เพิ่ม (OT/โบนัส)</th>
-                <th className="text-end" style={{ width: 100 }}>สปส. (แก้ได้)</th>
-                <th className="text-end" style={{ width: 100 }}>ภาษี</th>
-                <th className="text-end" style={{ width: 100 }}>หักอื่น</th>
-                <th className="text-end">สุทธิ</th>
+                <th className="text-end text-nowrap">เงินเดือน</th>
+                <th className="text-end text-nowrap">ค่ามือ/คอม</th>
+                <th className="text-end text-nowrap" style={{ width: 110 }}>OT/โบนัส</th>
+                <th className="text-end text-nowrap" style={{ width: 100 }}>สปส. (แก้ได้)</th>
+                <th className="text-end text-nowrap" style={{ width: 100 }}>ภาษี</th>
+                <th className="text-end text-nowrap" style={{ width: 100 }}>หักอื่น</th>
+                <th className="text-end text-nowrap">สุทธิ</th>
                 <th style={{ width: 120 }}>สลิปโอน</th>
                 <th style={{ width: 70 }} />
               </tr>
@@ -142,7 +142,7 @@ export default function PayrollTab() {
                   <td className="text-end">{r.earnings ? money(r.earnings) : <span className="text-muted">—</span>}</td>
                   <td>{paid ? <div className="text-end">{money(r.additions)}</div>
                     : <input type="number" className="form-control form-control-sm text-end" value={edits[r.user_ID]?.additions ?? r.additions} onChange={(e) => setEdit(r.user_ID, "additions", e.target.value)} />}</td>
-                  <td>{paid ? <div className="text-end text-warning">−{money(r.sso)}</div>
+                  <td>{paid ? <div className="text-end">−{money(r.sso)}</div>
                     : <input type="number" className="form-control form-control-sm text-end" value={edits[r.user_ID]?.sso ?? r.sso} onChange={(e) => setEdit(r.user_ID, "sso", e.target.value)} />}</td>
                   <td>{paid ? <div className="text-end">−{money(r.tax)}</div>
                     : <input type="number" className="form-control form-control-sm text-end" value={edits[r.user_ID]?.tax ?? r.tax} onChange={(e) => setEdit(r.user_ID, "tax", e.target.value)} />}</td>
@@ -174,9 +174,9 @@ export default function PayrollTab() {
                   </td>
                 </tr>
               ))}
-              {!rows.length && <tr><td colSpan={9} className="text-center text-muted py-4">— ไม่มีพนักงาน —</td></tr>}
+              {!rows.length && <tr><td colSpan={10} className="text-center text-muted py-4">— ไม่มีพนักงาน — เพิ่มที่แท็บ "พนักงาน" ก่อน</td></tr>}
             </tbody>
-            <tfoot className="table-light fw-bold">
+            <tfoot className="fw-bold">
               <tr>
                 <td>รวม ({totals.people} คน)</td>
                 <td className="text-end">{money(rows.reduce((s, r) => s + r.salary, 0))}</td>
@@ -248,6 +248,12 @@ export default function PayrollTab() {
           </div>
         </div>
       )}
+      <style jsx>{`
+        .pay-scroll { max-height: 65vh; overflow: auto; }
+        .pay-scroll table { font-variant-numeric: tabular-nums; }
+        .pay-scroll thead th { position: sticky; top: 0; z-index: 3; background: var(--bs-tertiary-bg); color: var(--bs-body-color); box-shadow: inset 0 -1px 0 var(--bs-border-color); }
+        .pay-scroll tfoot td { position: sticky; bottom: 0; z-index: 3; background: var(--bs-tertiary-bg); border-top: 2px solid var(--bs-border-color); }
+      `}</style>
     </>
   );
 }

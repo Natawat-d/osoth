@@ -98,7 +98,8 @@ export default function ConsentAgreement({ customer: c, procedure, company, date
       </div>
 
       <div className="text-end mt-2">
-        <span className="border border-dark rounded px-3 py-1 fw-bold">HN. {c?.HN_number || "…………………"}</span>
+        {/* HN_number ขึ้นต้นด้วย "HN-" อยู่แล้ว — ไม่เติมคำนำหน้าซ้ำเป็น "HN. HN-xxx" */}
+        <span className="border border-dark rounded px-3 py-1 fw-bold">{c?.HN_number || "HN. …………………"}</span>
       </div>
 
       <div className="row mt-3 text-center" style={{ lineHeight: 1.7 }}>

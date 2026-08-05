@@ -17,6 +17,7 @@ const STATUS_TH = {
   booked: ["จองแล้ว", "secondary"], arrived: ["มาถึง", "info"], ready: ["พร้อมทำ", "primary"],
   consulting: ["ปรึกษาหมอ", "warning"], bt_stage: ["BT ทำ", "warning"], doctor_stage: ["หมอทำ", "danger"],
   done: ["เสร็จ", "success"], cancelled: ["ยกเลิก", "dark"], no_show: ["ไม่มา", "dark"],
+  open: ["กำลังทำเคส", "info"], closed: ["ปิดเคสแล้ว", "secondary"], consult_no_sale: ["ปรึกษา–ไม่ซื้อ", "secondary"],
 };
 const SBadge = ({ s }) => { const [l, c] = STATUS_TH[s] || [s, "light"]; return <span className={`badge text-bg-${c}`}>{l}</span>; };
 
@@ -101,11 +102,21 @@ export default function OpdPage() {
           <div className="col-lg-4">
             <div className="card shadow-sm">
               <div className="card-header py-2">
-                <input className="form-control form-control-sm" placeholder="🔎 ค้นหา HN / ชื่อ / ห้อง"
-                       value={search} onChange={(e) => setSearch(e.target.value)} />
+                <div className="input-group input-group-sm">
+                  <span className="input-group-text bg-body-tertiary"><i className="bi bi-search" /></span>
+                  <input className="form-control" placeholder="ค้นหา HN / ชื่อ / ห้อง"
+                         value={search} onChange={(e) => setSearch(e.target.value)} />
+                  <span className="input-group-text bg-body-tertiary text-muted">{rows.length} คิว</span>
+                </div>
               </div>
               <div className="list-group list-group-flush" style={{ maxHeight: "68vh", overflowY: "auto" }}>
-                {rows.length === 0 && <div className="list-group-item text-center text-muted py-4">— ไม่มีคิว —</div>}
+                {rows.length === 0 && (
+                  <div className="list-group-item text-center text-muted py-5">
+                    <i className="bi bi-inbox fs-2 d-block mb-2" />
+                    {q ? <>ไม่พบคิวที่ตรงกับ &ldquo;{search.trim()}&rdquo;</> : "ไม่มีคิวในสถานะนี้"}
+                    {(filter !== "all" || q) && <div className="small mt-1">ลองล้างคำค้น หรือกด &ldquo;ทั้งหมด&rdquo; ด้านบน</div>}
+                  </div>
+                )}
                 {rows.map((r) => {
                   const opd = opds.find((o) => o.opd_ID === r.opd_ID);
                   const sel = active?.opd_ID && active.opd_ID === r.opd_ID;
@@ -114,17 +125,19 @@ export default function OpdPage() {
                          className={`list-group-item list-group-item-action d-flex gap-2 align-items-center ${sel ? "active" : ""}`}
                          style={{ cursor: r.opd_ID ? "pointer" : "default" }}
                          onClick={() => r.opd_ID && setActive(opd)}>
-                      <div className="text-center" style={{ minWidth: 46 }}>
+                      <div className="text-center" style={{ minWidth: 50 }}>
                         <b>{r.time_start}</b>
-                        <div style={{ fontSize: 10 }} className={sel ? "" : "text-muted"}>{roomName(r.room_ID)}</div>
+                        <div style={{ fontSize: 11 }} className={sel ? "" : "text-muted"}>{roomName(r.room_ID)}</div>
                       </div>
                       <div className="min-w-0 flex-grow-1">
                         <div className="fw-semibold text-truncate">
                           {r.contact?.nick_name || "ลูกค้าใหม่"}
                           {r.is_walk_in && <span className={`ms-1 small ${sel ? "" : "text-muted"}`}>· Walk-in</span>}
                         </div>
-                        <div className={`small ${sel ? "" : "text-muted"}`} style={{ fontSize: 11 }}>{r.HN_number || "ยังไม่มี HN"}</div>
-                        <SBadge s={r.status} />
+                        <div className="d-flex align-items-center gap-2 mt-1">
+                          <SBadge s={r.status} />
+                          <span className={`text-truncate ${sel ? "" : "text-muted"}`} style={{ fontSize: 11 }}>{r.HN_number || "ยังไม่มี HN"}</span>
+                        </div>
                       </div>
                       <div onClick={(e) => e.stopPropagation()}>
                         {r.opd_ID ? (
@@ -150,7 +163,9 @@ export default function OpdPage() {
                           onChanged={load} onClose={() => { setActive(null); load(); }} />
             ) : (
               <div className="card shadow-sm"><div className="card-body text-center text-muted py-5">
-                <i className="bi bi-clipboard2-pulse fs-1 d-block mb-2" />เลือกคิวจากด้านซ้ายเพื่อดู/ทำเคส
+                <i className="bi bi-clipboard2-pulse fs-1 d-block mb-2" />
+                <div className="fw-semibold">ยังไม่ได้เลือกเคส</div>
+                <div className="small mt-1">เลือกคิวจากรายการด้านซ้าย — กด &ldquo;เปิดเคส&rdquo; สำหรับคิวใหม่ หรือ &ldquo;ทำต่อ&rdquo; เพื่อทำเคสที่ค้างอยู่</div>
               </div></div>
             )}
           </div>
@@ -221,10 +236,13 @@ function SplitPay({ due, confirmLabel, ok, toast, onConfirm, depositAvailable = 
 }
 
 // ── การ์ดขั้นตอน (หัวข้อ + สถานะ + dim เมื่อยังไม่ถึง) ──
-function StepCard({ ico, title, badge, dim, borderColor, children }) {
+function StepCard({ no, ico, title, badge, dim, borderColor, children }) {
   return (
     <div className={`card shadow-sm mb-3 ${borderColor ? "border-" + borderColor : ""}`} style={{ opacity: dim ? 0.6 : 1 }}>
-      <div className="card-header py-2 d-flex align-items-center">
+      <div className="card-header py-2 d-flex align-items-center gap-2">
+        {no != null && (
+          <span className={`badge rounded-pill ${dim ? "text-bg-secondary" : "text-bg-primary"}`}>{no}</span>
+        )}
         <span className="fw-semibold"><i className={`bi ${ico} me-1 text-primary`} />{title}</span>
         <span className="ms-auto">{badge}</span>
       </div>
@@ -284,7 +302,12 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
     api(`/courses?branch_ID=${b}`).then((c) => setCourses(c.filter((x) => x.active))).catch(() => {});
   }, [opd?.branch_ID]);
 
-  if (!opd) return <div className="card shadow-sm"><div className="card-body text-center py-5"><span className="spinner-border text-primary" /></div></div>;
+  if (!opd) return (
+    <div className="card shadow-sm"><div className="card-body text-center py-5">
+      <span className="spinner-border text-primary d-block mx-auto mb-2" />
+      <span className="text-muted small">กำลังโหลดข้อมูลเคส…</span>
+    </div></div>
+  );
 
   const snap = cc?.course_snapshot;
   const canManage = ["super_admin", "admin"].includes(auth.user.role); // V3: admin ทำ OPD ครบ
@@ -412,6 +435,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
     ...(hasDr ? [{ k: "dr", l: "หมอ", on: drDone }] : []),
     { k: "close", l: "ปิดเคส", on: isClosed },
   ];
+  const stepNo = (k) => { const i = steps.findIndex((s) => s.k === k); return i >= 0 ? i + 1 : null; };
 
   const addonCard = (
     <StepCard ico="bi-plus-circle" title={`Add-on ${firstVisit ? "(ครั้งแรก = รวมบิลคอร์ส)" : "(แยกบิลเก็บทันที)"}`}
@@ -466,7 +490,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
             <li className="list-group-item px-0 py-2 d-flex align-items-center gap-2 flex-wrap" key={i}>
               <span>{a.product_ID ? `${a.name} ×${a.qty}` : a.name}</span>
               {a.medical_procedure_ID && <span className="badge text-bg-info">💉 {a.proc_name} · {money(a.proc_cost)}฿</span>}
-              {a.first_visit && <span className="badge text-bg-light border">รวมบิลคอร์ส</span>}
+              {a.first_visit && <span className="badge bg-body-tertiary border text-body-secondary">รวมบิลคอร์ส</span>}
               {a.recommended_by && <span className="text-muted small">แนะโดย {userMap[a.recommended_by] || a.recommended_by}</span>}
               <b className="ms-auto">{a.price > 0 ? `${money(a.price)}฿` : "—"}</b>
             </li>
@@ -482,22 +506,25 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
       <div className="card shadow-sm mb-3">
         <div className="card-body py-3">
           <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
-            <h5 className="fw-bold mb-0">{snap?.name || "เคส"}</h5>
+            <h5 className="fw-bold mb-0">
+              <i className="bi bi-person-circle me-1 text-primary" />
+              {customer?.nick_name || customer?.full_name || "เคส"}
+            </h5>
             <span className="badge text-bg-primary">{opd.HN_number}</span>
-            <span className="badge text-bg-light border">ครั้งที่ {opd.session_no}</span>
+            <span className="badge bg-body-tertiary border text-body">ครั้งที่ {opd.session_no}</span>
             <span className="ms-auto"><SBadge s={opd.status} /></span>
           </div>
           {cc && (
             <div className="text-muted small mb-2">
-              เหลือ {cc.uses_remaining}/{cc.uses_total} ครั้ง
+              <b className="text-body">{cc.course_snapshot?.name}</b> · เหลือ {cc.uses_remaining}/{cc.uses_total} ครั้ง
               {cc.balance_due > 0 && <span className="text-danger"> · ค้างชำระ {money(cc.balance_due)}฿</span>}
               {cc.expires_at && <> · หมดอายุ {String(cc.expires_at).slice(0, 10)}</>}
             </div>
           )}
           <div className="d-flex flex-wrap gap-1">
             {steps.map((s, i) => (
-              <span key={s.k} className={`badge rounded-pill ${s.on ? "text-bg-success" : "text-bg-light border text-muted"}`}>
-                {s.on ? "✓ " : `${i + 1}. `}{s.l}
+              <span key={s.k} className={`badge rounded-pill ${s.on ? "text-bg-success" : "bg-body-tertiary border text-body-secondary"}`}>
+                {s.on ? <i className="bi bi-check-lg me-1" /> : `${i + 1}. `}{s.l}
               </span>
             ))}
           </div>
@@ -506,7 +533,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
 
       {/* 1. วัดตัว + sale ดูแลเคส */}
       {!isClosed && (
-        <StepCard ico="bi-rulers" title="วัดตัว + Sale ดูแลเคส"
+        <StepCard no={stepNo("measure")} ico="bi-rulers" title="วัดตัว + Sale ดูแลเคส"
                   badge={measured ? <span className="badge text-bg-success">วัดแล้ว ✓</span> : <span className="badge text-bg-warning">บังคับก่อนทำหัตถการ</span>}>
           {!paid ? (
             <div className="mb-2" style={{ maxWidth: 360 }}>
@@ -518,25 +545,27 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
             </div>
           ) : opd.sale_ID ? <div className="text-muted small mb-2">Sale ดูแลเคส: <b>{userMap[opd.sale_ID] || opd.sale_ID}</b></div> : null}
           <div className="row g-2">
-            {[["blood_pressure", "ความดัน", "text"], ["heart_rate", "ชีพจร", "number"], ["weight_kg", "น้ำหนัก (kg)", "number"], ["height_cm", "ส่วนสูง (cm)", "number"], ["fat_mass", "มวลไขมัน", "number"], ["muscle_mass", "มวลกล้ามเนื้อ", "number"]].map(([k, lb, type]) => (
+            {[["blood_pressure", "ความดัน", "text", "120/80"], ["heart_rate", "ชีพจร (ครั้ง/นาที)", "number", "72"], ["weight_kg", "น้ำหนัก (kg)", "number", "55.5"], ["height_cm", "ส่วนสูง (cm)", "number", "165"], ["fat_mass", "มวลไขมัน", "number", "20"], ["muscle_mass", "มวลกล้ามเนื้อ", "number", "40"]].map(([k, lb, type, ph]) => (
               <div className="col-md-4 col-6" key={k}>
                 <label className="form-label small mb-1">{lb}</label>
                 <input type={type} className={`form-control form-control-sm ${vErr[k] ? "is-invalid" : ""}`} disabled={isClosed}
-                       value={vitals[k]} onChange={(e) => setVitals((v) => ({ ...v, [k]: e.target.value }))} />
+                       placeholder={ph} value={vitals[k]} onChange={(e) => setVitals((v) => ({ ...v, [k]: e.target.value }))} />
                 {vErr[k] && <div className="invalid-feedback">{vErr[k]}</div>}
               </div>
             ))}
           </div>
-          <ABtn className="btn btn-primary btn-sm mt-3" disabled={hasVErr} ok="บันทึกการวัดตัวแล้ว" toast={toast} onClick={saveVitals}>
-            บันทึกการวัดตัว {measured && "✓"}
-          </ABtn>
+          <div className="d-flex mt-3">
+            <ABtn className="btn btn-primary btn-sm ms-auto px-4" disabled={hasVErr} ok="บันทึกการวัดตัวแล้ว" toast={toast} onClick={saveVitals}>
+              บันทึกการวัดตัว {measured && "✓"}
+            </ABtn>
+          </div>
         </StepCard>
       )}
 
       {/* 2. ปรึกษาหมอ (ครั้งแรก ก่อนจ่าย) */}
       {!isClosed && !paid && opd.session_no <= 1 && (
         <StepCard ico="bi-chat-square-dots" title="ปรึกษาหมอก่อนชำระ (เลือกได้)"
-                  badge={<span className={`badge ${opd.status === "consulting" ? "text-bg-warning" : "text-bg-light border text-muted"}`}>{opd.status === "consulting" ? "กำลังปรึกษา" : "ครั้งแรก"}</span>}>
+                  badge={<span className={`badge ${opd.status === "consulting" ? "text-bg-warning" : "bg-body-tertiary border text-body-secondary"}`}>{opd.status === "consulting" ? "กำลังปรึกษา" : "ครั้งแรก"}</span>}>
           {opd.status === "consulting" ? (
             <div className="alert alert-warning py-2 mb-0">
               <b>กำลังปรึกษาหมอ{opd.consult_doctor_ID ? ` (${userMap[opd.consult_doctor_ID] || ""})` : ""}</b>
@@ -565,11 +594,12 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
 
       {/* 3. คอร์ส + ชำระเงิน */}
       {!isClosed && opd.status !== "consulting" && (
-        <StepCard ico="bi-credit-card" title="คอร์ส + ชำระเงิน"
+        <StepCard no={stepNo("pay")} ico="bi-credit-card" title="คอร์ส + ชำระเงิน"
                   borderColor={!paidReady ? "danger" : undefined}
                   badge={paidReady ? <span className="badge text-bg-success">ชำระครบ ✓</span> : <span className="badge text-bg-danger">ต้องเลือกคอร์ส + รับเงิน</span>}>
           {!hasCourse ? (
             <>
+              <div className="text-muted small fw-semibold mb-1">ขั้นที่ 1 — เลือกคอร์ส</div>
               <div className="btn-group btn-group-sm mb-2">
                 <button className={`btn ${sell.mode === "new" ? "btn-primary" : "btn-outline-primary"}`} onClick={() => setSell({ mode: "new", course_ID: "", existing_id: "" })}>ขายคอร์สใหม่</button>
                 <button className={`btn ${sell.mode === "existing" ? "btn-primary" : "btn-outline-primary"}`} onClick={() => setSell({ mode: "existing", course_ID: "", existing_id: "" })}>คอร์สเดิม ({custCourses.length})</button>
@@ -593,6 +623,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
               )}
               {sell.mode === "new" && courseChosen && dueAmount > 0 && (
                 <>
+                  <div className="text-muted small fw-semibold mt-3 mb-1">ขั้นที่ 2 — รับชำระ (เลือกอย่างใดอย่างหนึ่ง)</div>
                   <ABtn className="btn btn-outline-primary d-block ms-auto px-4 btn-sm" ok="เลือกคอร์สแล้ว — เพิ่ม add-on แล้วจ่ายรวม" toast={toast} onClick={() => attachCourse([])}>
                     เลือกคอร์สนี้ (ยังไม่จ่าย · เพิ่ม add-on ก่อน แล้วจ่ายรวม)
                   </ABtn>
@@ -633,9 +664,11 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
       {firstVisit && !isClosed && hasCourse && addonCard}
 
       {/* 4. ใบยินยอม (V3 — บังคับก่อนปิดเคส ทุกเคส) */}
-      <StepCard ico="bi-file-earmark-medical" title="ใบยินยอมการทำหัตถการ"
+      <StepCard no={stepNo("consent")} ico="bi-file-earmark-medical" title="ใบยินยอมการทำหัตถการ"
                 borderColor={!hasConsent && !isClosed ? "warning" : undefined}
-                badge={hasConsent ? <span className="badge text-bg-success">แนบแล้ว {opd.consents.length} ใบ ✓</span> : <span className="badge text-bg-warning">ยังไม่แนบ — บังคับก่อนปิดเคส</span>}>
+                badge={hasConsent ? <span className="badge text-bg-success">แนบแล้ว {opd.consents.length} ใบ ✓</span>
+                  : isClosed ? <span className="badge text-bg-secondary">ไม่มีใบยินยอม</span>
+                  : <span className="badge text-bg-warning">ยังไม่แนบ — บังคับก่อนปิดเคส</span>}>
         {!isClosed && (
           <div className="d-flex gap-2 flex-wrap mb-2">
             <label className="btn btn-outline-primary btn-sm mb-0">
@@ -687,7 +720,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
               </li>
             ))}
           </ul>
-        ) : <div className="text-muted small">— ยังไม่มีใบยินยอม — แนบทุกครั้งที่เปิดเคส แม้เป็นคอร์สเดิม</div>}
+        ) : <div className="text-muted small">{isClosed ? "— ไม่มีใบยินยอมแนบในเคสนี้ —" : "— ยังไม่มีใบยินยอม — แนบทุกครั้งที่เปิดเคส แม้เป็นคอร์สเดิม"}</div>}
       </StepCard>
 
       {/* ดูไฟล์ consent */}
@@ -718,7 +751,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
                   borderColor={stockOk ? undefined : "danger"}
                   badge={stockOk ? <span className="badge text-bg-success">พอ ✓</span> : <span className="badge text-bg-danger">ไม่พอ</span>}>
           <table className="table table-sm mb-0">
-            <thead className="table-light"><tr><th>สินค้า</th><th className="text-end">ต้องใช้</th><th className="text-end">คงเหลือ</th><th /></tr></thead>
+            <thead><tr className="small text-muted"><th className="fw-semibold">สินค้า</th><th className="text-end fw-semibold">ต้องใช้</th><th className="text-end fw-semibold">คงเหลือ</th><th /></tr></thead>
             <tbody>
               {stockNeed.map((s) => (
                 <tr key={s.product_ID}>
@@ -733,8 +766,8 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
 
       {/* 6. ขั้น BT */}
       {!isClosed && (
-        <StepCard ico="bi-person-heart" title="ขั้น BT (pre-procedure)" dim={!measured}
-                  badge={!hasBT ? <span className="badge text-bg-light border text-muted">คอร์สนี้ไม่มี</span> : btDone ? <span className="badge text-bg-success">เสร็จ ✓</span> : <span className="badge text-bg-warning">รอทำ</span>}>
+        <StepCard no={stepNo("bt")} ico="bi-person-heart" title="ขั้น BT (pre-procedure)" dim={!measured || !hasBT}
+                  badge={!hasBT ? <span className="badge bg-body-tertiary border text-body-secondary">คอร์สนี้ไม่มี</span> : btDone ? <span className="badge text-bg-success">เสร็จ ✓</span> : <span className="badge text-bg-warning">รอทำ</span>}>
           {hasBT ? (
             <div className="d-flex gap-2 align-items-end flex-wrap">
               <div style={{ minWidth: 220 }}>
@@ -756,8 +789,8 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
 
       {/* 7. ขั้นแพทย์ */}
       {!isClosed && (
-        <StepCard ico="bi-heart-pulse" title="ขั้นแพทย์" dim={!measured || (hasBT && !btDone)}
-                  badge={!hasDr ? <span className="badge text-bg-light border text-muted">คอร์สนี้ไม่มี</span> : drDone ? <span className="badge text-bg-success">เสร็จ ✓</span> : <span className="badge text-bg-danger">รอทำ</span>}>
+        <StepCard no={stepNo("dr")} ico="bi-heart-pulse" title="ขั้นแพทย์" dim={!measured || !hasDr || (hasBT && !btDone)}
+                  badge={!hasDr ? <span className="badge bg-body-tertiary border text-body-secondary">คอร์สนี้ไม่มี</span> : drDone ? <span className="badge text-bg-success">เสร็จ ✓</span> : <span className="badge text-bg-danger">รอทำ</span>}>
           {hasDr ? (
             <div className="d-flex gap-2 align-items-end flex-wrap">
               <div style={{ minWidth: 220 }}>
@@ -781,7 +814,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
       {opd.procedures_done?.length > 0 && (
         <StepCard ico="bi-clipboard-check" title="หัตถการที่บันทึก">
           <table className="table table-sm mb-0">
-            <thead className="table-light"><tr><th>หัตถการ</th><th>ประเภท</th><th>ผู้ทำ</th><th className="text-end">ค่ามือ</th></tr></thead>
+            <thead><tr className="small text-muted"><th className="fw-semibold">หัตถการ</th><th className="fw-semibold">ประเภท</th><th className="fw-semibold">ผู้ทำ</th><th className="text-end fw-semibold">ค่ามือ</th></tr></thead>
             <tbody>
               {opd.procedures_done.map((p, i) => (
                 <tr key={i}>
@@ -810,18 +843,26 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
 
       {/* 8. ปิดเคส */}
       {canManage && !isClosed && (
-        <StepCard ico="bi-lock" title="ปิดเคส" borderColor={measured && canTreat && hasConsent ? "primary" : undefined}>
+        <StepCard no={stepNo("close")} ico="bi-lock" title="ปิดเคส" borderColor={measured && canTreat && hasConsent ? "primary" : undefined}>
           <div className="text-muted small mb-2">
             ปิดเคส = ตัด stock (FIFO) → นับครั้งคอร์ส → สร้างค่ามือหมอ/BT + คอม → คิวเป็น "เสร็จ"
           </div>
-          <div className="d-flex align-items-center gap-2 flex-wrap">
-            <ABtn className="btn btn-primary" disabled={!measured || !canTreat || !hasConsent} toast={toast} onClick={doClose}>
+          <ul className="list-unstyled small mb-2">
+            {[
+              { ok: measured, label: "วัดตัวแล้ว" },
+              { ok: paidReady, label: "เลือกคอร์ส + ชำระครบ" },
+              { ok: stockOk, label: "สต๊อกเพียงพอ" },
+              { ok: hasConsent, label: "แนบใบยินยอมแล้ว" },
+            ].map((c) => (
+              <li key={c.label} className={`mb-1 ${c.ok ? "text-success" : "text-danger"}`}>
+                <i className={`bi me-2 ${c.ok ? "bi-check-circle-fill" : "bi-x-circle"}`} />{c.label}
+              </li>
+            ))}
+          </ul>
+          <div className="d-flex">
+            <ABtn className="btn btn-primary ms-auto px-4" disabled={!measured || !canTreat || !hasConsent} toast={toast} onClick={doClose}>
               <i className="bi bi-lock me-1" /> ปิดเคส
             </ABtn>
-            {!measured && <span className="text-danger small">ต้องวัดตัวก่อน</span>}
-            {measured && !paidReady && <span className="text-danger small">ต้องชำระเงินให้ครบก่อน</span>}
-            {measured && paidReady && !stockOk && <span className="text-danger small">สต๊อกไม่พอ</span>}
-            {measured && paidReady && stockOk && !hasConsent && <span className="text-warning small"><i className="bi bi-exclamation-triangle me-1" />ต้องแนบใบยินยอมก่อนปิดเคส</span>}
           </div>
         </StepCard>
       )}

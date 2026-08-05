@@ -131,8 +131,13 @@ export default function MyEarningsPage() {
               </div>
               <div className="card-body p-0" style={{ maxHeight: "58vh", overflowY: "auto" }}>
                 <table className="table table-sm table-hover mb-0">
-                  <thead className="table-light" style={{ position: "sticky", top: 0 }}>
-                    <tr><th>วันที่</th><th>ชนิด</th><th>อ้างอิง</th><th className="text-end">จำนวน</th></tr>
+                  <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                    <tr>
+                      <th className="bg-body-tertiary">วันที่</th>
+                      <th className="bg-body-tertiary">ชนิด</th>
+                      <th className="bg-body-tertiary">อ้างอิง</th>
+                      <th className="bg-body-tertiary text-end">จำนวน</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {(data?.rows || []).map((r) => {
@@ -146,7 +151,13 @@ export default function MyEarningsPage() {
                         </tr>
                       );
                     })}
-                    {!data?.rows?.length && <tr><td colSpan={4} className="text-center text-muted py-4">— ไม่มีรายการในช่วงนี้ —</td></tr>}
+                    {!data?.rows?.length && (
+                      <tr><td colSpan={4} className="text-center text-muted py-5">
+                        <i className="bi bi-cash-coin fs-3 d-block mb-1" />
+                        ไม่มีรายการค่ามือ/คอมในช่วงนี้
+                        <div className="small">ลองปรับช่วงวันที่จากมุมขวาบน</div>
+                      </td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -166,7 +177,7 @@ export default function MyEarningsPage() {
                     </li>
                   );
                 })}
-                {!Object.keys(byType).length && <li className="list-group-item text-muted small text-center py-3">— ไม่มีข้อมูล —</li>}
+                {!Object.keys(byType).length && <li className="list-group-item text-muted small text-center py-3">ยังไม่มีข้อมูลในช่วงนี้</li>}
                 <li className="list-group-item d-flex align-items-center bg-body-tertiary">
                   <b>รวมช่วงที่เลือก</b>
                   <b className="ms-auto text-primary">{money(data?.total || 0)}฿</b>

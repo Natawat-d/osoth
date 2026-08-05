@@ -77,6 +77,8 @@ export default function MonthCalendar({ value, onSelect, onMonthChange, events =
                 return (
                   <button key={cell.date}
                           className={`mcal-cell ${cell.inMonth ? "" : "out"} ${isToday ? "today" : ""} ${isSel ? "sel" : ""}`}
+                          title={chips.length ? `${chips.length} คิว` : undefined}
+                          aria-pressed={isSel}
                           onClick={() => onSelect?.(cell.date)}>
                     <span className={`mcal-day ${isToday ? "badge text-bg-primary rounded-circle" : ""}`}>{cell.day}</span>
                     {!compact && chips.slice(0, maxChips).map((c, i) => (

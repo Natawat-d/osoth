@@ -32,8 +32,8 @@ export function LineChart({ data = [], series = [], height = 240 }) {
           const yy = y(v);
           return (
             <g key={t}>
-              <line x1={padL} y1={yy} x2={W - padR} y2={yy} stroke="#eae7df" strokeWidth="1" />
-              <text x={padL - 8} y={yy + 4} textAnchor="end" fontSize="10" fill="#928c82">
+              <line x1={padL} y1={yy} x2={W - padR} y2={yy} stroke="var(--bs-border-color)" strokeWidth="1" />
+              <text x={padL - 8} y={yy + 4} textAnchor="end" fontSize="10" fill="var(--bs-secondary-color)">
                 {shortNum(v)}
               </text>
             </g>
@@ -42,7 +42,7 @@ export function LineChart({ data = [], series = [], height = 240 }) {
         {/* x labels */}
         {data.map((d, i) =>
           i % labelEvery === 0 ? (
-            <text key={i} x={x(i)} y={H - 12} textAnchor="middle" fontSize="10" fill="#928c82">
+            <text key={i} x={x(i)} y={H - 12} textAnchor="middle" fontSize="10" fill="var(--bs-secondary-color)">
               {String(d.date).slice(5)}
             </text>
           ) : null
@@ -95,13 +95,13 @@ export function DonutChart({ data = [], size = 200, unit = "" }) {
     <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img">
         {segs.map((s, i) => (
-          <path key={i} d={s.path} fill={s.color} stroke="#fff" strokeWidth="1.5" />
+          <path key={i} d={s.path} fill={s.color} stroke="var(--bs-body-bg)" strokeWidth="1.5" />
         ))}
-        <circle cx={cx} cy={cy} r={r} fill="#fff" />
-        <text x={cx} y={cy - 2} textAnchor="middle" fontSize="15" fontWeight="700" fill="#201d1a">
+        <circle cx={cx} cy={cy} r={r} fill="var(--bs-body-bg)" />
+        <text x={cx} y={cy - 2} textAnchor="middle" fontSize="15" fontWeight="700" fill="var(--bs-body-color)">
           {shortNum(total)}
         </text>
-        <text x={cx} y={cy + 15} textAnchor="middle" fontSize="10" fill="#928c82">รวม</text>
+        <text x={cx} y={cy + 15} textAnchor="middle" fontSize="10" fill="var(--bs-secondary-color)">รวม</text>
       </svg>
       <div className="chart-legend col">
         {segs.map((s, i) => (

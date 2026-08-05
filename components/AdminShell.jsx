@@ -194,6 +194,34 @@ export default function AdminShell({ children }) {
         <div className="float-end d-none d-sm-inline">OSOTH ERP v2</div>
         <strong>© {new Date().getFullYear()} {company?.name || brand.display_name}</strong>
       </footer>
+
+      {/* จัดช่องไฟ/active state ของ sidebar (เฉพาะเปลือก — ไม่แตะ css กลาง) */}
+      <style jsx global>{`
+        .app-sidebar .nav-header {
+          font-size: 11px;
+          letter-spacing: 0.08em;
+          color: rgba(255, 255, 255, 0.45);
+          padding: 0.9rem 1rem 0.3rem;
+        }
+        .app-sidebar .sidebar-menu > .nav-item > .nav-link {
+          margin: 1px 8px;
+          border-radius: 8px;
+          color: rgba(255, 255, 255, 0.78);
+        }
+        .app-sidebar .sidebar-menu > .nav-item > .nav-link:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+        }
+        .app-sidebar .sidebar-menu > .nav-item > .nav-link.active {
+          background: #1560a3;
+          color: #fff;
+          font-weight: 600;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
+        .app-sidebar .sidebar-brand {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+      `}</style>
     </div>
   );
 }
@@ -219,8 +247,10 @@ function CustomerSearch({ role }) {
   return (
     <div className="position-relative d-none d-md-block ms-3" style={{ width: 260 }}
          onBlur={() => setTimeout(() => setOpen(false), 150)}>
-      <input className="form-control form-control-sm" value={q}
-             placeholder="🔎 ค้นหาลูกค้า (HN/ชื่อ/เบอร์)"
+      <i className="bi bi-search position-absolute top-50 translate-middle-y text-muted"
+         style={{ left: 10, fontSize: 13, pointerEvents: "none" }} />
+      <input className="form-control form-control-sm ps-4" value={q}
+             placeholder="ค้นหาลูกค้า (HN / ชื่อ / เบอร์)"
              onChange={(e) => { setQ(e.target.value); run(e.target.value); }}
              onKeyDown={(e) => { if (e.key === "Enter" && res[0]) goto(res[0].HN_number); }}
              onFocus={() => res.length && setOpen(true)} />

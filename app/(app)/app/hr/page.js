@@ -9,6 +9,7 @@ import {
 import { ThroughputReport } from "@/components/lgc/StaffTools";
 import ScheduleRanges from "@/components/ScheduleRanges";
 import PayrollTab from "@/components/PayrollTab";
+import InfoBox from "@/components/InfoBox";
 
 // V3: 5 roles — admin คือ จอง+รับลูกค้า+OPD ในตัว (ไม่มีแผนกต้อนรับแยกแล้ว)
 const ROLES = [
@@ -30,7 +31,7 @@ export default function HrV2Page() {
 
   return (
     <div className="app-content">
-      <div className="container-fluid pt-3">
+      <div className="container-fluid pt-3 hr-wrap">
         <div className="d-flex align-items-center mb-3">
           <h4 className="mb-0 fw-bold">บุคคล (HR)</h4>
         </div>
@@ -50,6 +51,15 @@ export default function HrV2Page() {
         {tab === "report" && <ReportTab />}
         {tab === "throughput" && <div className="lgc"><ThroughputReport /></div>}
       </div>
+      <style jsx global>{`
+        .hr-wrap table { font-variant-numeric: tabular-nums; }
+        /* กันหัวตารางขาวจ้าใน dark mode — ใช้สีพื้นตามธีมแทน */
+        .hr-wrap .table-light {
+          --bs-table-bg: var(--bs-tertiary-bg);
+          --bs-table-color: var(--bs-body-color);
+          --bs-table-border-color: var(--bs-border-color);
+        }
+      `}</style>
     </div>
   );
 }
@@ -93,7 +103,7 @@ function StaffTab() {
                     <div className="fw-semibold">{u.full_name}</div>
                     <small className="text-muted">{u.nick_name}{u.phone ? ` · ${u.phone}` : ""}</small>
                   </td>
-                  <td><span className="badge text-bg-light border">{ROLE_TH[u.role] || u.role}</span></td>
+                  <td><span className="badge bg-body-tertiary text-body-secondary border">{ROLE_TH[u.role] || u.role}</span></td>
                   <td className="font-monospace small">{u.username || <span className="text-muted">—</span>}</td>
                   <td className="text-end">{u.salary ? money(u.salary) : <span className="text-muted">—</span>}</td>
                   <td className="small">{u.start_date || "—"}</td>
@@ -217,12 +227,13 @@ function StaffForm({ initial, onClose, onSaved }) {
                   </div>
                   <div className="col-md-4"><label className="form-label small">เบอร์โทร</label><input className="form-control form-control-sm" value={f.phone} onChange={set("phone")} /></div>
                   <div className="col-md-4"><label className="form-label small">อีเมล</label><input className="form-control form-control-sm" value={f.email} onChange={set("email")} /></div>
+                  <div className="col-12 mt-3"><div className="d-flex align-items-center gap-2 small fw-bold text-primary border-bottom pb-1"><i className="bi bi-key" />บัญชีเข้าระบบ (login)</div></div>
                   <div className="col-md-6"><label className="form-label small">username {isEdit ? "" : "*"}</label><input className="form-control form-control-sm" value={f.username} onChange={set("username")} autoComplete="off" /></div>
                   <div className="col-md-6"><label className="form-label small">{isEdit ? "รหัสผ่านใหม่ (ว่าง = ไม่เปลี่ยน)" : "รหัสผ่าน *"}</label><input type="password" className="form-control form-control-sm" value={f.password} onChange={set("password")} autoComplete="new-password" /></div>
                 </div>
               </div>
 
-              <div className="col-12"><hr className="my-1" /><b className="small text-primary"><i className="bi bi-briefcase me-1" />ข้อมูล HR</b></div>
+              <div className="col-12 mt-3"><div className="d-flex align-items-center gap-2 small fw-bold text-primary border-bottom pb-1"><i className="bi bi-briefcase" />ข้อมูล HR</div></div>
               <div className="col-md-3"><label className="form-label small">เงินเดือน (บาท)</label><input type="number" className="form-control form-control-sm" value={f.salary} onChange={set("salary")} /></div>
               <div className="col-md-3"><label className="form-label small">วันเริ่มงาน</label><input type="date" className="form-control form-control-sm" value={f.start_date} onChange={set("start_date")} /></div>
               <div className="col-md-3"><label className="form-label small">เลขบัตรประชาชน</label><input className="form-control form-control-sm" value={f.id_card} onChange={set("id_card")} /></div>
@@ -237,7 +248,7 @@ function StaffForm({ initial, onClose, onSaved }) {
 
               {isPro && (
                 <>
-                  <div className="col-12"><hr className="my-1" /><b className="small text-primary"><i className="bi bi-cash-coin me-1" />ค่าตัว {f.role === "doctor" ? "หมอ" : "BT"} (แยกจากพนักงานธรรมดา)</b></div>
+                  <div className="col-12 mt-3"><div className="d-flex align-items-center gap-2 small fw-bold text-primary border-bottom pb-1"><i className="bi bi-cash-coin" />ค่าตัว {f.role === "doctor" ? "หมอ" : "BT"} (แยกจากพนักงานธรรมดา)</div></div>
                   <div className="col-md-4"><label className="form-label small">ค่าตัวต่อชั่วโมง (บาท)</label><input type="number" className="form-control form-control-sm" value={f.rate_per_hour} onChange={set("rate_per_hour")} /></div>
                   {f.role === "BT" && <div className="col-md-4"><label className="form-label small">ค่ามือ default (บาท/หัตถการ)</label><input type="number" className="form-control form-control-sm" value={f.hand_fee} onChange={set("hand_fee")} /></div>}
                   {f.role === "doctor" && <div className="col-md-4"><label className="form-label small">DF ค่ามือหมอ default (บาท)</label><input type="number" className="form-control form-control-sm" value={f.doctor_fee} onChange={set("doctor_fee")} /></div>}
@@ -285,7 +296,7 @@ function OrgTab() {
 function OrgNode({ user, childrenOf, depth }) {
   const kids = childrenOf(user.user_ID);
   return (
-    <div style={{ marginLeft: depth ? 28 : 0, borderLeft: depth ? "2px solid #dee2e6" : "none", paddingLeft: depth ? 14 : 0, marginTop: 8 }}>
+    <div style={{ marginLeft: depth ? 28 : 0, borderLeft: depth ? "2px solid var(--bs-border-color)" : "none", paddingLeft: depth ? 14 : 0, marginTop: 8 }}>
       <div className="d-inline-flex align-items-center gap-2 border rounded-3 px-3 py-2 shadow-sm bg-body">
         {user.profile_picture
           ? <img src={user.profile_picture} alt="" width={34} height={34} className="rounded-circle object-fit-cover" />
@@ -319,13 +330,13 @@ function ReportTab() {
   return (
     <div className="row g-3">
       <div className="col-md-4">
-        <div className="card text-bg-primary shadow-sm"><div className="card-body"><div className="fs-3 fw-bold">{active.length}</div><div>พนักงานทั้งหมด</div></div></div>
+        <InfoBox ico="bi-people" label="พนักงานทั้งหมด" value={active.length} color="primary" />
       </div>
       <div className="col-md-4">
-        <div className="card text-bg-success shadow-sm"><div className="card-body"><div className="fs-3 fw-bold">{money(totalSalary)}</div><div>เงินเดือนรวม/เดือน (บาท)</div></div></div>
+        <InfoBox ico="bi-cash-stack" label="เงินเดือนรวม/เดือน (บาท)" value={money(totalSalary)} color="success" />
       </div>
       <div className="col-md-4">
-        <div className="card text-bg-info shadow-sm"><div className="card-body"><div className="fs-3 fw-bold">{pros.length}</div><div>หมอ + BT (ค่าตัวแยก)</div></div></div>
+        <InfoBox ico="bi-heart-pulse" label="หมอ + BT (ค่าตัวแยก)" value={pros.length} color="info" />
       </div>
       <div className="col-lg-6">
         <div className="card shadow-sm">

@@ -37,21 +37,37 @@ function HistoryFormInner() {
             <i className="bi bi-printer me-1" /> พิมพ์ / บันทึก PDF
           </button>
           <button className="btn btn-outline-secondary" onClick={() => history.back()}>← กลับ</button>
+          <span className="text-muted small align-self-center">* เอกสาร A4 — กด &ldquo;พิมพ์&rdquo; แล้วเลือกบันทึกเป็น PDF ได้</span>
           {c && !c.history_date && (
             <span className="badge text-bg-warning align-self-center">ลูกค้าเก่าก่อนมีแบบฟอร์ม — ข้อมูลสุขภาพอาจไม่ครบ</span>
           )}
         </div>
         {err && <div className="alert alert-danger py-2">{err}</div>}
+        {!hn && !err && <div className="alert alert-warning py-2 d-print-none"><i className="bi bi-exclamation-triangle me-1" />ไม่ได้ระบุ HN — เปิดหน้านี้จากโปรไฟล์ลูกค้า หรือหน้ารับลูกค้า</div>}
+        {hn && !c && !err && (
+          <div className="text-center text-muted py-5 d-print-none">
+            <span className="spinner-border spinner-border-sm me-2" />กำลังโหลดข้อมูลลูกค้า {hn}…
+          </div>
+        )}
 
+        {!(hn && !c && !err) && (
         <div className="card shadow-sm hf-doc">
           <div className="card-body p-4" style={{ fontSize: 14.5, lineHeight: 2.1 }}>
             {/* หัวเอกสาร */}
             <div className="d-flex align-items-start mb-1">
               <img src={`${bp}${company?.brand?.logo || "/brand/logo.jpg"}`} alt="logo" width={54} height={54} style={{ borderRadius: 8 }} />
-              <div className="ms-auto border border-dark rounded px-3 py-1 fw-bold">HN. {c?.HN_number || "…………………"}</div>
+              {/* HN_number ขึ้นต้นด้วย "HN-" อยู่แล้ว — ไม่เติมคำนำหน้าซ้ำเป็น "HN. HN-xxx" */}
+              <div className="ms-auto border border-dark rounded px-3 py-1 fw-bold">{c?.HN_number || "HN. …………………"}</div>
             </div>
             <div className="text-center fw-bold" style={{ fontSize: 16 }}>ประวัติผู้ใช้บริการ / ข้อมูลสุขภาพ</div>
-            <div className="text-center small text-muted mb-2">{company?.name || ""}</div>
+            <div className="text-center small text-muted mb-2" style={{ lineHeight: 1.5 }}>
+              {company?.name || ""}
+              {(company?.address || company?.phone) && (
+                <div>
+                  {company?.address || ""}{company?.address && company?.phone ? " · " : ""}{company?.phone ? `โทร ${company.phone}` : ""}
+                </div>
+              )}
+            </div>
             <div className="text-end">วันที่ <U v={dt.d} w={36} /> เดือน <U v={dt.m} w={90} /> ปี <U v={dt.y} w={54} /></div>
 
             <div>
@@ -104,9 +120,14 @@ function HistoryFormInner() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       <style jsx global>{`
+        /* เอกสาร = กระดาษ: บังคับพื้นขาวตัวดำเสมอ แม้ระบบอยู่ dark mode (กันพิมพ์/บันทึก PDF ออกมาเป็นพื้นดำ) */
+        .hf-doc, .hf-doc .card-body { background: #fff !important; color: #1a1a1a !important; }
+        .hf-doc .text-muted { color: #6c757d !important; }
+        .hf-doc .border-dark { border-color: #1a1a1a !important; }
         .hf-u { display: inline-block; border-bottom: 1px dotted #888; padding: 0 6px; font-weight: 600; }
         .hf-cb { font-size: 17px; }
         @media print {

@@ -18,18 +18,34 @@ const money = (n) => Number(n || 0).toLocaleString("th-TH", { minimumFractionDig
 const thisMonthFrom = () => new Date().toISOString().slice(0, 8) + "01";
 const today = () => new Date().toISOString().slice(0, 10);
 
-const TABS = [
-  { key: "daily", label: "รายวัน/ปิดยอด", ico: "bi-calendar-day" },
-  { key: "receipts", label: "ใบเสร็จ", ico: "bi-receipt" },
-  { key: "closing", label: "ปิดวัน/ปิดงวด", ico: "bi-safe" },
-  { key: "pnl", label: "งบกำไรขาดทุน", ico: "bi-graph-up" },
-  { key: "tb", label: "งบทดลอง", ico: "bi-list-columns" },
-  { key: "journal", label: "สมุดรายวัน", ico: "bi-journal-text" },
-  { key: "coa", label: "ผังบัญชี (GL)", ico: "bi-diagram-3" },
-  { key: "ar", label: "ลูกหนี้ (AR)", ico: "bi-person-down" },
-  { key: "ap", label: "เจ้าหนี้ (AP)", ico: "bi-building-down" },
-  { key: "budget", label: "งบประมาณ", ico: "bi-clipboard-data" },
-  { key: "commission", label: "คอมมิชชั่น", ico: "bi-percent" },
+// จัดกลุ่มแท็บ 11 อันตามงานจริง — หาเจอเร็วกว่าเรียงแบนแถวเดียว
+const TAB_GROUPS = [
+  {
+    label: "งานประจำวัน",
+    tabs: [
+      { key: "daily", label: "รายวัน/ปิดยอด", ico: "bi-calendar-day" },
+      { key: "receipts", label: "ใบเสร็จ", ico: "bi-receipt" },
+      { key: "closing", label: "ปิดวัน/ปิดงวด", ico: "bi-safe" },
+    ],
+  },
+  {
+    label: "รายงานบัญชี",
+    tabs: [
+      { key: "pnl", label: "งบกำไรขาดทุน", ico: "bi-graph-up" },
+      { key: "tb", label: "งบทดลอง", ico: "bi-list-columns" },
+      { key: "journal", label: "สมุดรายวัน", ico: "bi-journal-text" },
+      { key: "coa", label: "ผังบัญชี (GL)", ico: "bi-diagram-3" },
+    ],
+  },
+  {
+    label: "หนี้สิน & วางแผน",
+    tabs: [
+      { key: "ar", label: "ลูกหนี้ (AR)", ico: "bi-person-down" },
+      { key: "ap", label: "เจ้าหนี้ (AP)", ico: "bi-building-down" },
+      { key: "budget", label: "งบประมาณ", ico: "bi-clipboard-data" },
+      { key: "commission", label: "คอมมิชชั่น", ico: "bi-percent" },
+    ],
+  },
 ];
 
 export default function FinanceV2Page() {
@@ -41,21 +57,30 @@ export default function FinanceV2Page() {
 
   return (
     <div className="app-content">
-      <div className="container-fluid pt-3">
+      <div className="container-fluid pt-3 fin-wrap">
         <div className="d-flex align-items-center mb-3">
           <h4 className="mb-0 fw-bold">การเงิน / บัญชี</h4>
           <span className="text-muted ms-2 small">บัญชีคู่ (double-entry GL)</span>
         </div>
 
-        <ul className="nav nav-tabs mb-3">
-          {TABS.map((t) => (
-            <li className="nav-item" key={t.key}>
-              <button className={`nav-link ${tab === t.key ? "active fw-semibold" : ""}`} onClick={() => setTab(t.key)}>
-                <i className={`bi ${t.ico} me-1`} />{t.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="card shadow-sm mb-3">
+          <div className="card-body py-2 d-flex flex-wrap align-items-start column-gap-4 row-gap-2">
+            {TAB_GROUPS.map((g) => (
+              <div key={g.label} className="fin-tab-group">
+                <div className="text-muted text-uppercase fw-semibold mb-1" style={{ fontSize: 10.5, letterSpacing: ".05em" }}>{g.label}</div>
+                <div className="d-flex flex-wrap gap-1">
+                  {g.tabs.map((t) => (
+                    <button key={t.key} type="button"
+                            className={`btn btn-sm d-inline-flex align-items-center text-nowrap ${tab === t.key ? "btn-primary" : "btn-link text-body text-decoration-none"}`}
+                            onClick={() => setTab(t.key)}>
+                      <i className={`bi ${t.ico} me-1 ${tab === t.key ? "" : "text-primary"}`} />{t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {tab === "daily" && <div className="lgc"><DailyFinance /></div>}
         {tab === "receipts" && <ReceiptsTab />}
@@ -69,6 +94,27 @@ export default function FinanceV2Page() {
         {tab === "ap" && <ApTab />}
         {tab === "budget" && <BudgetTab />}
       </div>
+      <style jsx global>{`
+        .fin-wrap table { font-variant-numeric: tabular-nums; }
+        .fin-wrap .btn-link.text-body:hover { background: var(--bs-tertiary-bg); border-radius: var(--bs-border-radius); }
+        /* กันหัวตารางขาวจ้าใน dark mode — ใช้สีพื้นตามธีมแทน */
+        .fin-wrap .table-light {
+          --bs-table-bg: var(--bs-tertiary-bg);
+          --bs-table-color: var(--bs-body-color);
+          --bs-table-border-color: var(--bs-border-color);
+        }
+        /* กล่องสถิติ legacy (.stat) พื้นขาว hardcode — เปลี่ยนเป็นพื้นตามธีมให้อ่านออกใน dark mode */
+        .fin-wrap .stat {
+          background: var(--bs-body-bg);
+          border-color: var(--bs-border-color);
+          box-shadow: 0 2px 7px rgba(0, 0, 0, 0.07);
+        }
+        /* เส้นคั่นกลุ่มแท็บ — กวาดตาหากลุ่มเจอเร็วขึ้น */
+        .fin-tab-group + .fin-tab-group { border-left: 1px solid var(--bs-border-color); padding-left: 1.25rem; }
+        @media (max-width: 767.98px) {
+          .fin-tab-group + .fin-tab-group { border-left: 0; padding-left: 0; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -91,18 +137,20 @@ function PnlTab() {
         </div>
       </div>
       <div className="card-body">
-        <h6 className="fw-bold text-success">รายได้</h6>
+        <h6 className="fw-bold text-success"><i className="bi bi-arrow-down-left-circle me-1" />รายได้</h6>
         <table className="table table-sm mb-3">
           <tbody>
             {(data?.revenue || []).map((r) => (
-              <tr key={r.code}><td>{r.code} {r.name}</td><td className="text-end">{money(r.amount)}</td></tr>
+              <tr key={r.code}><td><span className="font-monospace text-muted small me-1">{r.code}</span>{r.name}</td><td className="text-end">{money(r.amount)}</td></tr>
             ))}
+            {!data?.revenue?.length && <tr><td colSpan={2} className="text-muted small">— ไม่มีรายได้ในช่วงที่เลือก —</td></tr>}
             <tr className="table-success fw-bold"><td>รวมรายได้</td><td className="text-end">{money(data?.total_revenue)}</td></tr>
           </tbody>
         </table>
-        <h6 className="fw-bold text-danger">ค่าใช้จ่าย</h6>
+        <h6 className="fw-bold text-danger"><i className="bi bi-arrow-up-right-circle me-1" />ค่าใช้จ่าย</h6>
         <table className="table table-sm mb-3">
           <tbody>
+            {!data?.expense_groups?.length && <tr><td colSpan={2} className="text-muted small">— ไม่มีค่าใช้จ่ายในช่วงที่เลือก —</td></tr>}
             {(data?.expense_groups || []).map((g) => (
               <tr key={g.group}>
                 <td>
@@ -115,8 +163,12 @@ function PnlTab() {
             <tr className="table-danger fw-bold"><td>รวมค่าใช้จ่าย</td><td className="text-end">{money(data?.total_expense)}</td></tr>
           </tbody>
         </table>
-        <div className={`alert ${(data?.net_profit ?? 0) >= 0 ? "alert-success" : "alert-danger"} fw-bold fs-5 mb-0`}>
-          กำไร (ขาดทุน) สุทธิ: {money(data?.net_profit)} บาท
+        <div className={`alert ${(data?.net_profit ?? 0) >= 0 ? "alert-success" : "alert-danger"} d-flex align-items-center mb-0`}>
+          <i className={`bi ${(data?.net_profit ?? 0) >= 0 ? "bi-graph-up-arrow" : "bi-graph-down-arrow"} fs-3 me-3`} />
+          <div>
+            <div className="small">กำไร (ขาดทุน) สุทธิ ช่วงที่เลือก</div>
+            <div className="fw-bold fs-4 lh-1">{money(data?.net_profit)} บาท</div>
+          </div>
         </div>
       </div>
     </div>
@@ -139,8 +191,10 @@ function TrialBalanceTab() {
             {data.balanced ? "✓ สมดุล" : "✗ ไม่สมดุล!"}
           </span>
         )}
-        <div className="ms-auto d-flex gap-2">
+        <div className="ms-auto d-flex gap-2 align-items-center">
+          <span className="text-muted small text-nowrap">ช่วงวันที่</span>
           <input type="date" className="form-control form-control-sm" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <span className="text-muted">–</span>
           <input type="date" className="form-control form-control-sm" value={to} onChange={(e) => setTo(e.target.value)} />
           {isFetching && <div className="spinner-border spinner-border-sm text-primary" />}
         </div>
@@ -152,13 +206,22 @@ function TrialBalanceTab() {
             {(data?.rows || []).filter((r) => r.debit || r.credit).map((r) => (
               <tr key={r.code}>
                 <td className="font-monospace">{r.code}</td><td>{r.name}</td>
-                <td><span className="badge text-bg-light border">{r.group}</span></td>
+                <td><span className="badge bg-body-tertiary text-body-secondary border">{r.group}</span></td>
                 <td className="text-end">{money(r.debit)}</td><td className="text-end">{money(r.credit)}</td>
                 <td className="text-end fw-semibold">{money(r.balance)}</td>
               </tr>
             ))}
+            {!(data?.rows || []).filter((r) => r.debit || r.credit).length && (
+              <tr>
+                <td colSpan={6} className="text-center text-muted py-5">
+                  <i className="bi bi-list-columns fs-2 d-block mb-2 opacity-50" />
+                  <div className="fw-semibold">ยังไม่มีการเคลื่อนไหวในบัญชี</div>
+                  <div className="small">แสดงเฉพาะบัญชีที่มียอด — ลองปรับช่วงวันที่ หรือรอรายการอัตโนมัติจากธุรกรรม</div>
+                </td>
+              </tr>
+            )}
           </tbody>
-          <tfoot className="table-light fw-bold">
+          <tfoot className="fw-bold table-group-divider">
             <tr><td colSpan={3}>รวม</td><td className="text-end">{money(data?.total?.debit)}</td><td className="text-end">{money(data?.total?.credit)}</td><td /></tr>
           </tfoot>
         </table>
@@ -204,7 +267,7 @@ function JournalTab() {
           </button>
         </div>
         {showForm && (
-          <div className="card-body border-bottom bg-light">
+          <div className="card-body border-bottom bg-body-tertiary">
             {err && <div className="alert alert-danger py-2">{err}</div>}
             <div className="row g-2 mb-2">
               <div className="col-md-3"><input type="date" className="form-control form-control-sm" value={f.date} onChange={(e) => setF((s) => ({ ...s, date: e.target.value }))} /></div>
@@ -245,8 +308,8 @@ function JournalTab() {
                       ))}
                     </div>
                   </td>
-                  <td><span className="badge text-bg-light border">{SOURCE_TH[je.source_type] || je.source_type}</span></td>
-                  <td className="text-end">{money(je.lines.reduce((s, l) => s + (l.debit || 0), 0))}</td>
+                  <td><span className="badge bg-body-tertiary text-body-secondary border">{SOURCE_TH[je.source_type] || je.source_type}</span></td>
+                  <td className="text-end fw-semibold">{money(je.lines.reduce((s, l) => s + (l.debit || 0), 0))}</td>
                 </tr>
               ))}
               {!jes.length && <tr><td colSpan={5} className="text-center text-muted py-4">— ยังไม่มีรายการ — รายการจะถูกสร้างอัตโนมัติเมื่อมีธุรกรรม (ขาย/จ่าย/รับของ)</td></tr>}
@@ -289,7 +352,7 @@ function CoaTab() {
                     <td className="font-monospace">{a.code}</td>
                     <td>{a.name} {a.system && <i className="bi bi-lock-fill text-muted small" title="บัญชีระบบ" />}</td>
                     <td>{TYPE_TH[a.type]}</td>
-                    <td><span className="badge text-bg-light border">{a.group}</span></td>
+                    <td><span className="badge bg-body-tertiary text-body-secondary border">{a.group}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -340,7 +403,9 @@ function ArTab() {
                 <td className="font-monospace small">{r.HN_number}</td><td>{r.customer}</td><td>{r.course}</td>
                 <td className="text-end">{money(r.total_price)}</td>
                 <td className="text-end fw-bold text-danger">{money(r.balance_due)}</td>
-                <td className="text-end">{r.days}</td>
+                <td className="text-end">
+                  <span className={`badge ${r.days > 30 ? "text-bg-danger" : r.days > 7 ? "text-bg-warning" : "bg-body-tertiary border text-body-secondary"}`}>{r.days} วัน</span>
+                </td>
               </tr>
             ))}
             {!data?.rows?.length && <tr><td colSpan={6} className="text-center text-muted py-4">— ไม่มีลูกหนี้ค้างชำระ —</td></tr>}
@@ -396,7 +461,7 @@ function ApTab() {
               <tbody>
                 {bills.map((b) => {
                   const paid = (b.payments || []).reduce((s, p) => s + p.amount, 0);
-                  const [label, cls] = STATUS_TH[b.status] || [b.status, "text-bg-light"];
+                  const [label, cls] = STATUS_TH[b.status] || [b.status, "bg-body-tertiary text-body-secondary border"];
                   return (
                     <tr key={b.bill_ID}>
                       <td className="font-monospace small">{b.bill_ID}{b.po_ID && <div className="text-muted">{b.po_ID}</div>}</td>

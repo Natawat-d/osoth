@@ -58,7 +58,12 @@ export default function RegisterOwnerPage() {
             <small className="text-muted">สมัครบัญชีเจ้าของระบบ (Owner) และข้อมูลบริษัท</small>
           </div>
 
-          {error && <div className="alert alert-danger py-2">{error}</div>}
+          {error && (
+            <div className="alert alert-danger py-2 d-flex align-items-center gap-2" role="alert">
+              <i className="bi bi-exclamation-triangle-fill" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={submit}>
             <h6 className="fw-bold text-primary mt-2"><i className="bi bi-building me-1" /> ข้อมูลบริษัท</h6>
@@ -115,7 +120,9 @@ export default function RegisterOwnerPage() {
           </form>
 
           <div className="text-center mt-3">
-            <Link href="/about_me" className="text-decoration-none small">← กลับหน้าแรก</Link>
+            <Link href="/about_me" className="text-decoration-none small">
+              <i className="bi bi-house me-1" />กลับหน้าแรก
+            </Link>
           </div>
         </div>
       </div>

@@ -21,8 +21,9 @@ export default function RootRedirect() {
     })();
   }, [router]);
   return (
-    <div className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
-      <div className="spinner-border text-primary" />
+    <div className="d-flex flex-column align-items-center justify-content-center gap-3 bg-body-tertiary" style={{ minHeight: "100vh" }}>
+      <div className="spinner-border text-primary" role="status" aria-label="กำลังโหลด" />
+      <small className="text-body-secondary">กำลังเปิดระบบ…</small>
     </div>
   );
 }

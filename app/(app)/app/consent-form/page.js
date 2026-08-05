@@ -30,6 +30,17 @@ function ConsentFormInner() {
           <span className="text-muted small align-self-center">* ปกติให้ลูกค้าเซ็นบนจอในหน้า OPD — หน้านี้สำหรับพิมพ์กระดาษ</span>
         </div>
 
+        {!hn && (
+          <div className="alert alert-warning py-2 d-print-none">
+            <i className="bi bi-exclamation-triangle me-1" />ไม่ได้ระบุ HN — เปิดหน้านี้จากหน้า OPD หรือโปรไฟล์ลูกค้า ระบบจะเติมข้อมูลลูกค้าให้อัตโนมัติ (พิมพ์เปล่าเพื่อกรอกมือได้)
+          </div>
+        )}
+        {hn && !customer && (
+          <div className="text-center text-muted py-4 d-print-none">
+            <span className="spinner-border spinner-border-sm me-2" />กำลังโหลดข้อมูลลูกค้า {hn}…
+          </div>
+        )}
+
         <div className="card shadow-sm cf-doc">
           <div className="card-body p-4">
             <ConsentAgreement customer={customer} procedure={course} company={setup?.company} />
@@ -39,6 +50,9 @@ function ConsentFormInner() {
 
       {/* พิมพ์: ซ่อนเปลือกระบบ เหลือแต่ฟอร์ม */}
       <style jsx global>{`
+        /* เอกสาร = กระดาษ: พื้นขาวตัวดำเสมอ แม้ระบบอยู่ dark mode (กันพิมพ์/บันทึก PDF พื้นดำ) */
+        .cf-doc, .cf-doc .card-body { background: #fff !important; color: #1a1a1a !important; }
+        .cf-doc .text-muted { color: #6c757d !important; }
         @media print {
           .app-sidebar, .app-header, .app-footer, .d-print-none { display: none !important; }
           .app-main { margin: 0 !important; }
