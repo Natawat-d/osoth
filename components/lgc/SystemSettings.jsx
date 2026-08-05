@@ -53,7 +53,7 @@ function HnConfig() {
   const save = async () => {
     setError("");
     try {
-      await api("/config", { method: "PUT", body: { hn_format: hn } });
+      await api("/config", { method: "PUT", body: { hn_format: hn, booking_fee: Number(config.booking_fee) || 0 } });
       alert("บันทึกแล้ว ✓");
     } catch (e) { setError(e.message); }
   };
@@ -80,6 +80,15 @@ function HnConfig() {
       </div>
       <div className="muted" style={{ marginTop: 8 }}>
         ตัวอย่าง: {[hn.prefix, hn.include_year ? new Date().getFullYear() + 543 : null, "1".padStart(hn.digits || 4, "0")].filter(Boolean).join("-")}
+      </div>
+      <div className="row" style={{ marginTop: 14, alignItems: "center" }}>
+        <div className="field"><label>ค่าจองคิว (บาท) — 0 = ไม่เก็บ</label>
+          <input type="number" min="0" value={config.booking_fee ?? 0}
+                 onChange={(e) => setConfig((c) => ({ ...c, booking_fee: e.target.value }))} /></div>
+        <div className="muted" style={{ maxWidth: 420 }}>
+          ตั้งไว้แล้วการจองคิวล่วงหน้าทุกครั้งต้องเก็บเงินก้อนนี้ก่อนถึงจองได้ —
+          นับเป็น &quot;รายได้ค่าจองคิว&quot; ทันที (ออกใบเสร็จอัตโนมัติ · ไม่หักเข้าค่าคอร์ส · walk-in ไม่เก็บ)
+        </div>
       </div>
     </div>
   );

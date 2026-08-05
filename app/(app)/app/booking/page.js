@@ -53,6 +53,10 @@ export default function BookingPage() {
   }, [branch_ID]);
   useEffect(() => { if (branch_ID) loadMonth(date.slice(0, 7)); }, [branch_ID, date, loadMonth]);
 
+  const [bookingFee, setBookingFee] = useState(0); // ค่าจองคิวที่เจ้าของตั้งไว้ (0 = ไม่เก็บ)
+  const [feeMethod, setFeeMethod] = useState("cash");
+  useEffect(() => { api("/config").then((c) => setBookingFee(Number(c.booking_fee) || 0)).catch(() => {}); }, []);
+
   const [query, setQuery] = useState("");
   const [foundCustomers, setFoundCustomers] = useState([]);
   const [pickedCustomer, setPickedCustomer] = useState(null);
@@ -113,7 +117,7 @@ export default function BookingPage() {
         });
         ccId = res.customer_course.customer_course_ID;
       }
-      await api("/reserves", {
+      const rs = await api("/reserves", {
         method: "POST",
         body: {
           branch_ID, HN_number: pickedCustomer?.HN_number || null,
@@ -121,9 +125,12 @@ export default function BookingPage() {
           customer_course_ID: ccId, date, time_start: form.time_start, time_end: form.time_end,
           room_ID: form.room_ID, doctor_ID: form.doctor_ID || null, is_walk_in: form.is_walk_in,
           payment_slip: form.payment_slip || "",
+          booking_fee_method: feeMethod, // ใช้เมื่อร้านตั้งค่าจองไว้ (จองล่วงหน้า)
         },
       });
-      toast.success("จองคิวสำเร็จ");
+      toast.success(rs.booking_fee_receipt
+        ? `จองคิวสำเร็จ · เก็บค่าจอง ${rs.booking_fee_paid}฿ แล้ว (ใบเสร็จ ${rs.booking_fee_receipt.receipt_no})`
+        : "จองคิวสำเร็จ");
       setForm((f) => ({ ...f, nick_name: "", phone: "", customer_course_ID: "", sell_course_ID: "", payment_slip: "" }));
       setPickedCustomer(null);
       loadEvents();
@@ -208,6 +215,7 @@ export default function BookingPage() {
                   <i className="bi bi-person-circle" />
                   <b>{selected.contact?.nick_name || selected.HN_number || selected.reserve_ID}</b>
                   <span className="bk-head-sub small">{roomName(selected.room_ID)} · {selected.time_start}–{selected.time_end}{selected.contact?.phone ? ` · โทร ${selected.contact.phone}` : ""}</span>
+                  {selected.booking_fee_paid > 0 && <span className="badge text-bg-warning">ค่าจอง {money(selected.booking_fee_paid)}฿ ✓</span>}
                   <span className="ms-auto"><SBadge s={selected.status} /></span>
                   <button className="btn-close btn-close-white" aria-label="ปิด" onClick={() => { setSelected(null); setResched(null); }} />
                 </div>
@@ -411,7 +419,22 @@ export default function BookingPage() {
                 <div className="lgc mb-1">
                   <ImageInput label="แนบสลิปจ่ายเงินจอง (ถ้ามี)" value={form.payment_slip} onChange={(v) => setForm((f) => ({ ...f, payment_slip: v }))} />
                 </div>
-                <div className="text-muted mb-2" style={{ fontSize: 11 }}>จองไม่ต้องจ่าย · จ่ายค่าคอร์สเต็มจำนวนก่อนทำหัตถการที่ OPD</div>
+                {bookingFee > 0 && !form.is_walk_in ? (
+                  <div className="d-flex align-items-center gap-2 border rounded-3 p-2 mb-2 bg-warning-subtle">
+                    <i className="bi bi-cash-coin text-warning fs-5" />
+                    <span className="small fw-semibold">ค่าจองคิว {money(bookingFee)}฿</span>
+                    <span className="text-muted" style={{ fontSize: 11 }}>เก็บตอนกดจอง · ออกใบเสร็จให้ทันที</span>
+                    <select className="form-select form-select-sm ms-auto" style={{ width: 110 }}
+                            value={feeMethod} onChange={(e) => setFeeMethod(e.target.value)}>
+                      <option value="cash">เงินสด</option><option value="transfer">โอน</option><option value="card">บัตร</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="text-muted mb-2" style={{ fontSize: 11 }}>
+                    {form.is_walk_in && bookingFee > 0 ? "Walk-in ไม่เก็บค่าจอง · " : "จองไม่ต้องจ่ายค่าคอร์ส · "}
+                    จ่ายค่าคอร์สเต็มจำนวนก่อนทำหัตถการที่ OPD
+                  </div>
+                )}
 
                 {/* สรุป + ปุ่มจอง */}
                 <div className="d-flex align-items-center gap-2 border-top pt-3 mt-3">

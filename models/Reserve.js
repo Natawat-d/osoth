@@ -28,6 +28,9 @@ const ReserveSchema = new mongoose.Schema(
     room_ID: { type: String, required: true },
     doctor_ID: { type: String, default: null },
     BT_ID: { type: String, default: null },
+    // ค่าจองคิว (ต่างจากมัดจำ: เป็นรายได้ทันที ไม่หักเข้าคอร์ส ไม่คืนอัตโนมัติ)
+    booking_fee_paid: { type: Number, default: 0 },
+    booking_fee_payment_ID: { type: String, default: null },
     deposit: { type: Number, default: 0 }, // มัดจำตอนจอง (เช่น 199)
     // none=ไม่มี · held=วางแล้ว · applied=หักเข้าคอร์สแล้ว · forfeited=ริบ (no-show) · refunded=คืนแล้ว
     deposit_status: { type: String, enum: ["none", "held", "applied", "forfeited", "refunded"], default: "none" },

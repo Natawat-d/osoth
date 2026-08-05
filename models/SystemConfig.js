@@ -13,6 +13,8 @@ const SystemConfigSchema = new mongoose.Schema(
     currency: { type: String, default: "THB" },
     // ลาป่วยเกินกี่วันต้องแนบใบรับรองแพทย์
     sick_cert_threshold_days: { type: Number, default: 2 },
+    // ค่าจองคิว (บาท) — ลูกค้าต้องจ่ายตอนจองล่วงหน้า นับเป็นรายได้ทันที · 0 = ไม่เก็บ
+    booking_fee: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

@@ -245,5 +245,24 @@ ok("มี JE รับรู้รายได้ (Dr 2310 / Cr 4000)", !!recJe
 const tbFinal = await api("owner", "/gl/reports/trial-balance");
 ok("TB สมดุลปิดท้ายทุกฟีเจอร์", tbFinal.data.balanced === true);
 
+
+// ── 14. ค่าจองคิว (booking fee) — เก็บตามยอดที่ตั้ง นับเป็นรายได้ทันที ──
+section("14) ค่าจองคิว: ตั้งยอด → บังคับเก็บตอนจอง → รายได้ 4200");
+ok("ตั้งค่าจอง 199 → 200", (await api("owner", "/config", { method: "PUT", body: { booking_fee: 199 } })).status === 200);
+const bfNo = await api("admin", "/reserves", { method: "POST", body: { branch_ID: "BR-001", date: "2026-09-25", time_start: "10:00", time_end: "10:30", room_ID: "RM-001", contact: { nick_name: "REGจอง" } } });
+ok("จองล่วงหน้าไม่เลือกช่องทางค่าจอง → 400", bfNo.status === 400 && /ค่าจอง/.test(bfNo.error || ""), JSON.stringify(bfNo.error || bfNo.status));
+const bfOk = await api("admin", "/reserves", { method: "POST", body: { branch_ID: "BR-001", date: "2026-09-25", time_start: "10:00", time_end: "10:30", room_ID: "RM-001", contact: { nick_name: "REGจอง" }, booking_fee_method: "cash" } });
+ok("จอง+จ่ายค่าจอง → 200 ได้ใบเสร็จ", bfOk.status === 200 && bfOk.data.booking_fee_paid === 199 && /^RC/.test(bfOk.data.booking_fee_receipt?.receipt_no || ""), JSON.stringify(bfOk.error || ""));
+const bfWalk = await api("admin", "/reserves", { method: "POST", body: { branch_ID: "BR-001", date: "2026-09-25", time_start: "11:00", time_end: "11:30", room_ID: "RM-001", contact: { nick_name: "REGวอล์ค" }, is_walk_in: true } });
+ok("walk-in ไม่ต้องจ่ายค่าจอง", bfWalk.status === 200 && (bfWalk.data.booking_fee_paid || 0) === 0);
+await api("owner", "/gl/journal/rebuild", { method: "POST" });
+const jeBf = await api("owner", "/gl/journal?source=payment");
+const bfJe = (jeBf.data || []).find((j) => (j.memo || "").includes(bfOk.data.booking_fee_payment_ID));
+ok("JE ค่าจอง Cr 4200 (รายได้ค่าจองคิว)", !!bfJe && bfJe.lines.some((l) => l.account_code === "4200" && l.credit === 199), JSON.stringify(bfJe ? bfJe.lines : "no je"));
+ok("ตั้งกลับ 0 → จองได้ไม่ต้องจ่าย", (await api("owner", "/config", { method: "PUT", body: { booking_fee: 0 } })).status === 200 &&
+  (await api("admin", "/reserves", { method: "POST", body: { branch_ID: "BR-001", date: "2026-09-25", time_start: "12:00", time_end: "12:30", room_ID: "RM-001", contact: { nick_name: "REGฟรี" } } })).status === 200);
+const tbBf = await api("owner", "/gl/reports/trial-balance");
+ok("TB สมดุลหลังค่าจอง", tbBf.data.balanced === true);
+
 console.log(`\n══ ผลรวม: ผ่าน ${pass} · ตก ${fail} ══`);
 process.exit(fail ? 1 : 0);

@@ -32,6 +32,7 @@ export const DEFAULT_COA = [
   // รายได้
   { code: "4000", name: "รายได้คอร์ส/บริการ", type: "revenue", group: "REVENUE", system: true },
   { code: "4100", name: "รายได้ add-on / อื่นๆ", type: "revenue", group: "REVENUE", system: true },
+  { code: "4200", name: "รายได้ค่าจองคิว", type: "revenue", group: "REVENUE", system: true },
   // ค่าใช้จ่าย
   { code: "5000", name: "ต้นทุนยา/เวชภัณฑ์ (COGS)", type: "expense", group: "COGS", system: true },
   { code: "5100", name: "ค่ามือแพทย์/BT + คอมมิชชั่น", type: "expense", group: "LABOR", system: true },
@@ -107,7 +108,10 @@ const dstr = (d) => (typeof d === "string" ? d.slice(0, 10) : localDate(new Date
 //   deposit → 2300 (มัดจำ = หนี้สิน ไม่ใช่รายได้) · add_on → 4100 (บริการเกิดทันที)
 //   คอร์ส deferred → 2310 (รายได้รับล่วงหน้า รอรับรู้ตอนใช้จริง) · คอร์สเดิม → 4000
 const paymentRevAcc = (p) =>
-  p.type === "deposit" ? "2300" : p.type === "add_on" ? "4100" : p.deferred ? "2310" : "4000";
+  p.type === "deposit" ? "2300"
+  : p.type === "booking_fee" ? "4200" // ค่าจองคิว = รายได้ทันที
+  : p.type === "add_on" ? "4100"
+  : p.deferred ? "2310" : "4000";
 
 export async function postFromPayment(p) {
   return postJE({
