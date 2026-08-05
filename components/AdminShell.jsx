@@ -77,10 +77,11 @@ export default function AdminShell({ children }) {
     if (hydrated && auth.ready && !auth.user) router.replace("/login");
   }, [hydrated, auth.ready, auth.user, router]);
 
-  // role อื่นเปิด /app (Dashboard เจ้าของ) → พาไปหน้างานแทน (ไม่โชว์ NoAccess)
+  // role อื่นเปิด /app (Dashboard เจ้าของ) → พาไป "หน้างานแรกของ role ตัวเอง"
+  // (sale ไม่มีสิทธิ์ OPD — เคยถูกส่งไป /app/opd แล้วเจอหน้าไม่มีสิทธิ์)
   useEffect(() => {
     if (auth.user && pathname === "/app" && auth.user.role !== "super_admin")
-      router.replace("/app/opd");
+      router.replace(auth.user.role === "sale" ? "/app/booking" : "/app/opd");
   }, [auth.user, pathname, router]);
 
   if (!hydrated || !auth.ready || !auth.user) return <FullLoader />;
@@ -159,7 +160,7 @@ export default function AdminShell({ children }) {
       <aside className="app-sidebar shadow" data-bs-theme="dark"
              style={{ background: "linear-gradient(180deg, #1a2035 0%, #212631 60%, #1e232e 100%)" }}>
         <div className="sidebar-brand">
-          <Link href={role === "super_admin" ? "/app" : "/app/opd"} className="brand-link d-flex align-items-center gap-2">
+          <Link href={role === "super_admin" ? "/app" : role === "sale" ? "/app/booking" : "/app/opd"} className="brand-link d-flex align-items-center gap-2">
             <img src={`${bp}${brand.logo}`} alt="logo" width={32} height={32} className="brand-image" />
             <span className="brand-text fw-bold text-white lh-1" style={{ fontSize: 14 }}>
               Healthcare Operator<br /><small className="fw-normal opacity-75">System · {brand.display_name}</small>
@@ -290,7 +291,7 @@ function NoAccess() {
             <i className="bi bi-shield-lock text-danger" style={{ fontSize: 48 }} />
             <h4 className="fw-bold mt-3">ไม่มีสิทธิ์เข้าถึง</h4>
             <p className="text-muted">บัญชีของคุณไม่มีสิทธิ์เปิดหน้านี้ — กรุณาติดต่อผู้ดูแลระบบ</p>
-            <Link href="/app/opd" className="btn btn-primary">กลับหน้างาน</Link>
+            <Link href={role === "sale" ? "/app/booking" : "/app/opd"} className="btn btn-primary">กลับหน้างาน</Link>
           </div>
         </div>
       </div>
