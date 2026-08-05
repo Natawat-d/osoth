@@ -51,7 +51,7 @@ export default function SetupPage() {
     <div className="app-content">
       <div className="container-fluid pt-3 setup-wrap">
         <div className="d-flex align-items-center mb-3">
-          <h4 className="mb-0 fw-bold">ตั้งค่าธุรกิจ (Setup)</h4>
+          <h4 className="mb-0 fw-bold prem-title">ตั้งค่าธุรกิจ (Setup)</h4>
         </div>
         <div className="card shadow-sm mb-3">
           <div className="card-body py-2 d-flex flex-wrap align-items-start column-gap-4 row-gap-2">
@@ -117,7 +117,8 @@ export default function SetupPage() {
         {tab === "system" && <div className="lgc"><SystemSettings /></div>}
       </div>
       <style jsx global>{`
-        .setup-wrap .btn-link.text-body:hover { background: var(--bs-tertiary-bg); border-radius: var(--bs-border-radius); }
+        .setup-wrap { --setup-grad: linear-gradient(135deg, #1560a3, #2a7bc4); }
+        .setup-wrap .btn-link.text-body:hover { background: var(--bs-tertiary-bg); border-radius: 999px; }
         .setup-wrap table { font-variant-numeric: tabular-nums; }
         /* กันหัวตารางขาวจ้าใน dark mode — ใช้สีพื้นตามธีมแทน */
         .setup-wrap .table-light {
@@ -130,6 +131,27 @@ export default function SetupPage() {
         @media (max-width: 767.98px) {
           .setup-tab-group + .setup-tab-group { border-left: 0; padding-left: 0; }
         }
+        .setup-wrap .prem-title { letter-spacing: 0.01em; position: relative; padding-bottom: 7px; }
+        .setup-wrap .prem-title::after {
+          content: ""; position: absolute; left: 1px; bottom: 0; width: 46px; height: 3px;
+          border-radius: 2px; background: var(--setup-grad);
+        }
+        /* แท็บกลุ่ม — pill ลื่น + active gradient แบรนด์ */
+        .setup-tab-group .btn { border-radius: 999px; transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease; }
+        .setup-tab-group .btn-primary { background: var(--setup-grad); border-color: transparent; box-shadow: 0 4px 12px rgba(21, 96, 163, 0.3); }
+        .setup-wrap .btn-primary:not(.lgc *) { background: var(--setup-grad); border-color: #1560a3; transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease; }
+        .setup-wrap .btn-primary:not(.lgc *):hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 5px 14px rgba(21, 96, 163, 0.32); }
+        .setup-wrap .btn-primary:not(.lgc *):active { transform: scale(0.97); }
+        .setup-wrap .card.shadow-sm:not(.lgc *) { border-color: var(--bs-border-color); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.06) !important; }
+        .setup-wrap thead th:not(.lgc *) { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; color: var(--bs-secondary-color); }
+        .setup-wrap .table tbody tr:nth-of-type(even):not([class*="table-"]):not(.lgc *) td {
+          background-color: color-mix(in srgb, var(--bs-body-color) 2.5%, transparent);
+        }
+        .setup-wrap .form-control:not(.lgc *):focus, .setup-wrap .form-select:not(.lgc *):focus {
+          border-color: #2a7bc4; box-shadow: 0 0 0 0.18rem rgba(21, 96, 163, 0.15);
+        }
+        .setup-wrap .list-group-item-action { transition: background 0.15s ease; }
+        .setup-wrap .list-group-item-action.active { background: var(--setup-grad); border-color: transparent; }
       `}</style>
     </div>
   );

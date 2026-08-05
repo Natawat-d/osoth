@@ -31,7 +31,7 @@ export default function InventoryPage() {
     <div className="app-content">
       <div className="container-fluid pt-3 inv-wrap">
         <div className="d-flex align-items-center mb-3">
-          <h4 className="mb-0 fw-bold">คลังสินค้า (Inventory)</h4>
+          <h4 className="mb-0 fw-bold prem-title">คลังสินค้า (Inventory)</h4>
         </div>
         <ul className="nav nav-tabs mb-3">
           {TABS.map((t) => (
@@ -50,12 +50,44 @@ export default function InventoryPage() {
         {tab === "report" && <ReportTab />}
       </div>
       <style jsx global>{`
+        .inv-wrap { --inv-grad: linear-gradient(135deg, #1560a3, #2a7bc4); }
         .inv-wrap table { font-variant-numeric: tabular-nums; }
         /* กันหัวตารางขาวจ้าใน dark mode — ใช้สีพื้นตามธีมแทน */
         .inv-wrap .table-light {
           --bs-table-bg: var(--bs-tertiary-bg);
           --bs-table-color: var(--bs-body-color);
           --bs-table-border-color: var(--bs-border-color);
+        }
+        .inv-wrap .prem-title { letter-spacing: 0.01em; position: relative; padding-bottom: 7px; }
+        .inv-wrap .prem-title::after {
+          content: ""; position: absolute; left: 1px; bottom: 0; width: 46px; height: 3px;
+          border-radius: 2px; background: var(--inv-grad);
+        }
+        /* แท็บบน — ขีด gradient ใต้แท็บ active แทนกรอบกล่อง */
+        .inv-wrap .nav-tabs .nav-link {
+          border: 0; position: relative; color: var(--bs-secondary-color);
+          transition: color 0.16s ease, background 0.16s ease;
+          border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem;
+        }
+        .inv-wrap .nav-tabs .nav-link:hover { color: var(--bs-body-color); background: var(--bs-tertiary-bg); }
+        .inv-wrap .nav-tabs .nav-link.active { color: var(--bs-primary); background: transparent; }
+        .inv-wrap .nav-tabs .nav-link.active::after {
+          content: ""; position: absolute; left: 12%; right: 12%; bottom: -1px; height: 3px;
+          border-radius: 2px; background: var(--inv-grad);
+        }
+        .inv-wrap .btn-primary {
+          background: var(--inv-grad); border-color: #1560a3;
+          transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+        }
+        .inv-wrap .btn-primary:hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 5px 14px rgba(21, 96, 163, 0.32); }
+        .inv-wrap .btn:active { transform: scale(0.97); }
+        .inv-wrap .card.shadow-sm { border-color: var(--bs-border-color); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.06) !important; }
+        .inv-wrap thead th { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; color: var(--bs-secondary-color); }
+        .inv-wrap .table tbody tr:nth-of-type(even):not([class*="table-"]) td {
+          background-color: color-mix(in srgb, var(--bs-body-color) 2.5%, transparent);
+        }
+        .inv-wrap .form-control:focus, .inv-wrap .form-select:focus {
+          border-color: #2a7bc4; box-shadow: 0 0 0 0.18rem rgba(21, 96, 163, 0.15);
         }
       `}</style>
     </div>

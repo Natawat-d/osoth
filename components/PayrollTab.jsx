@@ -148,7 +148,7 @@ export default function PayrollTab() {
                     : <input type="number" className="form-control form-control-sm text-end" value={edits[r.user_ID]?.tax ?? r.tax} onChange={(e) => setEdit(r.user_ID, "tax", e.target.value)} />}</td>
                   <td>{paid ? <div className="text-end">−{money(r.deduction)}</div>
                     : <input type="number" className="form-control form-control-sm text-end" value={edits[r.user_ID]?.deduction ?? r.deduction} onChange={(e) => setEdit(r.user_ID, "deduction", e.target.value)} />}</td>
-                  <td className="text-end fw-bold">{money(r.net)}</td>
+                  <td className="text-end fw-bold pay-net">{money(r.net)}</td>
                   <td>
                     {r.slip ? (
                       <span className="d-flex gap-1">
@@ -185,7 +185,7 @@ export default function PayrollTab() {
                 <td className="text-end">−{money(totals.sso)}</td>
                 <td className="text-end">−{money(rows.reduce((s, r) => s + r.tax, 0))}</td>
                 <td className="text-end">−{money(rows.reduce((s, r) => s + r.deduction, 0))}</td>
-                <td className="text-end">{money(totals.net)}</td>
+                <td className="text-end pay-net">{money(totals.net)}</td>
                 <td /><td />
               </tr>
             </tfoot>
@@ -251,8 +251,29 @@ export default function PayrollTab() {
       <style jsx>{`
         .pay-scroll { max-height: 65vh; overflow: auto; }
         .pay-scroll table { font-variant-numeric: tabular-nums; }
-        .pay-scroll thead th { position: sticky; top: 0; z-index: 3; background: var(--bs-tertiary-bg); color: var(--bs-body-color); box-shadow: inset 0 -1px 0 var(--bs-border-color); }
-        .pay-scroll tfoot td { position: sticky; bottom: 0; z-index: 3; background: var(--bs-tertiary-bg); border-top: 2px solid var(--bs-border-color); }
+        .pay-scroll thead th {
+          position: sticky; top: 0; z-index: 3;
+          background: var(--bs-tertiary-bg); color: var(--bs-secondary-color);
+          font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em;
+          box-shadow: inset 0 -2px 0 color-mix(in srgb, #1560a3 35%, var(--bs-border-color));
+        }
+        .pay-scroll tfoot td {
+          position: sticky; bottom: 0; z-index: 3; background: var(--bs-tertiary-bg);
+          border-top: 2px solid color-mix(in srgb, #1560a3 45%, var(--bs-border-color));
+        }
+        /* ตารางใหญ่อ่านสบาย — แถวโปร่ง + แถวสลับจางมาก + คอลัมน์สุทธิเด่น */
+        .pay-scroll tbody td { padding-block: 0.55rem; }
+        .pay-scroll tbody tr:nth-of-type(even) td:not(:global(.pay-net)) {
+          background-color: color-mix(in srgb, var(--bs-body-color) 2.5%, transparent);
+        }
+        :global(.pay-net) {
+          color: #1560a3; font-size: 1.02em;
+          background: color-mix(in srgb, #1560a3 5%, transparent);
+        }
+        :global([data-bs-theme="dark"]) .pay-scroll :global(.pay-net) { color: #6db1e8; }
+        .pay-scroll input:focus {
+          border-color: #2a7bc4; box-shadow: 0 0 0 0.18rem rgba(21, 96, 163, 0.15);
+        }
       `}</style>
     </>
   );

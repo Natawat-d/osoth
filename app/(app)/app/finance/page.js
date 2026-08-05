@@ -59,7 +59,7 @@ export default function FinanceV2Page() {
     <div className="app-content">
       <div className="container-fluid pt-3 fin-wrap">
         <div className="d-flex align-items-center mb-3">
-          <h4 className="mb-0 fw-bold">การเงิน / บัญชี</h4>
+          <h4 className="mb-0 fw-bold prem-title">การเงิน / บัญชี</h4>
           <span className="text-muted ms-2 small">บัญชีคู่ (double-entry GL)</span>
         </div>
 
@@ -95,8 +95,14 @@ export default function FinanceV2Page() {
         {tab === "budget" && <BudgetTab />}
       </div>
       <style jsx global>{`
+        .fin-wrap { --fin-grad: linear-gradient(135deg, #1560a3, #2a7bc4); }
         .fin-wrap table { font-variant-numeric: tabular-nums; }
-        .fin-wrap .btn-link.text-body:hover { background: var(--bs-tertiary-bg); border-radius: var(--bs-border-radius); }
+        .fin-wrap .prem-title { letter-spacing: 0.01em; position: relative; padding-bottom: 7px; }
+        .fin-wrap .prem-title::after {
+          content: ""; position: absolute; left: 1px; bottom: 0; width: 46px; height: 3px;
+          border-radius: 2px; background: var(--fin-grad);
+        }
+        .fin-wrap .btn-link.text-body:hover { background: var(--bs-tertiary-bg); border-radius: 999px; }
         /* กันหัวตารางขาวจ้าใน dark mode — ใช้สีพื้นตามธีมแทน */
         .fin-wrap .table-light {
           --bs-table-bg: var(--bs-tertiary-bg);
@@ -114,6 +120,28 @@ export default function FinanceV2Page() {
         @media (max-width: 767.98px) {
           .fin-tab-group + .fin-tab-group { border-left: 0; padding-left: 0; }
         }
+        /* แท็บกลุ่ม — ปุ่ม pill ลื่นๆ + active gradient แบรนด์ */
+        .fin-tab-group .btn { border-radius: 999px; transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease; }
+        .fin-tab-group .btn-primary { background: var(--fin-grad); border-color: transparent; box-shadow: 0 4px 12px rgba(21, 96, 163, 0.3); }
+        /* ปุ่ม primary นอกโซน .lgc — gradient แบรนด์เดียวกันทั้งหน้า */
+        .fin-wrap .btn-primary:not(.lgc *) { background: var(--fin-grad); border-color: #1560a3; transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease; }
+        .fin-wrap .btn-primary:not(.lgc *):hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 5px 14px rgba(21, 96, 163, 0.32); }
+        .fin-wrap .btn-primary:not(.lgc *):active { transform: scale(0.97); }
+        /* ตารางรายงานระดับ audit — หัวเล็ก letter-spacing, แถวสลับจางมาก, hover เนียน */
+        .fin-wrap .fin-audit thead th { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; color: var(--bs-secondary-color); }
+        .fin-wrap .fin-audit tbody tr:nth-of-type(even):not([class*="table-"]) td {
+          background-color: color-mix(in srgb, var(--bs-body-color) 2.5%, transparent);
+        }
+        .fin-wrap .fin-audit tbody td { padding-block: 0.45rem; }
+        .fin-wrap .fin-audit tfoot td {
+          border-top: 2px solid color-mix(in srgb, #1560a3 45%, var(--bs-border-color));
+          background: var(--bs-tertiary-bg);
+        }
+        .fin-wrap .card.shadow-sm:not(.lgc *) { border-color: var(--bs-border-color); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.06) !important; }
+        .fin-wrap .form-control:not(.lgc *):focus, .fin-wrap .form-select:not(.lgc *):focus {
+          border-color: #2a7bc4; box-shadow: 0 0 0 0.18rem rgba(21, 96, 163, 0.15);
+        }
+        .fin-wrap .fin-empty i { font-size: 2.6rem; opacity: 0.35; }
       `}</style>
     </div>
   );
@@ -200,7 +228,7 @@ function TrialBalanceTab() {
         </div>
       </div>
       <div className="card-body p-0" style={{ overflowX: "auto" }}>
-        <table className="table table-sm table-hover mb-0">
+        <table className="table table-sm table-hover mb-0 fin-audit">
           <thead className="table-light"><tr><th>รหัส</th><th>บัญชี</th><th>หมวด</th><th className="text-end">เดบิต</th><th className="text-end">เครดิต</th><th className="text-end">คงเหลือ</th></tr></thead>
           <tbody>
             {(data?.rows || []).filter((r) => r.debit || r.credit).map((r) => (
@@ -213,8 +241,8 @@ function TrialBalanceTab() {
             ))}
             {!(data?.rows || []).filter((r) => r.debit || r.credit).length && (
               <tr>
-                <td colSpan={6} className="text-center text-muted py-5">
-                  <i className="bi bi-list-columns fs-2 d-block mb-2 opacity-50" />
+                <td colSpan={6} className="text-center text-muted py-5 fin-empty">
+                  <i className="bi bi-list-columns d-block mb-2" />
                   <div className="fw-semibold">ยังไม่มีการเคลื่อนไหวในบัญชี</div>
                   <div className="small">แสดงเฉพาะบัญชีที่มียอด — ลองปรับช่วงวันที่ หรือรอรายการอัตโนมัติจากธุรกรรม</div>
                 </td>
@@ -293,7 +321,7 @@ function JournalTab() {
           </div>
         )}
         <div className="card-body p-0" style={{ overflowX: "auto" }}>
-          <table className="table table-sm table-hover mb-0">
+          <table className="table table-sm table-hover mb-0 fin-audit">
             <thead className="table-light"><tr><th>วันที่</th><th>เลขที่</th><th>รายการ</th><th>ที่มา</th><th className="text-end">ยอด</th></tr></thead>
             <tbody>
               {jes.map((je) => (
@@ -344,7 +372,7 @@ function CoaTab() {
         <div className="card shadow-sm">
           <div className="card-header fw-semibold">ผังบัญชี (Chart of Accounts)</div>
           <div className="card-body p-0">
-            <table className="table table-sm table-hover mb-0">
+            <table className="table table-sm table-hover mb-0 fin-audit">
               <thead className="table-light"><tr><th>รหัส</th><th>ชื่อบัญชี</th><th>ประเภท</th><th>หมวด (GL group)</th></tr></thead>
               <tbody>
                 {accounts.map((a) => (
@@ -395,7 +423,7 @@ function ArTab() {
         <span className="ms-auto badge text-bg-warning fs-6">รวม {money(data?.total)} ฿</span>
       </div>
       <div className="card-body p-0" style={{ overflowX: "auto" }}>
-        <table className="table table-sm table-hover mb-0">
+        <table className="table table-sm table-hover mb-0 fin-audit">
           <thead className="table-light"><tr><th>HN</th><th>ลูกค้า</th><th>คอร์ส</th><th className="text-end">ราคา</th><th className="text-end">ค้างชำระ</th><th className="text-end">ค้างมา (วัน)</th></tr></thead>
           <tbody>
             {(data?.rows || []).map((r) => (
@@ -456,7 +484,7 @@ function ApTab() {
         <div className="card shadow-sm">
           <div className="card-header fw-semibold">บิลเจ้าหนี้ (AP)</div>
           <div className="card-body p-0" style={{ overflowX: "auto" }}>
-            <table className="table table-sm table-hover mb-0 align-middle">
+            <table className="table table-sm table-hover mb-0 align-middle fin-audit">
               <thead className="table-light"><tr><th>เลขที่</th><th>ผู้ขาย</th><th>รายการ</th><th>วันที่/ครบกำหนด</th><th className="text-end">ยอด</th><th className="text-end">ค้าง</th><th>สถานะ</th><th /></tr></thead>
               <tbody>
                 {bills.map((b) => {
@@ -548,7 +576,7 @@ function BudgetTab() {
         <div className="card shadow-sm">
           <div className="card-header fw-semibold">งบประมาณ vs ยอดจริง · ปี {year}</div>
           <div className="card-body p-0" style={{ overflowX: "auto" }}>
-            <table className="table table-sm table-hover mb-0">
+            <table className="table table-sm table-hover mb-0 fin-audit">
               <thead className="table-light"><tr><th>บัญชี</th><th className="text-end">งบทั้งปี</th><th className="text-end">ใช้จริง</th><th className="text-end">คงเหลือ/เกิน</th><th style={{ width: 160 }}>สัดส่วน</th></tr></thead>
               <tbody>
                 {(report?.rows || []).map((r) => {

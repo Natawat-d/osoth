@@ -32,11 +32,16 @@ function ReceiptInner() {
   return (
     <div className="app-content">
       <div className="container py-3" style={{ maxWidth: 640 }}>
-        <div className="d-flex gap-2 mb-3 d-print-none">
-          <button className="btn btn-primary" onClick={() => window.print()}>
+        <div className="rc-bar d-flex gap-2 mb-3 d-print-none align-items-center flex-wrap">
+          <span className="rc-barico flex-shrink-0"><i className="bi bi-receipt" /></span>
+          <div className="me-2">
+            <div className="fw-semibold" style={{ fontSize: 14, lineHeight: 1.3 }}>ใบเสร็จรับเงิน</div>
+            <div className="text-muted" style={{ fontSize: 11.5 }}>เอกสาร A5 — กด &ldquo;พิมพ์&rdquo; แล้วเลือกบันทึกเป็น PDF ได้</div>
+          </div>
+          <button className="btn btn-outline-secondary btn-sm ms-auto" onClick={() => history.back()}>← กลับ</button>
+          <button className="btn btn-primary btn-sm px-4 rc-print" onClick={() => window.print()}>
             <i className="bi bi-printer me-1" /> พิมพ์ / บันทึก PDF
           </button>
-          <button className="btn btn-outline-secondary" onClick={() => history.back()}>← กลับ</button>
         </div>
         {err && <div className="alert alert-danger py-2">{err}</div>}
         {!r && !err && (
@@ -46,6 +51,7 @@ function ReceiptInner() {
         )}
 
         {r && (
+          <div className="rc-stage">
           <div className="card shadow-sm rc-doc position-relative">
             {r.status === "voided" && (
               <div className="position-absolute top-50 start-50 translate-middle text-danger fw-bold border border-danger border-3 rounded-3 px-4 py-2"
@@ -103,6 +109,7 @@ function ReceiptInner() {
               </div>
             </div>
           </div>
+          </div>
         )}
       </div>
       <style jsx global>{`
@@ -112,9 +119,33 @@ function ReceiptInner() {
         .rc-doc .table { --bs-table-color: #1a1a1a; --bs-table-bg: transparent; --bs-table-border-color: #dee2e6; color: #1a1a1a; }
         .rc-doc .table-light { --bs-table-color: #1a1a1a; --bs-table-bg: #f8f9fa; }
         .rc-doc .border-bottom { border-color: #dee2e6 !important; }
+
+        /* กรอบรอบนอก + toolbar หรู (เฉพาะบนจอ — เนื้อใบเสร็จคงเดิมทางการ) */
+        @media screen {
+          .rc-bar { background: color-mix(in srgb, var(--bs-body-bg) 78%, transparent);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--bs-border-color-translucent); border-radius: 14px; padding: .6rem .8rem;
+            box-shadow: 0 1px 2px rgba(15, 35, 60, .05), 0 6px 18px rgba(15, 35, 60, .06); }
+          .rc-barico { width: 34px; height: 34px; border-radius: 11px; color: #fff; font-size: 16px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #1560a3, #2a7bc4); box-shadow: 0 3px 9px rgba(21, 96, 163, .32); }
+          .rc-bar .btn { transition: transform .18s ease, box-shadow .18s ease; }
+          .rc-bar .btn:active { transform: scale(.96); }
+          .rc-print { background-image: linear-gradient(135deg, #1560a3, #2a7bc4); border: 0;
+            box-shadow: 0 2px 8px rgba(21, 96, 163, .28); }
+          .rc-print:hover { box-shadow: 0 5px 16px rgba(21, 96, 163, .38); transform: translateY(-1px); }
+          .rc-stage { padding: 22px; border-radius: 18px;
+            background: linear-gradient(160deg, color-mix(in srgb, #1560a3 8%, var(--bs-body-bg)),
+              color-mix(in srgb, #1560a3 2%, var(--bs-body-bg)) 65%);
+            border: 1px solid color-mix(in srgb, #1560a3 14%, transparent); }
+          .rc-doc { border: 1px solid #dfe5eb !important; border-radius: 6px;
+            box-shadow: 0 14px 38px rgba(10, 35, 66, .16), 0 3px 10px rgba(10, 35, 66, .08) !important; }
+          [data-bs-theme="dark"] .rc-doc { box-shadow: 0 14px 38px rgba(0, 0, 0, .5), 0 3px 10px rgba(0, 0, 0, .35) !important; }
+        }
         @media print {
           .app-sidebar, .app-header, .app-footer, .d-print-none { display: none !important; }
           .app-main { margin: 0 !important; }
+          .rc-stage { padding: 0 !important; border: none !important; background: none !important; }
           .rc-doc { border: none !important; box-shadow: none !important; }
           @page { size: A5 portrait; margin: 10mm; }
         }

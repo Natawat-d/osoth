@@ -35,7 +35,7 @@ export function ReceiptsTab() {
       </div>
       <div className="card-body p-0" style={{ overflowX: "auto" }}>
         {err && <div className="alert alert-danger py-2 m-2">{err}</div>}
-        <table className="table table-sm table-hover mb-0">
+        <table className="table table-sm table-hover mb-0 fin-audit">
           <thead className="table-light">
             <tr><th>เลขที่</th><th>เวลา</th><th>ลูกค้า</th><th>รายการ</th><th className="text-end">ยอด</th><th>ช่องทาง</th><th>สถานะ</th><th style={{ width: 110 }} /></tr>
           </thead>
@@ -63,8 +63,8 @@ export function ReceiptsTab() {
             ))}
             {!rows.length && (
               <tr>
-                <td colSpan={8} className="text-center text-muted py-5">
-                  <i className="bi bi-receipt fs-2 d-block mb-2 opacity-50" />
+                <td colSpan={8} className="text-center text-muted py-5 fin-empty">
+                  <i className="bi bi-receipt d-block mb-2" />
                   <div className="fw-semibold">ไม่มีใบเสร็จของวันที่เลือก</div>
                   <div className="small">ใบเสร็จออกอัตโนมัติเมื่อรับเงิน (คอร์ส / add-on / มัดจำ) — ลองเลือกวันอื่นจากช่องด้านบน</div>
                 </td>
@@ -104,21 +104,28 @@ export function ClosingTab() {
     <div className="row g-3">
       {msg && <div className="col-12"><div className={`alert py-2 mb-0 ${msg.startsWith("✗") ? "alert-danger" : "alert-success"}`}>{msg}</div></div>}
       <div className="col-12">
-        <div className="text-muted small"><i className="bi bi-signpost-2 me-1" />ลำดับงาน: <b>1</b> นับเงินสดทุกสิ้นวัน → <b>2</b> เคลียร์เงินบัตรเมื่อธนาคารโอนเข้า → <b>3</b> ล็อกงวดเมื่อปิดบัญชีสิ้นเดือน</div>
+        <div className="close-guide d-flex align-items-center flex-wrap gap-2 small text-muted">
+          <i className="bi bi-signpost-2 me-1" />ลำดับงาน:
+          <span className="close-guide-chip"><b className="me-1">1</b>นับเงินสดทุกสิ้นวัน</span>
+          <i className="bi bi-arrow-right-short" />
+          <span className="close-guide-chip"><b className="me-1">2</b>เคลียร์เงินบัตรเมื่อธนาคารโอนเข้า</span>
+          <i className="bi bi-arrow-right-short" />
+          <span className="close-guide-chip"><b className="me-1">3</b>ล็อกงวดเมื่อปิดบัญชีสิ้นเดือน</span>
+        </div>
       </div>
 
       {/* นับเงินสดสิ้นวัน */}
       <div className="col-lg-4">
-        <div className="card shadow-sm h-100">
+        <div className="card shadow-sm h-100 close-step">
           <div className="card-header py-2 fw-semibold d-flex align-items-center">
-            <span className="badge rounded-pill text-bg-primary me-2">1</span>
+            <span className="close-num me-2">1</span>
             <i className="bi bi-cash-coin me-1 text-primary" />ปิดยอดสิ้นวัน (นับเงินสดจริง)
           </div>
           <div className="card-body">
             <input type="date" className="form-control form-control-sm mb-2" value={date} onChange={(e) => setDate(e.target.value)} />
-            <div className="rounded-3 bg-body-tertiary border px-3 py-2 mb-2">
-              <div className="text-muted" style={{ fontSize: 11 }}>เงินสดที่ควรมีตามระบบ</div>
-              <div className="fw-bold fs-5 lh-sm">{money(dc?.expected_cash || 0)} ฿</div>
+            <div className="close-kpi rounded-3 border px-3 py-2 mb-2">
+              <div className="close-kpi-label text-muted">เงินสดที่ควรมีตามระบบ</div>
+              <div className="close-kpi-value fw-bold lh-sm">{money(dc?.expected_cash || 0)} ฿</div>
             </div>
             {dc?.closed ? (
               <div className={`alert py-2 small ${dc.record.diff === 0 ? "alert-success" : "alert-warning"}`}>
@@ -143,15 +150,15 @@ export function ClosingTab() {
 
       {/* เคลียร์เงินบัตร */}
       <div className="col-lg-4">
-        <div className="card shadow-sm h-100">
+        <div className="card shadow-sm h-100 close-step">
           <div className="card-header py-2 fw-semibold d-flex align-items-center">
-            <span className="badge rounded-pill text-bg-primary me-2">2</span>
+            <span className="close-num me-2">2</span>
             <i className="bi bi-credit-card me-1 text-primary" />เคลียร์เงินบัตรเข้าธนาคาร
           </div>
           <div className="card-body">
-            <div className="rounded-3 bg-body-tertiary border px-3 py-2 mb-2">
-              <div className="text-muted" style={{ fontSize: 11 }}>ยอดบัตรรอเคลียร์ (บัญชี 1020)</div>
-              <div className="fw-bold fs-5 lh-sm text-warning-emphasis">{money(cs?.pending_1020 || 0)} ฿</div>
+            <div className="close-kpi rounded-3 border px-3 py-2 mb-2">
+              <div className="close-kpi-label text-muted">ยอดบัตรรอเคลียร์ (บัญชี 1020)</div>
+              <div className="close-kpi-value fw-bold lh-sm text-warning-emphasis">{money(cs?.pending_1020 || 0)} ฿</div>
             </div>
             <label className="form-label small mb-1">ยอดที่เคลียร์ (เต็ม ก่อนหักค่าธรรมเนียม)</label>
             <input type="number" className="form-control form-control-sm mb-2" value={settle.amount} onChange={(e) => setSettle((s) => ({ ...s, amount: e.target.value }))} />
@@ -173,9 +180,9 @@ export function ClosingTab() {
 
       {/* ล็อกงวดบัญชี */}
       <div className="col-lg-4">
-        <div className="card shadow-sm h-100">
+        <div className="card shadow-sm h-100 close-step">
           <div className="card-header py-2 fw-semibold d-flex align-items-center">
-            <span className="badge rounded-pill text-bg-primary me-2">3</span>
+            <span className="close-num me-2">3</span>
             <i className="bi bi-lock me-1 text-primary" />ปิดงวดบัญชี (ล็อกย้อนหลัง)
           </div>
           <div className="card-body">
@@ -196,6 +203,36 @@ export function ClosingTab() {
           </div>
         </div>
       </div>
+      <style jsx>{`
+        /* การ์ดปิดวัน 3 ใบ — step หรู: แถบ gradient บน + เลข step วงกลม gradient + hover ยกนุ่ม */
+        .close-guide-chip {
+          display: inline-flex; align-items: center;
+          background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color);
+          border-radius: 999px; padding: 0.18rem 0.7rem; color: var(--bs-body-color);
+        }
+        :global(.close-step) {
+          position: relative; overflow: hidden; border-radius: 1rem;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        :global(.close-step)::before {
+          content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+          background: linear-gradient(90deg, #1560a3, #2a7bc4); z-index: 1;
+        }
+        :global(.close-step:hover) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12) !important;
+        }
+        .close-num {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 24px; height: 24px; flex: 0 0 auto; border-radius: 50%;
+          background: linear-gradient(135deg, #1560a3, #2a7bc4); color: #fff;
+          font-size: 0.78rem; font-weight: 700;
+          box-shadow: 0 2px 7px rgba(21, 96, 163, 0.35);
+        }
+        .close-kpi { background: color-mix(in srgb, #1560a3 5%, var(--bs-tertiary-bg)); }
+        .close-kpi-label { font-size: 11px; letter-spacing: 0.03em; }
+        .close-kpi-value { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+      `}</style>
     </div>
   );
 }

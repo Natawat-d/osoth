@@ -21,9 +21,9 @@ export default function AttendancePage() {
 
   return (
     <div className="app-content">
-      <div className="container-fluid pt-3">
+      <div className="container-fluid pt-3 att-prem">
         <div className="d-flex align-items-center mb-3 flex-wrap gap-2">
-          <h4 className="fw-bold mb-0">ลงเวลาเข้างาน</h4>
+          <h4 className="fw-bold mb-0 prem-title">ลงเวลาเข้างาน</h4>
           {isManager && (
             <ul className="nav nav-pills ms-auto">
               {[["me", "ของฉัน"], ["day", "ทีมรายวัน"]].map(([k, l]) => (
@@ -36,6 +36,59 @@ export default function AttendancePage() {
         </div>
         {tab === "me" ? <MyAttendance /> : <TeamAttendance auth={auth} />}
       </div>
+      <style jsx global>{`
+        .att-prem { --att-grad: linear-gradient(135deg, #1560a3, #2a7bc4); }
+        .att-prem .prem-title { letter-spacing: 0.01em; position: relative; padding-bottom: 7px; }
+        .att-prem .prem-title::after {
+          content: ""; position: absolute; left: 1px; bottom: 0; width: 46px; height: 3px;
+          border-radius: 2px; background: var(--att-grad);
+        }
+        .att-prem .nav-pills .nav-link {
+          border-radius: 999px; padding-inline: 1rem;
+          transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .att-prem .nav-pills .nav-link:not(.active):hover { background: var(--bs-tertiary-bg); }
+        .att-prem .nav-pills .nav-link.active { background: var(--att-grad); box-shadow: 0 4px 14px rgba(21, 96, 163, 0.32); }
+        .att-prem .table { font-variant-numeric: tabular-nums; }
+        .att-prem thead th { font-size: 0.76rem; font-weight: 600; letter-spacing: 0.02em; color: var(--bs-secondary-color); }
+        .att-prem .card.shadow-sm { border-color: var(--bs-border-color); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.06) !important; }
+        /* ── การ์ดลงเวลา (พระเอก) ── */
+        .att-prem .att-hero {
+          border: 0; border-radius: 1.1rem; overflow: hidden;
+          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+        }
+        .att-band { color: #fff; padding: 1.35rem 1rem 1.15rem; }
+        .att-band-none { background: linear-gradient(150deg, #66707c, #454e58); }
+        .att-band-working { background: linear-gradient(150deg, #1560a3, #2a7bc4); }
+        .att-band-done { background: linear-gradient(150deg, #177347, #2fa26b); }
+        .att-status-chip {
+          display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.16);
+          border: 1px solid rgba(255, 255, 255, 0.3); color: #fff;
+          font-size: 0.8rem; font-weight: 600; letter-spacing: 0.03em;
+          padding: 0.26rem 0.85rem; border-radius: 999px;
+        }
+        .att-ring {
+          width: 198px; height: 198px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          border: 2px solid rgba(255, 255, 255, 0.38);
+          box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.08), 0 6px 18px rgba(0, 0, 0, 0.15);
+        }
+        .att-band-working .att-ring { animation: attPulse 2.6s ease-in-out infinite; }
+        @keyframes attPulse {
+          0%, 100% { box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.08), 0 0 0 0 rgba(255, 255, 255, 0.3); }
+          50% { box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.12), 0 0 0 16px rgba(255, 255, 255, 0); }
+        }
+        .att-clock { font-size: 2.45rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.05; letter-spacing: 0.01em; }
+        .att-date { font-size: 0.76rem; opacity: 0.88; margin-top: 0.4rem; }
+        .att-prem .att-hero .btn-lg {
+          border-radius: 999px; font-weight: 600;
+          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .att-prem .att-hero .btn-lg:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.22); }
+        .att-prem .att-hero .btn-lg:active { transform: scale(0.96); }
+        .att-prem .att-empty i { font-size: 2.6rem; opacity: 0.35; }
+      `}</style>
     </div>
   );
 }
@@ -75,6 +128,7 @@ function MyAttendance() {
   const state = !todayRec?.check_in ? ["ยังไม่เข้างาน", "secondary", "bi-door-open"]
     : !todayRec?.check_out ? ["กำลังทำงาน", "success", "bi-person-workspace"]
     : ["ออกงานแล้ว", "dark", "bi-house-check"];
+  const band = !todayRec?.check_in ? "none" : !todayRec?.check_out ? "working" : "done";
 
   return (
     <>
@@ -86,17 +140,23 @@ function MyAttendance() {
       </div>
 
       <div className="row g-3">
-        {/* การ์ดลงเวลา */}
+        {/* การ์ดลงเวลา (พระเอก) */}
         <div className="col-lg-4">
-          <div className={`card shadow-sm text-center border-${state[1]}`}>
-            <div className="card-body py-4">
-              <span className={`badge text-bg-${state[1]} mb-3`}>
+          <div className="card att-hero text-center">
+            <div className={`att-band att-band-${band}`}>
+              <span className="att-status-chip">
                 <i className={`bi ${state[2]} me-1`} />{state[0]}
               </span>
-              <div className="display-5 fw-bold font-monospace mb-1">{clock || "--:--:--"}</div>
-              <div className="text-muted small mb-3">
-                {new Date().toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              <div className="att-ring mx-auto mt-3 mb-1">
+                <div>
+                  <div className="att-clock">{clock || "--:--:--"}</div>
+                  <div className="att-date">
+                    {new Date().toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                  </div>
+                </div>
               </div>
+            </div>
+            <div className="card-body py-4">
               {!todayRec?.check_in && (
                 <>
                   <button className="btn btn-success btn-lg px-5" disabled={busy} onClick={() => check("in")}>
@@ -164,8 +224,8 @@ function MyAttendance() {
                     );
                   })}
                   {!rows.length && (
-                    <tr><td colSpan={4} className="text-center text-muted py-5">
-                      <i className="bi bi-calendar2-week fs-3 d-block mb-1" />
+                    <tr><td colSpan={4} className="text-center text-muted py-5 att-empty">
+                      <i className="bi bi-calendar2-week d-block mb-2" />
                       ยังไม่มีประวัติลงเวลา
                       <div className="small">กดปุ่ม "เข้างาน" เพื่อเริ่มบันทึกวันแรกของคุณ</div>
                     </td></tr>
@@ -231,8 +291,8 @@ function TeamAttendance({ auth }) {
                 );
               })}
               {!rows.length && (
-                <tr><td colSpan={5} className="text-center text-muted py-5">
-                  <i className="bi bi-people fs-3 d-block mb-1" />
+                <tr><td colSpan={5} className="text-center text-muted py-5 att-empty">
+                  <i className="bi bi-people d-block mb-2" />
                   ยังไม่มีคนลงเวลาในวันนี้
                   <div className="small">เลือกวันที่อื่นได้จากช่องมุมขวาบน</div>
                 </td></tr>

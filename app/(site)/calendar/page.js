@@ -86,37 +86,46 @@ export default function CustomerCalendarPage() {
   }, [dayData]);
 
   return (
-    <div className="d-flex flex-column bg-body-tertiary" style={{ minHeight: "100vh" }}>
+    <div className="d-flex flex-column bg-body-tertiary cal-page" style={{ minHeight: "100vh" }}>
       {/* Navbar */}
-      <nav className="navbar navbar-expand navbar-dark" style={{ background: "#1560a3" }}>
+      <nav className="navbar navbar-expand navbar-dark cal-nav sticky-top">
         <div className="container-fluid px-3">
           <span className="navbar-brand d-flex align-items-center gap-2 fw-bold">
-            <img src={`${bp}${brand.logo}`} alt="logo" width={32} height={32} style={{ borderRadius: 6 }} />
+            <img src={`${bp}${brand.logo}`} alt="logo" width={32} height={32} style={{ borderRadius: 8 }} />
             {brand.display_name}
             <span className="fw-normal small opacity-75 d-none d-sm-inline">· ปฏิทินคิวสำหรับลูกค้า</span>
           </span>
           <div className="ms-auto d-flex gap-2">
-            <Link href="/about_me" className="btn btn-outline-light btn-sm">
+            <Link href="/about_me" className="btn btn-outline-light btn-sm cal-btn">
               <i className="bi bi-house me-1" /> หน้าแรก
             </Link>
-            <Link href="/login" className="btn btn-light btn-sm fw-semibold">
+            <Link href="/login" className="btn btn-light btn-sm fw-semibold cal-btn">
               <i className="bi bi-box-arrow-in-right me-1" /> เข้าสู่ระบบ
             </Link>
           </div>
         </div>
       </nav>
 
+      {/* แถบหัวหน้า — gradient แบรนด์จางรับกับ navbar */}
+      <div aria-hidden className="cal-halo" />
+
       {/* Content header (สไตล์ AdminLTE) */}
-      <div className="container-fluid px-3 pt-3 flex-grow-1">
-        <div className="d-flex align-items-center mb-2">
-          <h4 className="fw-bold mb-0 text-body">ปฏิทินคิว</h4>
+      <div className="container-fluid px-3 pt-3 flex-grow-1 position-relative">
+        <div className="d-flex align-items-center mb-3">
+          <div>
+            <div className="cal-eyebrow">Booking Calendar</div>
+            <h4 className="fw-bold mb-0 text-body d-flex align-items-center gap-2">
+              <span className="cal-title-tile"><i className="bi bi-calendar-heart" /></span>
+              ปฏิทินคิว
+            </h4>
+          </div>
           <nav className="ms-auto small text-body-secondary">หน้าแรก / <span className="text-body">ปฏิทิน</span></nav>
         </div>
 
         <div className="row g-3 pb-4">
           {/* ── คอลัมน์ซ้าย (ref: Draggable Events) — บนมือถือย้ายไปหลังปฏิทิน ── */}
           <div className="col-lg-3 order-2 order-lg-1">
-            <div className="card shadow-sm mb-3">
+            <div className="card border-0 cal-card mb-3">
               <div className="card-header fw-semibold py-2">สถานะคิว</div>
               <div className="card-body py-2">
                 {[["success", "ว่างมาก (0–3 คิว)"], ["warning", "เริ่มแน่น (4–7 คิว)"], ["danger", "คิวแน่น (8+ คิว)"]].map(([c, l]) => (
@@ -129,7 +138,7 @@ export default function CustomerCalendarPage() {
               </div>
             </div>
 
-            <div className="card shadow-sm mb-3">
+            <div className="card border-0 cal-card mb-3">
               <div className="card-header fw-semibold py-2"><i className="bi bi-telephone me-1 text-primary" />จองคิว ติดต่อเรา</div>
               <div className="card-body py-2">
                 <div className="d-flex flex-wrap gap-2">
@@ -146,7 +155,7 @@ export default function CustomerCalendarPage() {
             </div>
 
             {/* หมอที่อยู่ (วันเลือก) */}
-            <div className="card shadow-sm mb-3">
+            <div className="card border-0 cal-card mb-3">
               <div className="card-header fw-semibold py-2"><i className="bi bi-person-badge me-1 text-primary" />หมอวันที่เลือก</div>
               <ul className="list-group list-group-flush small">
                 {(dayData?.roster || []).map((d, i) => (
@@ -169,7 +178,7 @@ export default function CustomerCalendarPage() {
 
             {/* โปรโมชั่น */}
             {(dayData?.promos || []).slice(0, 2).map((p, i) => (
-              <div className="card shadow-sm mb-3" key={i}>
+              <div className="card border-0 cal-card mb-3" key={i}>
                 {p.banner_image && <img src={p.banner_image} className="card-img-top" alt={p.name} style={{ height: 110, objectFit: "cover" }} />}
                 <div className="card-body py-2">
                   <div className="fw-semibold small">{p.name}</div>
@@ -183,7 +192,7 @@ export default function CustomerCalendarPage() {
 
           {/* ── คอลัมน์ขวา: ปฏิทินรายเดือน (ref: FullCalendar card) — บนมือถือขึ้นก่อน ── */}
           <div className="col-lg-9 order-1 order-lg-2">
-            <div className="card shadow-sm">
+            <div className="card border-0 cal-card">
               <div className="card-header d-flex align-items-center flex-wrap gap-2 py-2">
                 <div className="btn-group">
                   <button className="btn btn-outline-secondary btn-sm" onClick={() => move(-1)} aria-label="เดือนก่อน"><i className="bi bi-chevron-left" /></button>
@@ -237,7 +246,7 @@ export default function CustomerCalendarPage() {
             </div>
 
             {/* รายละเอียดวันเลือก */}
-            <div className="card shadow-sm mt-3">
+            <div className="card border-0 cal-card mt-3">
               <div className="card-header d-flex align-items-center py-2">
                 <span className="fw-semibold">
                   <i className="bi bi-calendar-event me-1 text-primary" />
@@ -298,6 +307,67 @@ export default function CustomerCalendarPage() {
           {branch?.phone ? ` · โทร ${branch.phone}` : ""}
         </small>
       </footer>
+
+      <style jsx>{`
+        /* navbar gradient แบรนด์ + เงานุ่ม */
+        .cal-nav {
+          background: linear-gradient(135deg, #0f4a7d 0%, #1560a3 55%, #2a7bc4 100%);
+          box-shadow: 0 2px 14px rgba(11, 51, 88, 0.28);
+        }
+        /* :global — <Link> ไม่ได้รับ jsx hash class */
+        :global(.cal-btn) { transition: transform 0.18s ease; }
+        :global(.cal-btn:hover) { transform: translateY(-1px); }
+        :global(.cal-btn:active) { transform: scale(0.97); }
+
+        /* แถบเรืองแสงจางใต้ navbar — ให้หัวหน้ามีมิติ */
+        .cal-halo {
+          position: absolute; top: 0; left: 0; right: 0; height: 220px;
+          background:
+            radial-gradient(700px 200px at 15% 0%, rgba(21, 96, 163, 0.12), transparent 70%),
+            radial-gradient(600px 180px at 85% 0%, rgba(42, 123, 196, 0.1), transparent 70%);
+          pointer-events: none;
+        }
+        .cal-eyebrow {
+          font-size: 0.66rem; font-weight: 700; letter-spacing: 0.22em;
+          text-transform: uppercase; color: var(--bs-primary); opacity: 0.7;
+        }
+        .cal-title-tile {
+          width: 38px; height: 38px; border-radius: 0.75rem;
+          display: inline-flex; align-items: center; justify-content: center;
+          background: linear-gradient(135deg, #1560a3, #2a7bc4); color: #fff; font-size: 18px;
+          box-shadow: 0 6px 14px rgba(21, 96, 163, 0.32);
+        }
+
+        /* การ์ดหรู — เงาบางเนียน + hover ยกเฉพาะการ์ดข้อมูลรอง */
+        .cal-page :global(.cal-card) {
+          border-radius: 1rem; overflow: hidden;
+          box-shadow: 0 1px 3px rgba(15, 60, 102, 0.07), 0 6px 18px rgba(15, 60, 102, 0.07);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .cal-page :global(.col-lg-3 .cal-card:hover) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 10px rgba(15, 60, 102, 0.09), 0 14px 30px rgba(15, 60, 102, 0.14);
+        }
+        .cal-page :global(.cal-card > .card-header) {
+          background: linear-gradient(135deg, rgba(21, 96, 163, 0.07), rgba(42, 123, 196, 0.03));
+          border-bottom: 1px solid var(--bs-border-color-translucent);
+          letter-spacing: 0.01em;
+        }
+        :global([data-bs-theme="dark"]) .cal-page :global(.cal-card) {
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.3);
+        }
+        :global([data-bs-theme="dark"]) .cal-page :global(.col-lg-3 .cal-card:hover) {
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), 0 14px 30px rgba(0, 0, 0, 0.42);
+        }
+
+        /* month grid — เก็บรายละเอียด hover/เลือกให้พรีเมียม (เฉพาะหน้านี้) */
+        .cal-page :global(.mcal-cell) { transition: background 0.15s ease, box-shadow 0.15s ease; }
+        .cal-page :global(.mcal-cell:hover) { box-shadow: inset 0 0 0 1px rgba(21, 96, 163, 0.25); }
+        .cal-page :global(.mcal-cell.sel) {
+          outline: none;
+          box-shadow: inset 0 0 0 2px #1560a3, inset 0 0 0 5px rgba(21, 96, 163, 0.15);
+        }
+      `}</style>
     </div>
   );
 }

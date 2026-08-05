@@ -6,8 +6,22 @@
 :root {
   --osoth-primary: #1560a3;
   --osoth-primary-dark: #0f4a7d;
+  --osoth-primary-light: #2a7bc4;
   --bs-primary: #1560a3;
   --bs-primary-rgb: 21, 96, 163;
+  /* premium tokens: gradient แบรนด์ + เงา 2 ระดับ + focus ring */
+  --osoth-grad: linear-gradient(135deg, #1560a3 0%, #2a7bc4 100%);
+  --osoth-grad-hover: linear-gradient(135deg, #1a6cb5 0%, #3489d2 100%);
+  --osoth-grad-active: linear-gradient(135deg, #0f4a7d 0%, #1560a3 100%);
+  --osoth-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 3px 12px rgba(15, 23, 42, 0.06);
+  --osoth-shadow-lg: 0 6px 16px rgba(15, 23, 42, 0.1), 0 14px 34px rgba(15, 23, 42, 0.1);
+  --osoth-ring: 0 0 0 0.22rem rgba(21, 96, 163, 0.16);
+  --osoth-radius: 0.875rem;
+}
+[data-bs-theme="dark"] {
+  --osoth-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 3px 12px rgba(0, 0, 0, 0.25);
+  --osoth-shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.35);
+  --osoth-ring: 0 0 0 0.22rem rgba(72, 148, 212, 0.25);
 }
 
 /* ฟอนต์ Sarabun มาจาก next/font (--font-body) ที่ตั้งใน root layout */
@@ -17,19 +31,137 @@ body,
   font-family: var(--font-body), "Sarabun", system-ui, sans-serif;
 }
 
-/* ปุ่ม/ลิงก์ primary ใช้สีแบรนด์ */
+/* ── ปุ่ม: primary = gradient แบรนด์ · กดลงนิด · focus ring แบรนด์ ── */
+.btn {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.15s ease;
+}
+.btn:not(:disabled):not(.disabled):active { transform: scale(0.97); }
 .btn-primary {
   --bs-btn-bg: var(--osoth-primary);
   --bs-btn-border-color: var(--osoth-primary);
-  --bs-btn-hover-bg: var(--osoth-primary-dark);
-  --bs-btn-hover-border-color: var(--osoth-primary-dark);
+  --bs-btn-hover-bg: var(--osoth-primary-light);
+  --bs-btn-hover-border-color: var(--osoth-primary-light);
   --bs-btn-active-bg: var(--osoth-primary-dark);
   --bs-btn-active-border-color: var(--osoth-primary-dark);
+  --bs-btn-focus-shadow-rgb: 21, 96, 163;
+  background-image: var(--osoth-grad);
+  box-shadow: 0 2px 8px rgba(21, 96, 163, 0.25);
+}
+.btn-primary:hover {
+  background-image: var(--osoth-grad-hover);
+  box-shadow: 0 4px 14px rgba(21, 96, 163, 0.35);
+}
+.btn-primary:active, .btn-primary.active, .btn-check:checked + .btn-primary {
+  background-image: var(--osoth-grad-active);
+  box-shadow: 0 1px 4px rgba(21, 96, 163, 0.3);
+}
+.btn-primary:focus-visible {
+  background-image: var(--osoth-grad-hover);
+  box-shadow: 0 0 0 0.25rem rgba(21, 96, 163, 0.3);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--osoth-primary);
+  --bs-btn-border-color: var(--osoth-primary);
+  --bs-btn-hover-bg: var(--osoth-primary);
+  --bs-btn-hover-border-color: var(--osoth-primary);
+  --bs-btn-active-bg: var(--osoth-primary-dark);
+  --bs-btn-active-border-color: var(--osoth-primary-dark);
+  --bs-btn-focus-shadow-rgb: 21, 96, 163;
 }
 .text-primary { color: var(--osoth-primary) !important; }
 .bg-primary { background-color: var(--osoth-primary) !important; }
 a { color: var(--osoth-primary); }
 a:hover { color: var(--osoth-primary-dark); }
+
+/* ── การ์ดทั้งระบบ: เงานุ่มเนียน + radius สม่ำเสมอ + transition (hover ยกเฉพาะการ์ด interactive) ── */
+.card {
+  --bs-card-border-radius: var(--osoth-radius);
+  --bs-card-inner-border-radius: calc(var(--osoth-radius) - 1px);
+  --bs-card-border-color: var(--bs-border-color-translucent);
+  box-shadow: var(--osoth-shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.card > .card-header { border-bottom-color: var(--bs-border-color-translucent); }
+a.card, button.card, .card[role="button"] { cursor: pointer; }
+a.card:hover, button.card:hover, .card[role="button"]:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--osoth-shadow-lg);
+}
+
+/* ── ตาราง: หัวเนียน + tabular-nums + hover จางๆ ── */
+.table {
+  font-variant-numeric: tabular-nums;
+  --bs-table-hover-bg: rgba(21, 96, 163, 0.05);
+}
+[data-bs-theme="dark"] .table { --bs-table-hover-bg: rgba(88, 156, 216, 0.08); }
+.table thead th {
+  background-color: var(--bs-tertiary-bg);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  color: var(--bs-secondary-color);
+}
+.table > tbody > tr { transition: background-color 0.15s ease; }
+
+/* ── Topbar sticky glass จางๆ (ต้องรอดทั้ง 2 ธีม) ── */
+.app-header.osoth-topbar {
+  position: sticky;
+  top: 0;
+  background-color: var(--bs-body-bg);
+  border-bottom: 1px solid var(--bs-border-color-translucent) !important;
+}
+@supports ((backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px))) {
+  .app-header.osoth-topbar {
+    background-color: color-mix(in srgb, var(--bs-body-bg) 78%, transparent);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
+  }
+}
+
+/* ── Modal: backdrop เบลอจาง + การ์ด modal เงาลึก radius ใหญ่ขึ้นนิด ── */
+.modal-backdrop.show {
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.modal-content {
+  --bs-modal-border-radius: 1rem;
+  --bs-modal-inner-border-radius: calc(1rem - 1px);
+  border: 1px solid var(--bs-border-color-translucent);
+  box-shadow: var(--osoth-shadow-lg);
+}
+
+/* ── Dropdown เข้าชุดการ์ด ── */
+.dropdown-menu {
+  --bs-dropdown-border-radius: 0.75rem;
+  border-color: var(--bs-border-color-translucent);
+  box-shadow: var(--osoth-shadow-lg);
+}
+
+/* ── Form control: focus ring แบรนด์ ── */
+.form-control:focus, .form-select:focus, .form-check-input:focus {
+  border-color: rgba(21, 96, 163, 0.55);
+  box-shadow: var(--osoth-ring);
+}
+.form-check-input:checked { background-color: var(--osoth-primary); border-color: var(--osoth-primary); }
+
+/* ── Scrollbar เนียนบาง (webkit) — โปร่งแสง รอดทั้ง 2 ธีม ── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: rgba(108, 117, 125, 0.35);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: rgba(108, 117, 125, 0.55); }
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb { background-color: rgba(160, 170, 182, 0.3); }
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover { background-color: rgba(160, 170, 182, 0.5); }
+
+/* เอกสารพิมพ์ต้องคงกระดาษขาวเรียบ — ตัดเงา/ตกแต่งออกตอน print */
+@media print {
+  .card { box-shadow: none !important; }
+}
 
 /* sidebar แบรนด์ (AdminLTE sidebar-dark) — ให้ active ใช้สีแบรนด์ */
 .app-sidebar .nav-sidebar .nav-link.active {
@@ -76,7 +208,7 @@ a:hover { color: var(--osoth-primary-dark); }
 .mcal-cell:hover { background: #f0f6fc; }
 .mcal-cell.out { background: #fafbfc; }
 .mcal-cell.out .mcal-day { color: #b6bec5; }
-.mcal-cell.today { background: #fffbeb; }
+.mcal-cell.today { background: linear-gradient(135deg, #e9f2fb, #f4f9fe); }
 .mcal-cell.sel { outline: 2px solid var(--osoth-primary); outline-offset: -2px; z-index: 1; }
 .mcal-day { font-size: 12.5px; font-weight: 600; color: #495057; align-self: flex-end; }
 .mcal-day.badge { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
@@ -117,7 +249,7 @@ a:hover { color: var(--osoth-primary-dark); }
 [data-bs-theme="dark"] .osoth-auth-bg { background: linear-gradient(135deg, #0d3a63, #081f33); }
 [data-bs-theme="dark"] .mcal-cell { background: #23272b; }
 [data-bs-theme="dark"] .mcal-cell.out { background: #1e2226; }
-[data-bs-theme="dark"] .mcal-cell.today { background: #33301a; }
+[data-bs-theme="dark"] .mcal-cell.today { background: linear-gradient(135deg, #1c2d42, #202b38); }
 [data-bs-theme="dark"] .mcal-head { background: #2b3035; border-color: #3a4046; }
 
 /* ── พิมพ์สลิปเงินเดือน: โชว์เฉพาะ .payslip-print ── */

@@ -94,10 +94,10 @@
 }
 .lgc .btn:hover { border-color: var(--gold); background: var(--surface-2); }
 .lgc .btn.primary {
-  background: var(--seal); border-color: var(--seal); color: #fff;
-  box-shadow: 0 1px 2px rgba(126, 47, 67, 0.25);
+  background: linear-gradient(135deg, #1560a3, #2a7bc4); border-color: var(--seal); color: #fff;
+  box-shadow: 0 1px 3px rgba(21, 96, 163, 0.28);
 }
-.lgc .btn.primary:hover { background: var(--seal-dark); border-color: var(--seal-dark); }
+.lgc .btn.primary:hover { background: linear-gradient(135deg, #135692, #2a7bc4); border-color: var(--seal-dark); filter: brightness(1.05); }
 .lgc .btn.gold { background: var(--gold); border-color: var(--gold); color: #fff; }
 .lgc .btn.gold:hover { filter: brightness(0.94); }
 .lgc .btn.ghost { background: transparent; border-color: var(--line-2); }
@@ -119,7 +119,9 @@
   display: block; margin-bottom: 4px; letter-spacing: .01em;
 }
 .lgc .field { margin-bottom: 6px; }
-.lgc .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.lgc .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-left: 0; margin-right: 0; }
+/* กัน Bootstrap .row > * (width:100%) มาบังคับลูกในโซน legacy ให้ยืดเต็มแถว */
+.lgc .row > * { width: auto; max-width: none; margin-top: 0; }
 .lgc .row .field { flex: 1; min-width: 140px; margin-bottom: 0; }
 .lgc table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .lgc .tbl th {

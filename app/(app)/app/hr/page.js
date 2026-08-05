@@ -33,7 +33,7 @@ export default function HrV2Page() {
     <div className="app-content">
       <div className="container-fluid pt-3 hr-wrap">
         <div className="d-flex align-items-center mb-3">
-          <h4 className="mb-0 fw-bold">บุคคล (HR)</h4>
+          <h4 className="mb-0 fw-bold prem-title">บุคคล (HR)</h4>
         </div>
         <ul className="nav nav-tabs mb-3">
           {[["staff", "bi-people", "พนักงาน"], ["schedule", "bi-calendar3", "ตารางหมอ"], ["payroll", "bi-cash-coin", "เงินเดือน"], ["org", "bi-diagram-3", "ผังองค์กร"], ["report", "bi-clipboard-data", "รายงาน"], ["throughput", "bi-activity", "อัตราทำเคส"]].map(([k, ico, l]) => (
@@ -52,12 +52,52 @@ export default function HrV2Page() {
         {tab === "throughput" && <div className="lgc"><ThroughputReport /></div>}
       </div>
       <style jsx global>{`
+        .hr-wrap { --hr-grad: linear-gradient(135deg, #1560a3, #2a7bc4); }
         .hr-wrap table { font-variant-numeric: tabular-nums; }
         /* กันหัวตารางขาวจ้าใน dark mode — ใช้สีพื้นตามธีมแทน */
         .hr-wrap .table-light {
           --bs-table-bg: var(--bs-tertiary-bg);
           --bs-table-color: var(--bs-body-color);
           --bs-table-border-color: var(--bs-border-color);
+        }
+        .hr-wrap .prem-title { letter-spacing: 0.01em; position: relative; padding-bottom: 7px; }
+        .hr-wrap .prem-title::after {
+          content: ""; position: absolute; left: 1px; bottom: 0; width: 46px; height: 3px;
+          border-radius: 2px; background: var(--hr-grad);
+        }
+        /* แท็บบน — ขีด gradient ใต้แท็บ active */
+        .hr-wrap .nav-tabs .nav-link {
+          border: 0; position: relative; color: var(--bs-secondary-color);
+          transition: color 0.16s ease, background 0.16s ease;
+          border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem;
+        }
+        .hr-wrap .nav-tabs .nav-link:hover { color: var(--bs-body-color); background: var(--bs-tertiary-bg); }
+        .hr-wrap .nav-tabs .nav-link.active { color: var(--bs-primary); background: transparent; }
+        .hr-wrap .nav-tabs .nav-link.active::after {
+          content: ""; position: absolute; left: 12%; right: 12%; bottom: -1px; height: 3px;
+          border-radius: 2px; background: var(--hr-grad);
+        }
+        .hr-wrap .btn-primary:not(.lgc *) { background: var(--hr-grad); border-color: #1560a3; transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease; }
+        .hr-wrap .btn-primary:not(.lgc *):hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 5px 14px rgba(21, 96, 163, 0.32); }
+        .hr-wrap .btn-primary:not(.lgc *):active { transform: scale(0.97); }
+        .hr-wrap .card.shadow-sm:not(.lgc *) { border-color: var(--bs-border-color); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.06) !important; }
+        .hr-wrap thead th:not(.lgc *) { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; color: var(--bs-secondary-color); }
+        .hr-wrap .table tbody tr:nth-of-type(even):not([class*="table-"]):not(.lgc *) td {
+          background-color: color-mix(in srgb, var(--bs-body-color) 2.5%, transparent);
+        }
+        .hr-wrap .form-control:not(.lgc *):focus, .hr-wrap .form-select:not(.lgc *):focus {
+          border-color: #2a7bc4; box-shadow: 0 0 0 0.18rem rgba(21, 96, 163, 0.15);
+        }
+        /* รูปพนักงาน — วงแหวนแบรนด์บางๆ */
+        .hr-wrap .table img.rounded-circle, .hr-wrap .table span.rounded-circle {
+          box-shadow: 0 0 0 2px var(--bs-body-bg), 0 0 0 4px color-mix(in srgb, #1560a3 30%, transparent);
+        }
+        .hr-wrap .rounded-circle.bg-primary { background: var(--hr-grad) !important; }
+        /* โหนดผังองค์กร — hover ยกนุ่ม */
+        .hr-wrap .org-node { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+        .hr-wrap .org-node:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12) !important;
         }
       `}</style>
     </div>
@@ -297,7 +337,7 @@ function OrgNode({ user, childrenOf, depth }) {
   const kids = childrenOf(user.user_ID);
   return (
     <div style={{ marginLeft: depth ? 28 : 0, borderLeft: depth ? "2px solid var(--bs-border-color)" : "none", paddingLeft: depth ? 14 : 0, marginTop: 8 }}>
-      <div className="d-inline-flex align-items-center gap-2 border rounded-3 px-3 py-2 shadow-sm bg-body">
+      <div className="org-node d-inline-flex align-items-center gap-2 border rounded-3 px-3 py-2 shadow-sm bg-body">
         {user.profile_picture
           ? <img src={user.profile_picture} alt="" width={34} height={34} className="rounded-circle object-fit-cover" />
           : <span className="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white fw-bold" style={{ width: 34, height: 34, fontSize: 13 }}>{(user.nick_name || user.full_name).slice(0, 2)}</span>}

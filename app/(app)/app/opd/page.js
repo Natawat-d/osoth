@@ -81,11 +81,15 @@ export default function OpdPage() {
   };
 
   return (
-    <div className="app-content">
+    <div className="app-content opdx">
       <div className="container-fluid pt-3">
         {/* หัว + info-box (คลิก = filter) */}
-        <div className="d-flex align-items-center mb-2 flex-wrap gap-2">
-          <h4 className="fw-bold mb-0">OPD / หน้าห้อง</h4>
+        <div className="d-flex align-items-center mb-3 flex-wrap gap-2">
+          <span className="opdx-hero-ico"><i className="bi bi-clipboard2-pulse" /></span>
+          <div className="lh-sm">
+            <h4 className="fw-bold mb-0 opdx-title">OPD / หน้าห้อง</h4>
+            <span className="opdx-title-sub text-muted">เปิดเคส · ทำหัตถการ · ปิดเคส</span>
+          </div>
           <input type="date" className="form-control form-control-sm ms-auto" style={{ width: 150 }}
                  value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
@@ -113,20 +117,21 @@ export default function OpdPage() {
               <div className="list-group list-group-flush" style={{ maxHeight: "68vh", overflowY: "auto" }}>
                 {rows.length === 0 && (
                   <div className="list-group-item text-center text-muted py-5">
-                    <i className="bi bi-inbox fs-2 d-block mb-2" />
-                    {q ? <>ไม่พบคิวที่ตรงกับ &ldquo;{search.trim()}&rdquo;</> : "ไม่มีคิวในสถานะนี้"}
+                    <span className="opdx-empty-ico"><i className="bi bi-inbox" /></span>
+                    <div>{q ? <>ไม่พบคิวที่ตรงกับ &ldquo;{search.trim()}&rdquo;</> : "ไม่มีคิวในสถานะนี้"}</div>
                     {(filter !== "all" || q) && <div className="small mt-1">ลองล้างคำค้น หรือกด &ldquo;ทั้งหมด&rdquo; ด้านบน</div>}
                   </div>
                 )}
                 {rows.map((r) => {
                   const opd = opds.find((o) => o.opd_ID === r.opd_ID);
                   const sel = active?.opd_ID && active.opd_ID === r.opd_ID;
+                  const qc = (STATUS_TH[r.status] || [])[1] || "secondary";
                   return (
                     <div key={r.reserve_ID}
-                         className={`list-group-item list-group-item-action d-flex gap-2 align-items-center ${sel ? "active" : ""}`}
+                         className={`list-group-item list-group-item-action opdx-q opdx-q-${qc} d-flex gap-2 align-items-center ${sel ? "active" : ""}`}
                          style={{ cursor: r.opd_ID ? "pointer" : "default" }}
                          onClick={() => r.opd_ID && setActive(opd)}>
-                      <div className="text-center" style={{ minWidth: 50 }}>
+                      <div className="text-center opdx-q-time" style={{ minWidth: 50 }}>
                         <b>{r.time_start}</b>
                         <div style={{ fontSize: 11 }} className={sel ? "" : "text-muted"}>{roomName(r.room_ID)}</div>
                       </div>
@@ -164,14 +169,229 @@ export default function OpdPage() {
                           onChanged={load} onClose={() => { setActive(null); load(); }} />
             ) : (
               <div className="card shadow-sm"><div className="card-body text-center text-muted py-5">
-                <i className="bi bi-clipboard2-pulse fs-1 d-block mb-2" />
-                <div className="fw-semibold">ยังไม่ได้เลือกเคส</div>
+                <span className="opdx-empty-ico opdx-empty-lg"><i className="bi bi-clipboard2-pulse" /></span>
+                <div className="fw-semibold text-body">ยังไม่ได้เลือกเคส</div>
                 <div className="small mt-1">เลือกคิวจากรายการด้านซ้าย — กด &ldquo;เปิดเคส&rdquo; สำหรับคิวใหม่ หรือ &ldquo;ทำต่อ&rdquo; เพื่อทำเคสที่ค้างอยู่</div>
               </div></div>
             )}
           </div>
         </div>
       </div>
+
+      {/* ธีมพรีเมียมเฉพาะโซน OPD — scoped ใต้ .opdx เท่านั้น */}
+      <style jsx global>{`
+        .opdx {
+          --opdx-grad: linear-gradient(135deg, #1560a3 0%, #2a7bc4 100%);
+        }
+        /* ── การ์ดพื้นฐาน: มุมโค้ง + เงาบางเนียนสม่ำเสมอ ── */
+        .opdx .card {
+          border-radius: 0.85rem;
+          border-color: color-mix(in srgb, var(--bs-border-color) 78%, transparent);
+          box-shadow: var(--osoth-shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05), 0 3px 12px rgba(15, 23, 42, 0.06));
+        }
+        .opdx .card > .card-header {
+          background: transparent;
+          border-bottom: 1px solid color-mix(in srgb, var(--bs-border-color) 60%, transparent);
+        }
+        [data-bs-theme="dark"] .opdx .card {
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.35);
+        }
+        /* ── หัวหน้าจอ ── */
+        .opdx-hero-ico {
+          width: 42px; height: 42px; flex: 0 0 auto;
+          border-radius: 0.8rem;
+          display: inline-flex; align-items: center; justify-content: center;
+          background-image: var(--opdx-grad);
+          color: #fff; font-size: 1.25rem;
+          box-shadow: 0 4px 14px rgba(21, 96, 163, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+        .opdx-title { letter-spacing: -0.01em; }
+        .opdx-title-sub { font-size: 11px; letter-spacing: 0.06em; }
+        /* ── inbox คิว: แถบสีสถานะซ้าย + hover + เลือกแล้วเป็น gradient ── */
+        .opdx-q {
+          position: relative;
+          padding-left: 1.05rem;
+          transition: background-color 0.15s ease;
+        }
+        .opdx-q::before {
+          content: "";
+          position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px;
+          border-radius: 0 4px 4px 0;
+          background: var(--qc, var(--bs-secondary));
+          opacity: 0.9;
+          transition: top 0.18s ease, bottom 0.18s ease;
+        }
+        .opdx-q-primary { --qc: var(--bs-primary); }
+        .opdx-q-info { --qc: var(--bs-info); }
+        .opdx-q-warning { --qc: var(--bs-warning); }
+        .opdx-q-danger { --qc: var(--bs-danger); }
+        .opdx-q-success { --qc: var(--bs-success); }
+        .opdx-q-dark { --qc: var(--bs-dark); }
+        .opdx-q:hover:not(.active) { background: color-mix(in srgb, var(--bs-primary) 6%, transparent); }
+        [data-bs-theme="dark"] .opdx-q:hover:not(.active) { background: color-mix(in srgb, var(--bs-primary) 14%, transparent); }
+        .opdx-q:hover::before { top: 5px; bottom: 5px; }
+        .opdx-q.active {
+          background-image: var(--opdx-grad);
+          border-color: transparent;
+          box-shadow: 0 5px 16px rgba(21, 96, 163, 0.35);
+          z-index: 1;
+        }
+        .opdx-q.active::before { background: #fff; opacity: 0.95; top: 5px; bottom: 5px; }
+        .opdx-q-time b { font-variant-numeric: tabular-nums; font-size: 0.98rem; letter-spacing: -0.01em; }
+        /* ── empty state ── */
+        .opdx-empty-ico {
+          width: 68px; height: 68px;
+          display: inline-flex; align-items: center; justify-content: center;
+          border-radius: 50%; font-size: 1.9rem; margin-bottom: 0.65rem;
+          background: color-mix(in srgb, var(--bs-primary) 8%, transparent);
+          color: color-mix(in srgb, var(--bs-primary) 55%, var(--bs-secondary-color));
+        }
+        .opdx-empty-lg { width: 84px; height: 84px; font-size: 2.4rem; }
+        /* ── StepCard: เลขขั้นวงกลม gradient + เส้นเชื่อมแนวตั้งจาง ── */
+        .opdx-step { position: relative; }
+        .opdx-step:not(:last-child)::after {
+          content: "";
+          position: absolute; left: 30px; top: 100%; height: 1rem; width: 2px;
+          background: linear-gradient(180deg, color-mix(in srgb, var(--bs-primary) 32%, var(--bs-border-color)), transparent);
+        }
+        .opdx-step-no, .opdx-step-ico {
+          width: 30px; height: 30px; flex: 0 0 auto;
+          border-radius: 50%;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-weight: 700; font-size: 0.85rem;
+          font-variant-numeric: tabular-nums;
+        }
+        .opdx-step-no {
+          background-image: var(--opdx-grad);
+          color: #fff;
+          box-shadow: 0 3px 8px rgba(21, 96, 163, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+        .opdx-step-ico {
+          background: color-mix(in srgb, var(--bs-primary) 10%, transparent);
+          color: var(--bs-primary);
+          font-size: 0.95rem;
+        }
+        .opdx-dim { opacity: 0.55; filter: saturate(0.85); }
+        .opdx-dim .opdx-step-no {
+          background-image: none;
+          background: var(--bs-secondary-bg);
+          color: var(--bs-secondary-color);
+          box-shadow: none;
+        }
+        /* ── การ์ดที่ถึงคิวทำงาน: ring/glow จางสีตามสถานะ ── */
+        .opdx-hot {
+          --hot: var(--bs-primary);
+          border-color: transparent !important;
+          box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--hot) 60%, transparent),
+                      0 0 0 5px color-mix(in srgb, var(--hot) 9%, transparent),
+                      0 6px 18px color-mix(in srgb, var(--hot) 14%, transparent);
+        }
+        .opdx-hot-danger { --hot: var(--bs-danger); }
+        .opdx-hot-warning { --hot: var(--bs-warning); }
+        .opdx-hot-primary { --hot: var(--bs-primary); }
+        /* ── step chips (progress ของเคส) ── */
+        .opdx-chip {
+          display: inline-flex; align-items: center; gap: 0.32rem;
+          font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
+          padding: 0.28rem 0.62rem; border-radius: 999px;
+          border: 1px solid transparent;
+          transition: background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .opdx-chip-done {
+          color: var(--bs-success);
+          background: color-mix(in srgb, var(--bs-success) 10%, transparent);
+          border-color: color-mix(in srgb, var(--bs-success) 28%, transparent);
+        }
+        .opdx-chip-cur {
+          color: #fff;
+          background-image: var(--opdx-grad);
+          box-shadow: 0 3px 10px rgba(21, 96, 163, 0.32);
+        }
+        .opdx-chip-todo {
+          color: var(--bs-secondary-color);
+          background: var(--bs-tertiary-bg);
+          border-color: var(--bs-border-color);
+        }
+        .opdx-chip-no {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 15px; height: 15px; border-radius: 50%; font-size: 0.6rem;
+          background: rgba(255, 255, 255, 0.28);
+        }
+        .opdx-chip-todo .opdx-chip-no { background: color-mix(in srgb, var(--bs-secondary-color) 16%, transparent); }
+        /* ── การ์ดหัวเคส ── */
+        .opdx-hero {
+          position: relative; overflow: hidden;
+          background-image: linear-gradient(135deg, color-mix(in srgb, var(--bs-primary) 7%, var(--bs-body-bg)) 0%, var(--bs-body-bg) 62%);
+        }
+        [data-bs-theme="dark"] .opdx-hero {
+          background-image: linear-gradient(135deg, color-mix(in srgb, var(--bs-primary) 16%, var(--bs-body-bg)) 0%, var(--bs-body-bg) 65%);
+        }
+        .opdx-hero::before {
+          content: "";
+          position: absolute; right: -50px; top: -70px; width: 230px; height: 230px;
+          border-radius: 50%; pointer-events: none;
+          background: radial-gradient(circle, rgba(var(--bs-primary-rgb), 0.1), transparent 70%);
+        }
+        .opdx-avatar {
+          width: 44px; height: 44px; flex: 0 0 auto;
+          border-radius: 50%;
+          display: inline-flex; align-items: center; justify-content: center;
+          background-image: var(--opdx-grad);
+          color: #fff; font-size: 1.35rem;
+          box-shadow: 0 4px 12px rgba(21, 96, 163, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+        /* ── ปุ่มปิดเคส เด่นสุดในหน้า ── */
+        .opdx-close:not(:disabled) {
+          background-image: var(--opdx-grad);
+          border-color: transparent;
+          font-weight: 600; letter-spacing: 0.02em;
+          box-shadow: 0 6px 18px rgba(21, 96, 163, 0.35);
+        }
+        .opdx-close:not(:disabled):hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 26px rgba(21, 96, 163, 0.42);
+          filter: brightness(1.06);
+        }
+        /* ── timeline ── */
+        .opdx-tl-dot {
+          border: 2px solid var(--bs-body-bg);
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+        }
+        .opdx-tl-line {
+          width: 2px;
+          background: linear-gradient(180deg, color-mix(in srgb, var(--bs-primary) 28%, var(--bs-border-color)), color-mix(in srgb, var(--bs-border-color) 55%, transparent));
+        }
+        /* ── จำนวนเงินเด่น ── */
+        .opdx-amt { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--bs-primary); }
+        /* ── micro-interaction ── */
+        .opdx .btn { transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, filter 0.15s ease; }
+        .opdx .btn:not(:disabled):active { transform: scale(0.97); }
+        .opdx .form-control, .opdx .form-select { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+        .opdx .form-control:focus, .opdx .form-select:focus {
+          border-color: color-mix(in srgb, var(--bs-primary) 45%, var(--bs-border-color));
+          box-shadow: var(--osoth-ring, 0 0 0 0.22rem rgba(21, 96, 163, 0.16));
+        }
+        /* ── modal: backdrop glass จางๆ + กล่องมนเงานุ่ม ── */
+        .opdx-modal {
+          background: rgba(8, 16, 28, 0.48);
+          backdrop-filter: blur(5px);
+          -webkit-backdrop-filter: blur(5px);
+        }
+        .opdx .modal-content {
+          border: 0; border-radius: 1rem;
+          box-shadow: 0 24px 70px rgba(4, 12, 24, 0.45);
+        }
+        /* ── การ์ดเคสโผล่นุ่มๆ ตอนเลือก ── */
+        .opdx-fade { animation: opdxUp 0.25s ease; }
+        @keyframes opdxUp {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .opdx-fade { animation: none; }
+          .opdx .btn, .opdx-q, .opdx-q::before { transition: none; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -205,7 +425,7 @@ function SplitPay({ due, confirmLabel, ok, toast, onConfirm, depositAvailable = 
     <div className="border-top pt-2 mt-2">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <span className="text-muted small">ชำระ (เต็มจำนวน)</span>
-        <b className="fs-5">{money(due)}฿</b>
+        <b className="fs-5 opdx-amt">{money(due)}฿</b>
       </div>
       {lines.map((l, i) => (
         <div className="d-flex gap-2 mb-1" key={i}>
@@ -239,12 +459,12 @@ function SplitPay({ due, confirmLabel, ok, toast, onConfirm, depositAvailable = 
 // ── การ์ดขั้นตอน (หัวข้อ + สถานะ + dim เมื่อยังไม่ถึง) ──
 function StepCard({ no, ico, title, badge, dim, borderColor, children }) {
   return (
-    <div className={`card shadow-sm mb-3 ${borderColor ? "border-" + borderColor : ""}`} style={{ opacity: dim ? 0.6 : 1 }}>
+    <div className={`card shadow-sm mb-3 opdx-step ${borderColor ? `opdx-hot opdx-hot-${borderColor}` : ""} ${dim ? "opdx-dim" : ""}`}>
       <div className="card-header py-2 d-flex align-items-center gap-2">
-        {no != null && (
-          <span className={`badge rounded-pill ${dim ? "text-bg-secondary" : "text-bg-primary"}`}>{no}</span>
-        )}
-        <span className="fw-semibold"><i className={`bi ${ico} me-1 text-primary`} />{title}</span>
+        {no != null
+          ? <span className="opdx-step-no">{no}</span>
+          : <span className="opdx-step-ico"><i className={`bi ${ico}`} /></span>}
+        <span className="fw-semibold">{no != null && <i className={`bi ${ico} me-1 text-primary`} />}{title}</span>
         <span className="ms-auto">{badge}</span>
       </div>
       <div className="card-body py-3">{children}</div>
@@ -512,15 +732,13 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
   );
 
   return (
-    <div>
+    <div className="opdx-fade">
       {/* หัวเคส + step chips */}
-      <div className="card shadow-sm mb-3">
+      <div className="card shadow-sm mb-3 opdx-hero">
         <div className="card-body py-3">
           <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
-            <h5 className="fw-bold mb-0">
-              <i className="bi bi-person-circle me-1 text-primary" />
-              {customer?.nick_name || customer?.full_name || "เคส"}
-            </h5>
+            <span className="opdx-avatar"><i className="bi bi-person-fill" /></span>
+            <h5 className="fw-bold mb-0">{customer?.nick_name || customer?.full_name || "เคส"}</h5>
             <span className="badge text-bg-primary">{opd.HN_number}</span>
             <span className="badge bg-body-tertiary border text-body">ครั้งที่ {opd.session_no}</span>
             <span className="ms-auto"><SBadge s={opd.status} /></span>
@@ -532,12 +750,16 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
               {cc.expires_at && <> · หมดอายุ {String(cc.expires_at).slice(0, 10)}</>}
             </div>
           )}
-          <div className="d-flex flex-wrap gap-1">
-            {steps.map((s, i) => (
-              <span key={s.k} className={`badge rounded-pill ${s.on ? "text-bg-success" : "bg-body-tertiary border text-body-secondary"}`}>
-                {s.on ? <i className="bi bi-check-lg me-1" /> : `${i + 1}. `}{s.l}
-              </span>
-            ))}
+          <div className="d-flex flex-wrap gap-1 position-relative">
+            {steps.map((s, i) => {
+              const curIdx = isClosed ? -1 : steps.findIndex((x) => !x.on);
+              const cls = s.on ? "opdx-chip-done" : i === curIdx ? "opdx-chip-cur" : "opdx-chip-todo";
+              return (
+                <span key={s.k} className={`opdx-chip ${cls}`}>
+                  {s.on ? <i className="bi bi-check-lg" /> : <span className="opdx-chip-no">{i + 1}</span>}{s.l}
+                </span>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -735,7 +957,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
           </div>
         )}
         {signMode && !isClosed && (
-          <div className="modal fade show d-block" style={{ background: "rgba(0,0,0,.5)" }}>
+          <div className="modal fade show d-block opdx-modal">
             <div className="modal-dialog modal-xl modal-dialog-scrollable">
               <div className="modal-content">
                 <div className="modal-header py-2">
@@ -773,7 +995,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
 
       {/* ดูไฟล์ consent */}
       {viewConsent && (
-        <div className="modal fade show d-block" style={{ background: "rgba(0,0,0,.5)" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setViewConsent(null); }}>
+        <div className="modal fade show d-block opdx-modal" onMouseDown={(e) => { if (e.target === e.currentTarget) setViewConsent(null); }}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header py-2">
@@ -915,7 +1137,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
             ))}
           </ul>
           <div className="d-flex">
-            <ABtn className="btn btn-primary ms-auto px-4" disabled={!measured || !canTreat || !hasConsent || needHealth} toast={toast} onClick={doClose}>
+            <ABtn className="btn btn-primary btn-lg ms-auto px-5 opdx-close" disabled={!measured || !canTreat || !hasConsent || needHealth} toast={toast} onClick={doClose}>
               <i className="bi bi-lock me-1" /> ปิดเคส
             </ABtn>
           </div>
@@ -926,12 +1148,12 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
       <StepCard ico="bi-clock-history" title="Timeline เคส">
         <ul className="list-unstyled mb-0">
           {timeline.map((t, i) => (
-            <li key={i} className="d-flex gap-2 pb-2 position-relative">
-              <span className={`d-inline-flex align-items-center justify-content-center rounded-circle text-bg-${t.color}`}
-                    style={{ width: 28, height: 28, fontSize: 13, zIndex: 1 }}>
+            <li key={i} className="d-flex gap-2 pb-3 position-relative">
+              <span className={`d-inline-flex align-items-center justify-content-center rounded-circle opdx-tl-dot text-bg-${t.color}`}
+                    style={{ width: 30, height: 30, fontSize: 13, zIndex: 1 }}>
                 <i className={`bi ${t.ico}`} />
               </span>
-              {i < timeline.length - 1 && <span className="position-absolute bg-secondary-subtle" style={{ left: 13, top: 28, width: 2, bottom: -4 }} />}
+              {i < timeline.length - 1 && <span className="position-absolute opdx-tl-line" style={{ left: 14, top: 30, bottom: -2 }} />}
               <span className="small pt-1">
                 <b>{t.label}</b>
                 <span className="text-muted ms-2">{t.at ? new Date(t.at).toLocaleString("th-TH") : ""}</span>
@@ -963,7 +1185,7 @@ function HealthRecordModal({ customer, courseName, onSave, onClose, toast }) {
   };
 
   return (
-    <div className="modal fade show d-block" style={{ background: "rgba(0,0,0,.5)" }}>
+    <div className="modal fade show d-block opdx-modal">
       <div className="modal-dialog modal-lg modal-dialog-scrollable">
         <div className="modal-content">
           <div className="modal-header py-2">

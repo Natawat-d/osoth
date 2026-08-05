@@ -123,16 +123,22 @@ function CustomersInner() {
   );
 
   return (
-    <div className="app-content">
+    <div className="app-content cxz">
       <div className="container-fluid pt-3">
-        <div className="d-flex align-items-center mb-3">
-          <h4 className="fw-bold mb-0">ลูกค้า (HN)</h4>
+        <div className="d-flex align-items-center gap-3 mb-3">
+          <span className="cx-headico d-inline-flex align-items-center justify-content-center flex-shrink-0">
+            <i className="bi bi-people-fill" />
+          </span>
+          <div>
+            <h4 className="fw-bold mb-0">ลูกค้า (HN)</h4>
+            <div className="cx-lbl mt-1">โปรไฟล์ · คอร์ส · ประวัติการใช้บริการ</div>
+          </div>
         </div>
 
         {/* ค้นหา */}
-        <div className="card shadow-sm mb-3">
+        <div className="card shadow-sm mb-3 cx-search-card">
           <div className="card-body py-3">
-            <div className="input-group" style={{ maxWidth: 520 }}>
+            <div className="input-group cx-search" style={{ maxWidth: 520 }}>
               <span className="input-group-text bg-body-tertiary"><i className="bi bi-search text-muted" /></span>
               <input className="form-control" value={q} placeholder="HN / ชื่อ / เบอร์โทร"
                      onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
@@ -143,14 +149,14 @@ function CustomersInner() {
 
             {!searched && !profile && (
               <div className="text-center text-muted py-4">
-                <i className="bi bi-person-vcard d-block mb-2" style={{ fontSize: 34, opacity: 0.4 }} />
+                <span className="cx-empty-ico"><i className="bi bi-person-vcard" /></span>
                 <div className="small">พิมพ์ HN, ชื่อ, ชื่อเล่น หรือเบอร์โทร แล้วกดค้นหา — เว้นว่างเพื่อดูลูกค้าล่าสุด</div>
               </div>
             )}
 
             {searched && rows.length === 0 && !profile && (
               <div className="text-center text-muted py-4">
-                <i className="bi bi-search-heart d-block mb-2" style={{ fontSize: 34, opacity: 0.4 }} />
+                <span className="cx-empty-ico"><i className="bi bi-search-heart" /></span>
                 <div>ไม่พบลูกค้าที่ตรงกับ &ldquo;{q}&rdquo;</div>
                 <div className="small mt-1">ลองค้นบางส่วนของชื่อหรือเบอร์ · ลูกค้าใหม่สร้าง HN ได้ที่หน้า ปฏิทิน (รับลูกค้า)</div>
               </div>
@@ -196,28 +202,27 @@ function CustomersInner() {
           <div className="row g-3">
             <div className="col-lg-7">
               {/* โปรไฟล์ */}
-              <div className="card shadow-sm mb-3">
-                <div className="card-header py-2 d-flex align-items-center flex-wrap gap-2">
-                  <span className="d-inline-flex align-items-center justify-content-center rounded-circle text-bg-primary flex-shrink-0 fw-bold"
-                        style={{ width: 34, height: 34 }}>
+              <div className="card shadow-sm mb-3 cx-hero">
+                <div className="cx-hero-head d-flex align-items-center flex-wrap gap-3 px-3 py-3">
+                  <span className="cx-avatar flex-shrink-0">
                     {(cust.nick_name || cust.full_name || "?").replace(/^คุณ/, "").trim().charAt(0) || "?"}
                   </span>
                   <div className="me-auto">
-                    <div className="fw-bold">
+                    <div className="fw-bold cx-hero-name">
                       {cust.prefix ? `${cust.prefix} ` : ""}{cust.full_name} {cust.sure_name || ""}
-                      {cust.nick_name && <span className="text-muted fw-normal"> ({cust.nick_name})</span>}
+                      {cust.nick_name && <span className="fw-normal cx-hero-nick"> ({cust.nick_name})</span>}
                     </div>
-                    <div className="small text-muted font-monospace">
-                      {cust.HN_number}
-                      {cust.gender && <span className="font-sans-serif"> · {cust.gender}</span>}
-                      {age && <span className="font-sans-serif"> · {age} ปี</span>}
+                    <div className="d-flex align-items-center flex-wrap gap-2 mt-1">
+                      <span className="cx-hn-badge font-monospace">{cust.HN_number}</span>
+                      {cust.gender && <span className="cx-hero-meta small">{cust.gender}</span>}
+                      {age && <span className="cx-hero-meta small">{age} ปี</span>}
                     </div>
                   </div>
-                  <a className="btn btn-outline-primary btn-sm" target="_blank" rel="noreferrer"
+                  <a className="btn cx-hero-btn btn-sm" target="_blank" rel="noreferrer"
                      href={`/app/history-form?hn=${encodeURIComponent(cust.HN_number)}`}>
                     <i className="bi bi-file-earmark-person me-1" />ประวัติผู้ใช้บริการ (PDF)
                   </a>
-                  {!editing && <button className="btn btn-outline-secondary btn-sm" onClick={startEdit}><i className="bi bi-pencil me-1" />แก้ไข</button>}
+                  {!editing && <button className="btn cx-hero-btn btn-sm" onClick={startEdit}><i className="bi bi-pencil me-1" />แก้ไข</button>}
                 </div>
                 <div className="card-body py-3">
                   {!editing ? (
@@ -225,7 +230,7 @@ function CustomersInner() {
                       <div className="row g-3">
                         {/* กลุ่มติดต่อ */}
                         <div className="col-md-6">
-                          <div className="text-muted fw-semibold mb-1" style={{ fontSize: 12, letterSpacing: 0.3 }}>การติดต่อ</div>
+                          <div className="cx-lbl mb-1">การติดต่อ</div>
                           <InfoRow icon="bi-telephone" label="เบอร์โทร">{cust.phone || "—"}</InfoRow>
                           {cust.line_id && <InfoRow icon="bi-chat-dots" label="LINE">{cust.line_id}</InfoRow>}
                           {cust.email && <InfoRow icon="bi-envelope" label="อีเมล">{cust.email}</InfoRow>}
@@ -238,7 +243,7 @@ function CustomersInner() {
                         </div>
                         {/* กลุ่มความปลอดภัย */}
                         <div className="col-md-6">
-                          <div className="text-muted fw-semibold mb-1" style={{ fontSize: 12, letterSpacing: 0.3 }}>ข้อควรระวัง</div>
+                          <div className="cx-lbl mb-1">ข้อควรระวัง</div>
                           <InfoRow icon="bi-capsule" label="แพ้ยา">
                             {cust.drug_allergies?.length
                               ? cust.drug_allergies.map((a) => <span key={a} className="badge text-bg-danger me-1">{a}</span>)
@@ -251,9 +256,9 @@ function CustomersInner() {
                         </div>
                         {/* สรุปแบบฟอร์มสุขภาพ 9 ข้อ */}
                         <div className="col-12">
-                          <div className="border rounded-3 bg-body-tertiary p-2 px-3">
+                          <div className="cx-health rounded-3 p-2 px-3">
                             <div className="d-flex align-items-center flex-wrap gap-2">
-                              <span className="text-muted fw-semibold" style={{ fontSize: 12, letterSpacing: 0.3 }}>
+                              <span className="cx-lbl">
                                 <i className="bi bi-clipboard2-pulse me-1" />ข้อมูลสุขภาพ (แบบฟอร์ม 9 ข้อ)
                               </span>
                               {health ? (
@@ -316,7 +321,9 @@ function CustomersInner() {
 
               {/* คอร์สที่ถือ + ชำระ */}
               <div className="card shadow-sm mb-3">
-                <div className="card-header py-2 fw-semibold"><i className="bi bi-grid-3x3-gap me-1 text-primary" />คอร์สที่ถือ</div>
+                <div className="card-header py-2 fw-semibold d-flex align-items-center gap-2">
+                  <span className="cx-ico"><i className="bi bi-grid-3x3-gap" /></span>คอร์สที่ถือ
+                </div>
                 <div className="card-body p-0 table-responsive">
                   <table className="table table-sm table-hover align-middle mb-0">
                     <thead>
@@ -349,8 +356,8 @@ function CustomersInner() {
                       ))}
                       {!profile.courses.length && (
                         <tr><td colSpan={6} className="text-center text-muted py-4">
-                          <i className="bi bi-bag d-block mb-1" style={{ fontSize: 24, opacity: 0.4 }} />
-                          ยังไม่มีคอร์ส — ขายคอร์สได้จากหน้า OPD / หน้าห้อง
+                          <span className="cx-empty-ico cx-empty-sm"><i className="bi bi-bag" /></span>
+                          <div>ยังไม่มีคอร์ส — ขายคอร์สได้จากหน้า OPD / หน้าห้อง</div>
                         </td></tr>
                       )}
                     </tbody>
@@ -382,9 +389,9 @@ function CustomersInner() {
 
               {/* ใบยินยอมย้อนหลัง */}
               <div className="card shadow-sm mb-3">
-                <div className="card-header py-2 fw-semibold d-flex align-items-center">
-                  <i className="bi bi-file-earmark-medical me-1 text-primary" />ใบยินยอมทั้งหมด
-                  <span className="badge text-bg-secondary ms-2">{consents.length}</span>
+                <div className="card-header py-2 fw-semibold d-flex align-items-center gap-2">
+                  <span className="cx-ico"><i className="bi bi-file-earmark-medical" /></span>ใบยินยอมทั้งหมด
+                  <span className="badge cx-count">{consents.length}</span>
                 </div>
                 <ul className="list-group list-group-flush">
                   {consents.map((c, i) => (
@@ -397,8 +404,8 @@ function CustomersInner() {
                   ))}
                   {!consents.length && (
                     <li className="list-group-item text-muted small py-4 text-center">
-                      <i className="bi bi-file-earmark d-block mb-1" style={{ fontSize: 24, opacity: 0.4 }} />
-                      ยังไม่มีใบยินยอม — ลูกค้าเซ็นบนจอได้ในหน้า OPD ก่อนทำหัตถการ
+                      <span className="cx-empty-ico cx-empty-sm"><i className="bi bi-file-earmark" /></span>
+                      <div>ยังไม่มีใบยินยอม — ลูกค้าเซ็นบนจอได้ในหน้า OPD ก่อนทำหัตถการ</div>
                     </li>
                   )}
                 </ul>
@@ -408,21 +415,22 @@ function CustomersInner() {
             {/* ขวา: timeline ประวัติ */}
             <div className="col-lg-5">
               <div className="card shadow-sm">
-                <div className="card-header py-2 d-flex align-items-center">
-                  <span className="fw-semibold"><i className="bi bi-clock-history me-1 text-primary" />Timeline ประวัติ</span>
-                  <span className="badge text-bg-secondary ms-2">{timeline.length}</span>
+                <div className="card-header py-2 d-flex align-items-center gap-2">
+                  <span className="cx-ico"><i className="bi bi-clock-history" /></span>
+                  <span className="fw-semibold">Timeline ประวัติ</span>
+                  <span className="badge cx-count">{timeline.length}</span>
                   <button className="btn btn-outline-secondary btn-sm ms-auto" disabled={!timeline.length} onClick={exportHistory}><i className="bi bi-download me-1" />CSV</button>
                 </div>
                 <div className="card-body py-3">
                   <ul className="list-unstyled mb-0">
                     {timeline.map((t, i) => (
                       <li key={t.opd_ID} className="d-flex gap-2 pb-3 position-relative">
-                        <span className={`d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0 ${t.status === "closed" ? "text-bg-success" : "text-bg-warning"}`}
+                        <span className={`cx-tl-dot d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0 ${t.status === "closed" ? "text-bg-success" : "text-bg-warning"}`}
                               style={{ width: 30, height: 30, fontSize: 13, zIndex: 1 }}
                               title={t.status === "closed" ? "ปิดเคสแล้ว" : "เคสยังไม่ปิด"}>
                           <i className={`bi ${t.status === "closed" ? "bi-check2" : "bi-hourglass-split"}`} />
                         </span>
-                        {i < timeline.length - 1 && <span className="position-absolute bg-secondary-subtle" style={{ left: 14, top: 30, width: 2, bottom: -6 }} />}
+                        {i < timeline.length - 1 && <span className="position-absolute cx-tl-line" style={{ left: 14, top: 32, width: 2, bottom: -4 }} />}
                         <div className="small">
                           <div><b>{fmtDate(t.date)}</b> · เคส {t.opd_ID} · ครั้งที่ {t.session_no}
                             {t.consent > 0 && <span className="badge text-bg-success ms-1" title="มีใบยินยอม">✓ ยินยอม</span>}
@@ -434,8 +442,8 @@ function CustomersInner() {
                     ))}
                     {!timeline.length && (
                       <li className="text-muted small text-center py-4">
-                        <i className="bi bi-clock-history d-block mb-1" style={{ fontSize: 24, opacity: 0.4 }} />
-                        ยังไม่มีประวัติการใช้บริการ
+                        <span className="cx-empty-ico cx-empty-sm"><i className="bi bi-clock-history" /></span>
+                        <div>ยังไม่มีประวัติการใช้บริการ</div>
                       </li>
                     )}
                   </ul>
@@ -467,6 +475,77 @@ function CustomersInner() {
           </div>
         )}
       </div>
+
+      {/* พรีเมียม — scoped ด้วย .cxz เฉพาะหน้านี้ (ธีมกลางไม่เกี่ยว) */}
+      <style jsx global>{`
+        .cxz { --cx-grad: linear-gradient(135deg, #1560a3, #2a7bc4); }
+        /* การ์ด: มุมโค้งสม่ำเสมอ + เงาบางเนียน */
+        .cxz .card { border-radius: 14px; border: 1px solid var(--bs-border-color-translucent); overflow: hidden;
+          box-shadow: 0 1px 2px rgba(15, 35, 60, .05), 0 6px 18px rgba(15, 35, 60, .05); }
+        [data-bs-theme="dark"] .cxz .card { box-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 22px rgba(0, 0, 0, .28); }
+        .cxz .card-header { background: transparent; border-bottom: 1px solid var(--bs-border-color-translucent); }
+        .cxz .modal-content { border-radius: 14px; overflow: hidden; }
+
+        /* micro-interaction: ปุ่มลื่น + focus ring สีแบรนด์ */
+        .cxz .btn { transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease,
+          border-color .18s ease, color .18s ease; }
+        .cxz .btn:active { transform: scale(.96); }
+        .cxz .btn-primary { background-image: var(--cx-grad); border: 0; box-shadow: 0 2px 8px rgba(21, 96, 163, .28); }
+        .cxz .btn-primary:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(21, 96, 163, .38); transform: translateY(-1px); }
+        .cxz .form-control:focus, .cxz .form-select:focus {
+          border-color: #2a7bc4; box-shadow: 0 0 0 .22rem rgba(21, 96, 163, .14); }
+
+        /* หัวหน้าจอ */
+        .cxz .cx-headico { width: 42px; height: 42px; border-radius: 13px; background: var(--cx-grad); color: #fff;
+          font-size: 19px; box-shadow: 0 4px 12px rgba(21, 96, 163, .32); }
+        .cxz .cx-lbl { font-size: 11px; font-weight: 600; letter-spacing: .8px; color: var(--bs-secondary-color); }
+
+        /* hero โปรไฟล์ */
+        .cxz .cx-hero-head { background: var(--cx-grad); color: #fff; }
+        .cxz .cx-avatar { width: 54px; height: 54px; border-radius: 16px; display: inline-flex; align-items: center;
+          justify-content: center; font-size: 24px; font-weight: 700; color: #fff;
+          background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .35);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 4px 10px rgba(0, 30, 60, .18); }
+        .cxz .cx-hero-name { font-size: 1.1rem; letter-spacing: .2px; }
+        .cxz .cx-hero-nick { color: rgba(255, 255, 255, .78); }
+        .cxz .cx-hero-meta { color: rgba(255, 255, 255, .82); }
+        .cxz .cx-hn-badge { background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .32);
+          color: #fff; border-radius: 999px; padding: 1px 10px; font-size: 12px; letter-spacing: .5px; }
+        .cxz .cx-hero-btn { --bs-btn-color: #fff; --bs-btn-border-color: rgba(255, 255, 255, .5);
+          --bs-btn-hover-color: #fff; --bs-btn-hover-bg: rgba(255, 255, 255, .16); --bs-btn-hover-border-color: #fff;
+          --bs-btn-active-color: #fff; --bs-btn-active-bg: rgba(255, 255, 255, .22);
+          --bs-btn-active-border-color: #fff; border-width: 1px; }
+
+        /* ไอคอนวงกลม gradient หัวการ์ด + badge จำนวน */
+        .cxz .cx-ico { width: 26px; height: 26px; border-radius: 50%; background: var(--cx-grad); color: #fff;
+          display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+          box-shadow: 0 2px 6px rgba(21, 96, 163, .32); }
+        .cxz .cx-count { background: color-mix(in srgb, #1560a3 12%, var(--bs-body-bg));
+          color: var(--bs-primary-text-emphasis); border: 1px solid color-mix(in srgb, #1560a3 22%, transparent);
+          border-radius: 999px; font-weight: 600; }
+
+        /* ชิปสรุปสุขภาพ */
+        .cxz .cx-health { background: linear-gradient(135deg, color-mix(in srgb, #1560a3 7%, var(--bs-body-bg)),
+          color-mix(in srgb, #1560a3 2%, var(--bs-body-bg))); border: 1px solid color-mix(in srgb, #1560a3 14%, transparent); }
+
+        /* empty state มีบุคลิก */
+        .cxz .cx-empty-ico { width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center;
+          justify-content: center; font-size: 26px; margin-bottom: .55rem;
+          color: #1560a3; background: color-mix(in srgb, #1560a3 9%, var(--bs-body-bg));
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, #1560a3 14%, transparent); }
+        [data-bs-theme="dark"] .cxz .cx-empty-ico { color: #7cb5e8; }
+        .cxz .cx-empty-sm { width: 48px; height: 48px; font-size: 20px; }
+
+        /* ตาราง: หัวเล็ก letter-spacing + ตัวเลข tabular */
+        .cxz thead th { letter-spacing: .5px; }
+        .cxz .table td { font-variant-numeric: tabular-nums; }
+        .cxz .table-hover > tbody > tr:hover > * {
+          --bs-table-hover-bg: color-mix(in srgb, #1560a3 6%, var(--bs-body-bg)); }
+
+        /* timeline */
+        .cxz .cx-tl-dot { box-shadow: 0 0 0 4px color-mix(in srgb, #1560a3 8%, var(--bs-body-bg)); }
+        .cxz .cx-tl-line { background: linear-gradient(var(--bs-border-color), transparent); }
+      `}</style>
     </div>
   );
 }

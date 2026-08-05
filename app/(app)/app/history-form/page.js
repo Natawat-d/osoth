@@ -48,15 +48,19 @@ function HistoryFormInner() {
   return (
     <div className="app-content">
       <div className="container py-3" style={{ maxWidth: 820 }}>
-        <div className="d-flex gap-2 mb-3 d-print-none">
-          <button className="btn btn-primary" onClick={() => window.print()}>
+        <div className="hf-bar d-flex gap-2 mb-3 d-print-none align-items-center flex-wrap">
+          <span className="hf-barico flex-shrink-0"><i className="bi bi-file-earmark-person" /></span>
+          <div className="me-2">
+            <div className="fw-semibold" style={{ fontSize: 14, lineHeight: 1.3 }}>เอกสารประวัติผู้ใช้บริการ</div>
+            <div className="text-muted" style={{ fontSize: 11.5 }}>เอกสาร A4 — กด &ldquo;พิมพ์&rdquo; แล้วเลือกบันทึกเป็น PDF ได้</div>
+            {c && !c.history_date && (
+              <span className="badge text-bg-warning mt-1">ลูกค้าเก่าก่อนมีแบบฟอร์ม — ข้อมูลสุขภาพอาจไม่ครบ</span>
+            )}
+          </div>
+          <button className="btn btn-outline-secondary btn-sm ms-auto" onClick={() => history.back()}>← กลับ</button>
+          <button className="btn btn-primary btn-sm px-4 hf-print" onClick={() => window.print()}>
             <i className="bi bi-printer me-1" /> พิมพ์ / บันทึก PDF
           </button>
-          <button className="btn btn-outline-secondary" onClick={() => history.back()}>← กลับ</button>
-          <span className="text-muted small align-self-center">* เอกสาร A4 — กด &ldquo;พิมพ์&rdquo; แล้วเลือกบันทึกเป็น PDF ได้</span>
-          {c && !c.history_date && (
-            <span className="badge text-bg-warning align-self-center">ลูกค้าเก่าก่อนมีแบบฟอร์ม — ข้อมูลสุขภาพอาจไม่ครบ</span>
-          )}
         </div>
         {err && <div className="alert alert-danger py-2">{err}</div>}
         {!hn && !ccId && !err && <div className="alert alert-warning py-2 d-print-none"><i className="bi bi-exclamation-triangle me-1" />ไม่ได้ระบุ HN — เปิดหน้านี้จากโปรไฟล์ลูกค้า หรือหน้ารับลูกค้า</div>}
@@ -67,6 +71,7 @@ function HistoryFormInner() {
         )}
 
         {!((hn || ccId) && !c && !err) && (
+        <div className="hf-stage">
         <div className="card shadow-sm hf-doc">
           <div className="card-body p-4" style={{ fontSize: 14.5, lineHeight: 2.1 }}>
             {/* หัวเอกสาร */}
@@ -137,6 +142,7 @@ function HistoryFormInner() {
             </div>
           </div>
         </div>
+        </div>
         )}
       </div>
 
@@ -147,9 +153,33 @@ function HistoryFormInner() {
         .hf-doc .border-dark { border-color: #1a1a1a !important; }
         .hf-u { display: inline-block; border-bottom: 1px dotted #888; padding: 0 6px; font-weight: 600; }
         .hf-cb { font-size: 17px; }
+
+        /* กรอบรอบนอก + toolbar หรู (เฉพาะบนจอ — เนื้อเอกสารคงเดิมทางการ) */
+        @media screen {
+          .hf-bar { background: color-mix(in srgb, var(--bs-body-bg) 78%, transparent);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--bs-border-color-translucent); border-radius: 14px; padding: .6rem .8rem;
+            box-shadow: 0 1px 2px rgba(15, 35, 60, .05), 0 6px 18px rgba(15, 35, 60, .06); }
+          .hf-barico { width: 34px; height: 34px; border-radius: 11px; color: #fff; font-size: 16px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #1560a3, #2a7bc4); box-shadow: 0 3px 9px rgba(21, 96, 163, .32); }
+          .hf-bar .btn { transition: transform .18s ease, box-shadow .18s ease; }
+          .hf-bar .btn:active { transform: scale(.96); }
+          .hf-print { background-image: linear-gradient(135deg, #1560a3, #2a7bc4); border: 0;
+            box-shadow: 0 2px 8px rgba(21, 96, 163, .28); }
+          .hf-print:hover { box-shadow: 0 5px 16px rgba(21, 96, 163, .38); transform: translateY(-1px); }
+          .hf-stage { padding: 22px; border-radius: 18px;
+            background: linear-gradient(160deg, color-mix(in srgb, #1560a3 8%, var(--bs-body-bg)),
+              color-mix(in srgb, #1560a3 2%, var(--bs-body-bg)) 65%);
+            border: 1px solid color-mix(in srgb, #1560a3 14%, transparent); }
+          .hf-doc { border: 1px solid #dfe5eb !important; border-radius: 6px;
+            box-shadow: 0 14px 38px rgba(10, 35, 66, .16), 0 3px 10px rgba(10, 35, 66, .08) !important; }
+          [data-bs-theme="dark"] .hf-doc { box-shadow: 0 14px 38px rgba(0, 0, 0, .5), 0 3px 10px rgba(0, 0, 0, .35) !important; }
+        }
         @media print {
           .app-sidebar, .app-header, .app-footer, .d-print-none { display: none !important; }
           .app-main { margin: 0 !important; }
+          .hf-stage { padding: 0 !important; border: none !important; background: none !important; }
           .hf-doc { border: none !important; box-shadow: none !important; }
           @page { size: A4; margin: 14mm; }
         }

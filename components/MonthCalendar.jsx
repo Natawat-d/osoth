@@ -53,14 +53,14 @@ export default function MonthCalendar({ value, onSelect, onMonthChange, events =
   };
 
   return (
-    <div className="card shadow-sm">
-      <div className="card-header d-flex align-items-center flex-wrap gap-2 py-2">
+    <div className="card shadow-sm mcal-premium">
+      <div className="card-header d-flex align-items-center flex-wrap gap-2 py-2 mcal-phead">
         <div className="btn-group">
           <button className="btn btn-outline-secondary btn-sm" onClick={() => move(-1)} aria-label="เดือนก่อน"><i className="bi bi-chevron-left" /></button>
           <button className="btn btn-outline-secondary btn-sm" onClick={() => move(1)} aria-label="เดือนถัดไป"><i className="bi bi-chevron-right" /></button>
         </div>
         <button className="btn btn-outline-primary btn-sm" onClick={goToday}>วันนี้</button>
-        <h6 className="fw-bold mb-0 mx-auto">{MONTHS_TH[ym.m]} {ym.y + 543}</h6>
+        <h6 className="fw-bold mb-0 mx-auto mcal-ptitle"><i className="bi bi-calendar3 me-2 opacity-75" />{MONTHS_TH[ym.m]} {ym.y + 543}</h6>
         {headerExtra}
       </div>
       <div className="card-body p-0">
@@ -93,6 +93,39 @@ export default function MonthCalendar({ value, onSelect, onMonthChange, events =
           ))}
         </div>
       </div>
+      <style jsx>{`
+        .mcal-phead { background: linear-gradient(135deg, rgba(21, 96, 163, 0.09), rgba(42, 123, 196, 0.015) 65%); }
+        .mcal-ptitle { letter-spacing: 0.2px; }
+        .mcal-ptitle i { color: #1560a3; }
+        .mcal-premium :global(.mcal-cell) {
+          transition: background 0.15s ease, box-shadow 0.15s ease;
+        }
+        .mcal-premium :global(.mcal-cell:hover) {
+          background: color-mix(in srgb, #1560a3 9%, var(--bs-card-bg, var(--bs-body-bg)));
+          box-shadow: inset 0 0 0 1px rgba(21, 96, 163, 0.22);
+        }
+        .mcal-premium :global(.mcal-cell.today) {
+          background: linear-gradient(135deg, rgba(21, 96, 163, 0.16), rgba(42, 123, 196, 0.03) 75%),
+            var(--bs-card-bg, var(--bs-body-bg));
+        }
+        .mcal-premium :global(.mcal-cell.sel) {
+          outline: none;
+          border-radius: 10px;
+          box-shadow: inset 0 0 0 2px #1560a3, inset 0 0 16px rgba(21, 96, 163, 0.1), 0 4px 14px rgba(21, 96, 163, 0.22);
+          z-index: 1;
+        }
+        .mcal-premium :global(.mcal-day.badge) {
+          background: linear-gradient(135deg, #1560a3, #2a7bc4) !important;
+          box-shadow: 0 2px 6px rgba(21, 96, 163, 0.35);
+        }
+        .mcal-premium :global(.mcal-count) {
+          background: linear-gradient(135deg, #1560a3, #2a7bc4) !important;
+          border-radius: 99px;
+          box-shadow: 0 1px 4px rgba(21, 96, 163, 0.3);
+          font-variant-numeric: tabular-nums;
+        }
+        .mcal-premium :global(.mcal-head > div) { letter-spacing: 0.4px; font-size: 12px; }
+      `}</style>
     </div>
   );
 }

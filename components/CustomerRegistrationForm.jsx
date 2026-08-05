@@ -50,9 +50,10 @@ export default function CustomerRegistrationForm({ initial = {}, busy = false, o
 
   const L = ({ children }) => <label className="form-label small mb-1 text-muted">{children}</label>;
   const Section = ({ no, icon, title, right }) => (
-    <div className="d-flex align-items-center gap-2 border-bottom pb-2 mb-2 mt-1">
-      <span className="d-inline-flex align-items-center justify-content-center rounded-circle text-bg-primary flex-shrink-0 fw-bold" style={{ width: 26, height: 26, fontSize: 13 }}>{no}</span>
-      <h6 className="fw-bold mb-0"><i className={`bi ${icon} me-1 text-primary`} />{title}</h6>
+    <div className="d-flex align-items-center gap-2 crf-sec pb-2 mb-2 mt-1">
+      <span className="crf-secico flex-shrink-0"><i className={`bi ${icon}`} /></span>
+      <h6 className="fw-bold mb-0">{title}</h6>
+      <span className="crf-secno">ส่วนที่ {no}</span>
       {right && <span className="ms-auto">{right}</span>}
     </div>
   );
@@ -60,18 +61,18 @@ export default function CustomerRegistrationForm({ initial = {}, busy = false, o
   if (!mounted) return null;
   return createPortal(
     // zIndex 2000: ให้ลอยเหนือ sidebar/topbar ของ AdminLTE (modal ปกติ 1055 แพ้ sidebar)
-    <div className="modal fade show d-block" style={{ background: "rgba(0,0,0,.5)", overflowY: "auto", zIndex: 2000 }}>
+    <div className="modal fade show d-block crf" style={{ background: "rgba(8, 24, 40, .55)", backdropFilter: "blur(3px)", overflowY: "auto", zIndex: 2000 }}>
       <div className="modal-dialog modal-xl modal-dialog-scrollable">
         <div className="modal-content">
-          <div className="modal-header py-2 gap-2">
-            <b><i className="bi bi-person-plus me-2 text-primary" />ประวัติผู้ใช้บริการ / ข้อมูลสุขภาพ — สร้าง HN ใหม่</b>
+          <div className="modal-header py-2 gap-2 crf-head">
+            <b><span className="crf-headico me-2"><i className="bi bi-person-plus" /></span>ประวัติผู้ใช้บริการ / ข้อมูลสุขภาพ — สร้าง HN ใหม่</b>
             <span className={`badge ms-auto ${unanswered ? "text-bg-warning" : "text-bg-success"}`}>
               สุขภาพ {answered}/{HEALTH_ITEMS.length}
             </span>
-            <span className={`badge ${signature ? "text-bg-success" : "bg-body-secondary text-body border"}`}>
+            <span className={`badge ${signature ? "text-bg-success" : "crf-badge-idle"}`}>
               {signature ? "เซ็นแล้ว ✓" : "ยังไม่เซ็น"}
             </span>
-            <button className="btn-close ms-0" onClick={onCancel} />
+            <button className="btn-close btn-close-white ms-0" onClick={onCancel} />
           </div>
           <div className="modal-body">
             <div className="alert alert-light border small py-2 mb-3">
@@ -123,7 +124,7 @@ export default function CustomerRegistrationForm({ initial = {}, busy = false, o
               {HEALTH_ITEMS.map(({ key, label }, i) => {
                 const h = health[key];
                 return (
-                  <div className={`d-flex align-items-center gap-2 py-2 border-bottom flex-wrap rounded-1 ${h.has === null ? "" : "bg-body-tertiary"}`}
+                  <div className={`d-flex align-items-center gap-2 py-2 border-bottom flex-wrap rounded-2 crf-hrow ${h.has === null ? "" : h.has ? "crf-hrow-has" : "crf-hrow-clear"}`}
                        key={key} style={{ borderBottomStyle: "dashed", minHeight: 54, paddingLeft: 6, paddingRight: 6 }}>
                     <span className="me-auto" style={{ minWidth: 250, flex: "1 1 250px" }}>
                       <span className="text-muted me-1">{i + 1}.</span>{label}
@@ -154,7 +155,7 @@ export default function CustomerRegistrationForm({ initial = {}, busy = false, o
             {/* คำยืนยัน + ลายเซ็น */}
             <Section no={4} icon="bi-pen" title="คำยืนยัน + ลายเซ็นผู้ใช้บริการ"
                      right={signature ? <span className="badge text-bg-success">เซ็นแล้ว ✓</span> : null} />
-            <div className="border rounded-3 p-3 bg-body-tertiary">
+            <div className="rounded-3 p-3 crf-sign">
               <div className="small mb-2">
                 ผู้ใช้บริการขอยืนยันว่าข้อมูลทั้งหมดเป็นความจริง หากมีการปกปิดหรือให้ข้อมูลเท็จ ข้าพเจ้ารับผิดชอบต่อความเสียหายทั้งหมดแต่เพียงผู้เดียว
                 และยินยอมเปิดเผยข้อมูลข้างต้นแก่ผู้ให้บริการ คลินิก และแพทย์
@@ -185,6 +186,54 @@ export default function CustomerRegistrationForm({ initial = {}, busy = false, o
           </div>
         </div>
       </div>
+
+      {/* พรีเมียม — scoped ด้วย .crf เฉพาะโมดัลนี้ (ธีมกลางไม่เกี่ยว) */}
+      <style jsx global>{`
+        .crf { --crf-grad: linear-gradient(135deg, #1560a3, #2a7bc4); }
+        .crf .modal-content { border: 0; border-radius: 16px; overflow: hidden;
+          box-shadow: 0 12px 44px rgba(5, 25, 50, .35); }
+
+        /* หัวโมดัล gradient แบรนด์ */
+        .crf .crf-head { background: var(--crf-grad); color: #fff; border-bottom: 0; }
+        .crf .crf-headico { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center;
+          justify-content: center; font-size: 15px; background: rgba(255, 255, 255, .18);
+          border: 1px solid rgba(255, 255, 255, .35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+        .crf .crf-badge-idle { background: rgba(255, 255, 255, .16); color: #fff;
+          border: 1px solid rgba(255, 255, 255, .35); }
+
+        /* section header: ไอคอนวงกลม gradient + เส้นคั่นจาง */
+        .crf .crf-sec { border-bottom: 2px solid transparent;
+          border-image: linear-gradient(90deg, color-mix(in srgb, #1560a3 45%, transparent), transparent 65%) 1; }
+        .crf .crf-secico { width: 30px; height: 30px; border-radius: 50%; background: var(--crf-grad); color: #fff;
+          display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+          box-shadow: 0 3px 8px rgba(21, 96, 163, .32); }
+        .crf .crf-secno { font-size: 10.5px; font-weight: 600; letter-spacing: .8px; color: var(--bs-secondary-color);
+          background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color-translucent);
+          border-radius: 999px; padding: 1px 8px; }
+
+        /* แถวคำถามสุขภาพ: hover ลื่น + tint ตามคำตอบ */
+        .crf .crf-hrow { transition: background-color .18s ease; }
+        .crf .crf-hrow:hover { background: color-mix(in srgb, #1560a3 5%, var(--bs-body-bg)); }
+        .crf .crf-hrow-clear, .crf .crf-hrow-clear:hover {
+          background: color-mix(in srgb, var(--bs-success) 7%, var(--bs-body-bg)); }
+        .crf .crf-hrow-has, .crf .crf-hrow-has:hover {
+          background: color-mix(in srgb, var(--bs-warning) 9%, var(--bs-body-bg)); }
+        .crf .btn-group .btn { transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease,
+          border-color .15s ease, color .15s ease; }
+        .crf .btn:active { transform: scale(.96); }
+
+        /* กล่องลายเซ็น */
+        .crf .crf-sign { background: linear-gradient(135deg, color-mix(in srgb, #1560a3 7%, var(--bs-body-bg)),
+          color-mix(in srgb, #1560a3 2%, var(--bs-body-bg)));
+          border: 1px solid color-mix(in srgb, #1560a3 16%, transparent); }
+
+        /* ปุ่ม primary gradient + focus ring แบรนด์ */
+        .crf .btn-primary { background-image: var(--crf-grad); border: 0;
+          box-shadow: 0 2px 8px rgba(21, 96, 163, .28); transition: transform .18s ease, box-shadow .18s ease; }
+        .crf .btn-primary:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(21, 96, 163, .38); transform: translateY(-1px); }
+        .crf .form-control:focus, .crf .form-select:focus {
+          border-color: #2a7bc4; box-shadow: 0 0 0 .22rem rgba(21, 96, 163, .14); }
+      `}</style>
     </div>,
     document.body
   );

@@ -114,7 +114,7 @@ export default function AdminShell({ children }) {
     <div className={`app-wrapper ${collapsed ? "sidebar-collapse" : ""}`}>
       <BsToaster />
       {/* Navbar */}
-      <nav className="app-header navbar navbar-expand bg-body border-bottom">
+      <nav className="app-header navbar navbar-expand osoth-topbar border-bottom">
         <div className="container-fluid">
           <ul className="navbar-nav">
             <li className="nav-item">
@@ -156,7 +156,8 @@ export default function AdminShell({ children }) {
       </nav>
 
       {/* Sidebar */}
-      <aside className="app-sidebar shadow" data-bs-theme="dark" style={{ background: "#212631" }}>
+      <aside className="app-sidebar shadow" data-bs-theme="dark"
+             style={{ background: "linear-gradient(180deg, #1a2035 0%, #212631 60%, #1e232e 100%)" }}>
         <div className="sidebar-brand">
           <Link href={role === "super_admin" ? "/app" : "/app/opd"} className="brand-link d-flex align-items-center gap-2">
             <img src={`${bp}${brand.logo}`} alt="logo" width={32} height={32} className="brand-image" />
@@ -199,27 +200,40 @@ export default function AdminShell({ children }) {
       <style jsx global>{`
         .app-sidebar .nav-header {
           font-size: 11px;
-          letter-spacing: 0.08em;
-          color: rgba(255, 255, 255, 0.45);
-          padding: 0.9rem 1rem 0.3rem;
+          letter-spacing: 0.09em;
+          color: rgba(255, 255, 255, 0.42);
+          padding: 0.95rem 1rem 0.3rem;
         }
         .app-sidebar .sidebar-menu > .nav-item > .nav-link {
           margin: 1px 8px;
           border-radius: 8px;
           color: rgba(255, 255, 255, 0.78);
+          transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease,
+            transform 0.18s ease;
         }
         .app-sidebar .sidebar-menu > .nav-item > .nav-link:hover {
           background: rgba(255, 255, 255, 0.08);
           color: #fff;
+          transform: translateX(2px);
+        }
+        .app-sidebar .sidebar-menu > .nav-item > .nav-link:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 0.18rem rgba(72, 148, 212, 0.45);
+          color: #fff;
         }
         .app-sidebar .sidebar-menu > .nav-item > .nav-link.active {
-          background: #1560a3;
+          background: linear-gradient(135deg, #1560a3 0%, #2a7bc4 100%);
           color: #fff;
           font-weight: 600;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+          box-shadow: 0 3px 10px rgba(21, 96, 163, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+          transform: none;
         }
         .app-sidebar .sidebar-brand {
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .app-sidebar .sidebar-wrapper {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
         }
       `}</style>
     </div>

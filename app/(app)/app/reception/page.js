@@ -106,7 +106,7 @@ export default function ReceptionPage() {
               headerExtra={<span className="badge bg-body-tertiary text-body border">คิววันที่เลือก {events.length}</span>} />
 
             <div className="card shadow-sm mt-3">
-              <div className="card-header py-2 d-flex align-items-center">
+              <div className="card-header py-2 d-flex align-items-center rcp-head">
                 <span className="fw-semibold"><i className="bi bi-columns-gap me-1 text-primary" />ตารางห้อง · {date.split("-").reverse().join("/")}</span>
                 <span className="text-muted small ms-2">คลิกคิวเพื่อรับเข้า/เปิดเคส</span>
               </div>
@@ -114,10 +114,10 @@ export default function ReceptionPage() {
                 <DayRoomGrid rooms={rooms} events={events} roomDoctor={roomDoctor} selectedId={selected?.reserve_ID} date={date}
                              onEventClick={setSelected} />
               </div>
-              <div className="card-footer py-1 d-flex gap-3 flex-wrap justify-content-center bg-body">
+              <div className="card-footer py-2 d-flex gap-2 flex-wrap justify-content-center bg-body">
                 {legendItems.map(([k, v]) => (
-                  <span key={k} className="d-inline-flex align-items-center gap-1 small text-muted">
-                    <span style={{ width: 9, height: 9, borderRadius: 3, background: v.color, display: "inline-block" }} />{v.label}
+                  <span key={k} className="d-inline-flex align-items-center gap-1 small text-muted rcp-lg">
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: v.color, display: "inline-block" }} />{v.label}
                   </span>
                 ))}
               </div>
@@ -132,8 +132,8 @@ export default function ReceptionPage() {
                 : (
                   <div className="card shadow-sm">
                     <div className="card-body text-center py-5">
-                      <i className="bi bi-bell fs-1 d-block mb-2 text-muted opacity-50" />
-                      <div className="fw-semibold">ยังไม่ได้เลือกคิว</div>
+                      <span className="rcp-empty-ico"><i className="bi bi-bell" /></span>
+                      <div className="fw-semibold mt-3">ยังไม่ได้เลือกคิว</div>
                       <div className="text-muted small mt-1">คลิกคิวลูกค้าในตารางห้อง<br />เพื่อรับเข้า / เปิดเคส</div>
                       {counts.waiting > 0 && <span className="badge bg-body-tertiary text-body border mt-3">วันนี้รอรับอีก {counts.waiting} คิว</span>}
                     </div>
@@ -143,6 +143,48 @@ export default function ReceptionPage() {
           </div>
         </div>
       </div>
+      <style jsx global>{`
+        .rcp-head {
+          background: linear-gradient(135deg, rgba(21, 96, 163, 0.1), rgba(42, 123, 196, 0.015) 70%);
+          border-bottom: 1px solid rgba(21, 96, 163, 0.14);
+        }
+        .rcp-head-strong {
+          background: linear-gradient(135deg, #1560a3, #2a7bc4);
+          color: #fff;
+          border-bottom: 0;
+        }
+        .rcp-head-strong .rcp-head-sub { color: rgba(255, 255, 255, 0.8); }
+        .rcp-panel {
+          border: 1px solid rgba(21, 96, 163, 0.3);
+          box-shadow: 0 10px 28px rgba(21, 96, 163, 0.16) !important;
+          overflow: hidden;
+          animation: rcpSlideIn 0.22s ease;
+        }
+        @keyframes rcpSlideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: none; }
+        }
+        .rcp-step-cur {
+          background: linear-gradient(135deg, #1560a3, #2a7bc4);
+          color: #fff;
+          box-shadow: 0 3px 8px rgba(21, 96, 163, 0.35);
+        }
+        .rcp-empty-ico {
+          width: 76px; height: 76px; border-radius: 50%;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 2rem; color: #1560a3;
+          background: linear-gradient(135deg, rgba(21, 96, 163, 0.13), rgba(42, 123, 196, 0.03));
+          box-shadow: inset 0 0 0 1px rgba(21, 96, 163, 0.16);
+        }
+        .rcp-lg {
+          padding: 2px 9px;
+          border-radius: 99px;
+          background: var(--bs-tertiary-bg);
+          border: 1px solid var(--bs-border-color);
+          transition: transform 0.15s ease;
+        }
+        .rcp-lg:hover { transform: translateY(-1px); }
+      `}</style>
     </div>
   );
 }
@@ -176,13 +218,13 @@ function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
   const stepIdx = FLOW.indexOf(r.status);
 
   return (
-    <div className="card shadow-sm border-primary-subtle">
-      <div className="card-header py-2 d-flex align-items-center gap-2 bg-primary-subtle">
-        <i className="bi bi-person-circle text-primary" />
+    <div className="card shadow-sm rcp-panel">
+      <div className="card-header py-2 d-flex align-items-center gap-2 rcp-head-strong">
+        <i className="bi bi-person-circle" />
         <b>{r.contact?.nick_name || r.HN_number || "ลูกค้าใหม่"}</b>
-        <span className="text-muted small">{roomName(r.room_ID)} · {r.time_start}–{r.time_end}{r.is_walk_in ? " · Walk-in" : ""}</span>
+        <span className="rcp-head-sub small">{roomName(r.room_ID)} · {r.time_start}–{r.time_end}{r.is_walk_in ? " · Walk-in" : ""}</span>
         <span className="ms-auto"><SBadge s={r.status} /></span>
-        <button className="btn-close" aria-label="ปิด" onClick={onClear} />
+        <button className="btn-close btn-close-white" aria-label="ปิด" onClick={onClear} />
       </div>
       <div className="card-body py-3">
         {/* step flow — ผ่านแล้ว = ฟ้าอ่อน+เช็ค · ขั้นปัจจุบัน = น้ำเงินเข้ม · ที่เหลือ = จาง */}
@@ -192,7 +234,7 @@ function ReceptionPanel({ r, opd, roomName, toast, onDone, onClear }) {
             const cls = i < stepIdx
               ? "bg-primary-subtle text-primary-emphasis border border-primary-subtle"
               : i === stepIdx
-                ? "text-bg-primary"
+                ? "rcp-step-cur"
                 : "bg-body-tertiary text-body-secondary border";
             return (
               <span key={s} className={`badge rounded-pill ${cls}`}>

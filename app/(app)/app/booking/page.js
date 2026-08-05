@@ -184,7 +184,7 @@ export default function BookingPage() {
               headerExtra={<span className="badge bg-body-tertiary text-body border">คิววันที่เลือก {events.length}</span>} />
 
             <div className="card shadow-sm mt-3">
-              <div className="card-header py-2 d-flex align-items-center flex-wrap gap-2">
+              <div className="card-header py-2 d-flex align-items-center flex-wrap gap-2 bk-head">
                 <span className="fw-semibold"><i className="bi bi-columns-gap me-1 text-primary" />ตารางห้อง · {date.split("-").reverse().join("/")}</span>
                 <span className="text-muted small">คลิกช่องว่าง = เลือกห้อง/เวลา · คลิกคิว = จัดการ</span>
               </div>
@@ -193,23 +193,23 @@ export default function BookingPage() {
                              onEventClick={setSelected}
                              onSlotClick={(room_ID, time) => { setForm((f) => ({ ...f, room_ID })); setStart(time); }} />
               </div>
-              <div className="card-footer py-1 d-flex gap-3 flex-wrap justify-content-center bg-body">
+              <div className="card-footer py-2 d-flex gap-2 flex-wrap justify-content-center bg-body">
                 {legendItems.map(([k, v]) => (
-                  <span key={k} className="d-inline-flex align-items-center gap-1 small text-muted">
-                    <span style={{ width: 9, height: 9, borderRadius: 3, background: v.color, display: "inline-block" }} />{v.label}
+                  <span key={k} className="d-inline-flex align-items-center gap-1 small text-muted bk-lg">
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: v.color, display: "inline-block" }} />{v.label}
                   </span>
                 ))}
               </div>
             </div>
 
             {selected && (
-              <div className="card shadow-sm mt-3 border-primary-subtle" id="booking-manage-card">
-                <div className="card-header py-2 d-flex align-items-center gap-2 bg-primary-subtle">
-                  <i className="bi bi-person-circle text-primary" />
+              <div className="card shadow-sm mt-3 bk-manage" id="booking-manage-card">
+                <div className="card-header py-2 d-flex align-items-center gap-2 bk-head-strong">
+                  <i className="bi bi-person-circle" />
                   <b>{selected.contact?.nick_name || selected.HN_number || selected.reserve_ID}</b>
-                  <span className="text-muted small">{roomName(selected.room_ID)} · {selected.time_start}–{selected.time_end}{selected.contact?.phone ? ` · โทร ${selected.contact.phone}` : ""}</span>
+                  <span className="bk-head-sub small">{roomName(selected.room_ID)} · {selected.time_start}–{selected.time_end}{selected.contact?.phone ? ` · โทร ${selected.contact.phone}` : ""}</span>
                   <span className="ms-auto"><SBadge s={selected.status} /></span>
-                  <button className="btn-close" aria-label="ปิด" onClick={() => { setSelected(null); setResched(null); }} />
+                  <button className="btn-close btn-close-white" aria-label="ปิด" onClick={() => { setSelected(null); setResched(null); }} />
                 </div>
                 <div className="card-body py-3">
                   {selected.payment_slip && (
@@ -239,9 +239,9 @@ export default function BookingPage() {
                   </div>
 
                   {/* มัดจำการจอง — กัน no-show · ริบอัตโนมัติเมื่อไม่มา · หักเข้าค่าคอร์สตอนจ่ายที่ OPD */}
-                  <div className="border-top pt-2 mt-3">
+                  <div className={`mt-3 bk-deposit bk-dep-${selected.deposit_status || (["booked", "arrived"].includes(selected.status) ? "form" : "none")}`}>
                     <div className="d-flex gap-2 flex-wrap align-items-center">
-                      <span className="small fw-semibold"><i className="bi bi-shield-check me-1 text-primary" />มัดจำกันคิว</span>
+                      <span className="small fw-semibold"><i className={`bi me-1 ${selected.deposit_status === "held" ? "bi-shield-fill-check text-success" : "bi-shield-check text-primary"}`} />มัดจำกันคิว</span>
                       {selected.deposit_status === "held" ? (
                         <>
                           <span className="badge text-bg-success"><i className="bi bi-check2 me-1" />วางแล้ว {money(selected.deposit)}฿</span>
@@ -292,7 +292,7 @@ export default function BookingPage() {
           {/* ขวา: ค้นลูกค้า + จอง */}
           <div className="col-lg-4">
             <div className="card shadow-sm mb-3">
-              <div className="card-header py-2 fw-semibold"><i className="bi bi-search me-1 text-primary" />ค้นหาลูกค้า</div>
+              <div className="card-header py-2 fw-semibold bk-head"><i className="bi bi-search me-1 text-primary" />ค้นหาลูกค้า</div>
               <div className="card-body py-3">
                 <div className="input-group input-group-sm mb-2">
                   <input className="form-control" value={query} placeholder="HN / ชื่อ / เบอร์โทร"
@@ -337,10 +337,10 @@ export default function BookingPage() {
             </div>
 
             <div className="card shadow-sm">
-              <div className="card-header py-2 fw-semibold"><i className="bi bi-calendar-plus me-1 text-primary" />จองคิว + เลือกคอร์ส</div>
+              <div className="card-header py-2 fw-semibold bk-head"><i className="bi bi-calendar-plus me-1 text-primary" />จองคิว + เลือกคอร์ส</div>
               <div className="card-body py-3">
                 {/* 1) ลูกค้า */}
-                <div className="text-secondary small fw-semibold mb-1"><i className="bi bi-person me-1" />ลูกค้า</div>
+                <div className="text-secondary small fw-semibold mb-1 bk-sec"><i className="bi bi-person me-1" />ลูกค้า</div>
                 {pickedCustomer ? (
                   <div className="d-flex align-items-center gap-2 small bg-body-tertiary border rounded-3 px-2 py-2 mb-2">
                     <span className="badge text-bg-primary">{pickedCustomer.HN_number}</span>
@@ -360,7 +360,7 @@ export default function BookingPage() {
                 )}
 
                 {/* 2) คอร์ส */}
-                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3"><i className="bi bi-ticket-perforated me-1" />คอร์ส</div>
+                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3 bk-sec"><i className="bi bi-ticket-perforated me-1" />คอร์ส</div>
                 <label className="form-label small mb-1">ผูกกับการจอง — ขายตอนจองได้</label>
                 <select className="form-select form-select-sm mb-2"
                         value={form.customer_course_ID ? `cc:${form.customer_course_ID}` : form.sell_course_ID ? `sell:${form.sell_course_ID}` : ""}
@@ -385,7 +385,7 @@ export default function BookingPage() {
                   </optgroup>
                 </select>
                 {/* 3) เวลา & ห้อง */}
-                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3"><i className="bi bi-clock me-1" />เวลา & ห้อง</div>
+                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3 bk-sec"><i className="bi bi-clock me-1" />เวลา & ห้อง</div>
                 <div className="row g-2 mb-2">
                   <div className="col-6"><label className="form-label small mb-1">ห้อง *</label>
                     <select className="form-select form-select-sm" value={form.room_ID} onChange={(e) => setForm((f) => ({ ...f, room_ID: e.target.value }))}>
@@ -407,7 +407,7 @@ export default function BookingPage() {
                   <label className="form-check-label small" htmlFor="walkin">Walk-in (ไม่ได้จองล่วงหน้า)</label>
                 </div>
                 {/* 4) หลักฐาน (ถ้ามี) */}
-                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3"><i className="bi bi-receipt me-1" />สลิป (ถ้ามี)</div>
+                <div className="text-secondary small fw-semibold mb-1 border-top pt-2 mt-3 bk-sec"><i className="bi bi-receipt me-1" />สลิป (ถ้ามี)</div>
                 <div className="lgc mb-1">
                   <ImageInput label="แนบสลิปจ่ายเงินจอง (ถ้ามี)" value={form.payment_slip} onChange={(v) => setForm((f) => ({ ...f, payment_slip: v }))} />
                 </div>
@@ -429,6 +429,58 @@ export default function BookingPage() {
           </div>
         </div>
       </div>
+      <style jsx global>{`
+        .bk-head {
+          background: linear-gradient(135deg, rgba(21, 96, 163, 0.1), rgba(42, 123, 196, 0.015) 70%);
+          border-bottom: 1px solid rgba(21, 96, 163, 0.14);
+        }
+        .bk-head-strong {
+          background: linear-gradient(135deg, #1560a3, #2a7bc4);
+          color: #fff;
+          border-bottom: 0;
+        }
+        .bk-head-strong .bk-head-sub { color: rgba(255, 255, 255, 0.8); }
+        .bk-manage {
+          border: 1px solid rgba(21, 96, 163, 0.3);
+          box-shadow: 0 10px 28px rgba(21, 96, 163, 0.16) !important;
+          overflow: hidden;
+          animation: bkSlideIn 0.22s ease;
+        }
+        @keyframes bkSlideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: none; }
+        }
+        .bk-deposit {
+          border-radius: 12px;
+          padding: 0.65rem 0.8rem;
+          border: 1px solid var(--bs-border-color);
+          background: var(--bs-tertiary-bg);
+          transition: background 0.2s ease;
+        }
+        .bk-dep-form {
+          background: linear-gradient(135deg, rgba(203, 152, 24, 0.14), rgba(203, 152, 24, 0.02) 75%);
+          border-color: rgba(203, 152, 24, 0.42);
+        }
+        .bk-dep-held {
+          background: linear-gradient(135deg, rgba(25, 135, 84, 0.14), rgba(25, 135, 84, 0.02) 75%);
+          border-color: rgba(25, 135, 84, 0.42);
+        }
+        .bk-dep-applied {
+          background: linear-gradient(135deg, rgba(13, 110, 253, 0.12), rgba(13, 110, 253, 0.02) 75%);
+          border-color: rgba(13, 110, 253, 0.35);
+        }
+        .bk-dep-forfeited { opacity: 0.85; }
+        .bk-sec { letter-spacing: 0.3px; }
+        .bk-sec i { color: #1560a3; opacity: 0.85; }
+        .bk-lg {
+          padding: 2px 9px;
+          border-radius: 99px;
+          background: var(--bs-tertiary-bg);
+          border: 1px solid var(--bs-border-color);
+          transition: transform 0.15s ease;
+        }
+        .bk-lg:hover { transform: translateY(-1px); }
+      `}</style>
     </div>
   );
 }

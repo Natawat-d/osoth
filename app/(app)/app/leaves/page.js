@@ -19,9 +19,9 @@ export default function LeavesPage() {
 
   return (
     <div className="app-content">
-      <div className="container-fluid pt-3">
+      <div className="container-fluid pt-3 lv-prem">
         <div className="d-flex align-items-center mb-3 flex-wrap gap-2">
-          <h4 className="fw-bold mb-0">ลางาน</h4>
+          <h4 className="fw-bold mb-0 prem-title">ลางาน</h4>
           {isManager && (
             <ul className="nav nav-pills ms-auto">
               {[["mine", "ของฉัน"], ["pending", "รออนุมัติ"], ["absence", "ขาดงานรายวัน"], ["kpi", "สรุปการลา"]].map(([k, l]) => (
@@ -37,6 +37,36 @@ export default function LeavesPage() {
         {tab === "absence" && isManager && <DailyAbsence auth={auth} />}
         {tab === "kpi" && isManager && <LeaveSummary auth={auth} />}
       </div>
+      <style jsx global>{`
+        .lv-prem { --lv-grad: linear-gradient(135deg, #1560a3, #2a7bc4); }
+        .lv-prem .prem-title { letter-spacing: 0.01em; position: relative; padding-bottom: 7px; }
+        .lv-prem .prem-title::after {
+          content: ""; position: absolute; left: 1px; bottom: 0; width: 46px; height: 3px;
+          border-radius: 2px; background: var(--lv-grad);
+        }
+        .lv-prem .nav-pills .nav-link {
+          border-radius: 999px; padding-inline: 1rem;
+          transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .lv-prem .nav-pills .nav-link:not(.active):hover { background: var(--bs-tertiary-bg); }
+        .lv-prem .nav-pills .nav-link.active { background: var(--lv-grad); box-shadow: 0 4px 14px rgba(21, 96, 163, 0.32); }
+        .lv-prem .card.shadow-sm { border-color: var(--bs-border-color); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.06) !important; }
+        .lv-prem .table { font-variant-numeric: tabular-nums; }
+        .lv-prem thead th { font-size: 0.76rem; font-weight: 600; letter-spacing: 0.02em; color: var(--bs-secondary-color); }
+        .lv-prem .btn-primary {
+          background: var(--lv-grad); border-color: #1560a3;
+          transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        }
+        .lv-prem .btn-primary:hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 5px 14px rgba(21, 96, 163, 0.32); }
+        .lv-prem .btn:active { transform: scale(0.97); }
+        /* แถวคำขอ — เส้น accent ซ้ายตามสถานะ + hover เนียน */
+        .lv-prem .lv-item { border-left: 3px solid transparent; transition: background 0.15s ease, border-color 0.15s ease; }
+        .lv-prem .lv-item:hover { background: var(--bs-tertiary-bg); }
+        .lv-prem .lv-empty i { font-size: 2.6rem; opacity: 0.35; }
+        .lv-prem .form-control:focus, .lv-prem .form-select:focus {
+          border-color: #2a7bc4; box-shadow: 0 0 0 0.18rem rgba(21, 96, 163, 0.15);
+        }
+      `}</style>
     </div>
   );
 }
@@ -166,7 +196,7 @@ function MyLeaves({ auth }) {
                 const [tl, tc] = TYPE_TH[r.type] || [r.type, "light"];
                 const [sl, sc] = STATUS_TH[r.status] || [r.status, "light"];
                 return (
-                  <div key={r.leave_ID} className="list-group-item py-2">
+                  <div key={r.leave_ID} className="list-group-item py-2 lv-item" style={{ borderLeftColor: `var(--bs-${sc})` }}>
                     <div className="d-flex align-items-center gap-2 flex-wrap">
                       <span className={`badge text-bg-${tc}`}>{tl}</span>
                       <span className="small fw-semibold">{fmtD(r.date_from)} – {fmtD(r.date_to)}</span>
@@ -187,8 +217,8 @@ function MyLeaves({ auth }) {
                 );
               })}
               {!rows.length && (
-                <div className="list-group-item text-center text-muted py-5">
-                  <i className="bi bi-inbox fs-3 d-block mb-1" />
+                <div className="list-group-item text-center text-muted py-5 lv-empty">
+                  <i className="bi bi-inbox d-block mb-2" />
                   ยังไม่มีคำขอลา
                   <div className="small">ยื่นคำขอได้จากฟอร์ม "ยื่นคำขอลา"</div>
                 </div>
@@ -235,7 +265,7 @@ function PendingApprovals({ auth }) {
         {rows.map((r) => {
           const [tl, tc] = TYPE_TH[r.type] || [r.type, "light"];
           return (
-            <div key={r.leave_ID} className="list-group-item py-3">
+            <div key={r.leave_ID} className="list-group-item py-3 lv-item" style={{ borderLeftColor: `var(--bs-${tc})` }}>
               <div className="d-flex align-items-center gap-2 flex-wrap">
                 <b>{users[r.user_ID]?.full_name || r.user_ID}</b>
                 <span className={`badge text-bg-${tc}`}>{tl}</span>
@@ -252,7 +282,7 @@ function PendingApprovals({ auth }) {
             </div>
           );
         })}
-        {!rows.length && <div className="list-group-item text-center text-muted py-5"><i className="bi bi-cup-hot fs-2 d-block mb-2" />ไม่มีคำขอรออนุมัติ</div>}
+        {!rows.length && <div className="list-group-item text-center text-muted py-5 lv-empty"><i className="bi bi-cup-hot d-block mb-2" />ไม่มีคำขอรออนุมัติ<div className="small">ทีมงานมาครบ ไม่มีใครยื่นลาเพิ่ม</div></div>}
       </div>
     </div>
   );
