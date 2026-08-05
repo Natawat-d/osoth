@@ -32,6 +32,9 @@ const CustomerCourseSchema = new mongoose.Schema(
     // ไม่มีผ่อน — จ่ายเต็ม (paid) หรือ ยังไม่จ่าย (unpaid) เท่านั้น
     // V3.5: รับรู้รายได้ตามครั้งใช้ (deferred revenue) — เฉพาะคอร์สที่ขายหลังเปิดฟีเจอร์
     deferred: { type: Boolean, default: false },
+    // ประวัติสุขภาพประจำคอร์ส (เอกสาร "ประวัติผู้ใช้บริการ/ข้อมูลสุขภาพ") — บันทึก+เซ็น
+    // ในครั้งแรกของคอร์ส (session 1) ก่อนปิดเคส: { health_info, signature, signed_at, signed_by }
+    health_record: { type: Object, default: null },
     revenue_recognized: { type: Number, default: 0 }, // ยอดที่รับรู้เข้า 4000 แล้วสะสม
     payment_status: {
       type: String,

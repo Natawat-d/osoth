@@ -114,6 +114,15 @@ const tinyPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfF
 const consentUp = await call("admin", "POST", `/opd/${opd.data.opd_ID}/consent`, { kind: "signature", file: tinyPng, filename: "sig.png" });
 ok("แนบใบยินยอม (เซ็นบนจอ) สำเร็จ", consentUp.ok && consentUp.data.consents === 1);
 
+console.log("5.95) V3.6: ประวัติสุขภาพประจำคอร์ส — บังคับครั้งแรกของคอร์ส (session 1)");
+const closeNoHealth = await call("admin", "POST", `/opd/${opd.data.opd_ID}/close`);
+ok("ครั้งแรกไม่มีประวัติสุขภาพ → 400", closeNoHealth.status === 400 && /สุขภาพ/.test(closeNoHealth.error || ""), JSON.stringify(closeNoHealth.error || ""));
+const healthUp = await call("admin", "POST", `/customer-courses/${cc.customer_course_ID}/health-record`, {
+  health_info: { allergy: { has: true, detail: "เพนิซิลลิน" }, chronic: { has: false, detail: "" } },
+  signature: tinyPng,
+});
+ok("บันทึกประวัติสุขภาพ + เซ็น สำเร็จ", healthUp.ok === true, JSON.stringify(healthUp.error || ""));
+
 console.log("6) ปิดเคส — ตัด stock FIFO + นับครั้ง + ค่ามือ");
 const closed = await call("admin", "POST", `/opd/${opd.data.opd_ID}/close`);
 ok("ปิดเคสสำเร็จ", closed.ok, JSON.stringify(closed));

@@ -143,7 +143,7 @@ ok("notification persisted (API)", notifList.length >= 1);
   const t2 = opds2.find((o) => o.status !== "closed" && o.customer_course_ID);
   if (t2) {
     const blocked = await api(adm, `/opd/${t2.opd_ID}/close`, { method: "POST" });
-    ok("V3: ปิดเคสไม่มี consent → 400", blocked.ok === false && /ยินยอม|วัดตัว|ชำระ/.test(blocked.error || ""), blocked.error);
+    ok("V3: ปิดเคสไม่มี consent → 400", blocked.ok === false && /ยินยอม|วัดตัว|ชำระ|สุขภาพ/.test(blocked.error || ""), blocked.error);
     const tiny = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
     const att = await api(adm, `/opd/${t2.opd_ID}/consent`, { method: "POST", body: { kind: "upload", file: tiny, filename: "scan.png" } });
     ok("V3: แนบ consent สำเร็จ", att.ok === true, JSON.stringify(att.error || ""));

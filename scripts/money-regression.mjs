@@ -160,6 +160,8 @@ section("9) ปิดเคส: atomic + dry-run stock");
 await api("admin", `/customer-courses/${ovOk.data.customer_course.customer_course_ID}/pay`, { method: "POST", body: { payments: [{ amount: 900, method: "cash" }] } });
 await api("admin", `/opd/${opdID}`, { method: "PUT", body: { opd_data: { weight_kg: 60 } } });
 await api("admin", `/opd/${opdID}/consent`, { method: "POST", body: { kind: "signature", file: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", filename: "s.png", mime: "image/png" } });
+// V3.6: ครั้งแรกของคอร์สต้องมีประวัติสุขภาพเซ็นแล้ว
+await api("admin", `/customer-courses/${ovOk.data.customer_course.customer_course_ID}/health-record`, { method: "POST", body: { health_info: {}, signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" } });
 const [c1, c2] = await Promise.all([
   api("admin", `/opd/${opdID}/close`, { method: "POST" }),
   api("admin", `/opd/${opdID}/close`, { method: "POST" }),
@@ -233,6 +235,7 @@ ok("ปลดล็อก → 200", (await api("owner", "/gl/period-lock", { met
 section("13) deferred revenue: ปิดเคสแล้วรับรู้รายได้เข้า 4000");
 await api("admin", `/opd/${opd2.data.opd_ID}`, { method: "PUT", body: { opd_data: { weight_kg: 55 } } });
 await api("admin", `/opd/${opd2.data.opd_ID}/consent`, { method: "POST", body: { kind: "signature", file: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5CYII=", filename: "s.png", mime: "image/png" } });
+await api("admin", `/customer-courses/${cc2id}/health-record`, { method: "POST", body: { health_info: {}, signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5CYII=" } });
 const close2 = await api("admin", `/opd/${opd2.data.opd_ID}/close`, { method: "POST" });
 ok("ปิดเคสคอร์ส deferred → 200", close2.status === 200, JSON.stringify(close2.error || ""));
 await api("owner", "/gl/journal/rebuild", { method: "POST" });

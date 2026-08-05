@@ -15,19 +15,35 @@ const U = ({ v, w = "auto" }) => (
 
 function HistoryFormInner() {
   const sp = useSearchParams();
-  const hn = sp.get("hn") || "";
+  const hnParam = sp.get("hn") || "";
+  const ccId = sp.get("cc") || ""; // โหมดเอกสารประจำคอร์ส (health_record ที่เซ็นตอนเริ่มคอร์สครั้งแรก)
   const { data: setup } = useGetSetupStateQuery();
   const company = setup?.company;
   const [c, setC] = useState(null);
+  const [ccDoc, setCcDoc] = useState(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    if (hn) api(`/customers/${encodeURIComponent(hn)}`).then((r) => setC(r.customer)).catch((e) => setErr(e.message));
-  }, [hn]);
+    (async () => {
+      try {
+        if (ccId) {
+          const cc = await api(`/customer-courses/${encodeURIComponent(ccId)}`);
+          setCcDoc(cc);
+          if (cc.HN_number) setC((await api(`/customers/${encodeURIComponent(cc.HN_number)}`)).customer);
+        } else if (hnParam) {
+          setC((await api(`/customers/${encodeURIComponent(hnParam)}`)).customer);
+        }
+      } catch (e) { setErr(e.message); }
+    })();
+  }, [hnParam, ccId]);
 
-  const dt = thaiDocDate(c?.history_date || (c?.created_at || "").slice(0, 10));
+  const hn = ccId ? (ccDoc?.HN_number || "") : hnParam;
+  const rec = ccDoc?.health_record || null; // เอกสารประจำคอร์ส: สุขภาพ+ลายเซ็น จาก health_record
+  const docDate = rec?.signed_at ? new Date(rec.signed_at).toISOString().slice(0, 10) : null;
+  const dt = thaiDocDate(docDate || c?.history_date || (c?.created_at || "").slice(0, 10));
   const bd = c?.birth_date ? c.birth_date.split("-") : null; // [y,m,d]
-  const h = c?.health_info || {};
+  const h = rec ? rec.health_info || {} : c?.health_info || {};
+  const signatureImg = rec ? rec.signature : c?.history_signature;
 
   return (
     <div className="app-content">
@@ -43,14 +59,14 @@ function HistoryFormInner() {
           )}
         </div>
         {err && <div className="alert alert-danger py-2">{err}</div>}
-        {!hn && !err && <div className="alert alert-warning py-2 d-print-none"><i className="bi bi-exclamation-triangle me-1" />ไม่ได้ระบุ HN — เปิดหน้านี้จากโปรไฟล์ลูกค้า หรือหน้ารับลูกค้า</div>}
-        {hn && !c && !err && (
+        {!hn && !ccId && !err && <div className="alert alert-warning py-2 d-print-none"><i className="bi bi-exclamation-triangle me-1" />ไม่ได้ระบุ HN — เปิดหน้านี้จากโปรไฟล์ลูกค้า หรือหน้ารับลูกค้า</div>}
+        {(hn || ccId) && !c && !err && (
           <div className="text-center text-muted py-5 d-print-none">
             <span className="spinner-border spinner-border-sm me-2" />กำลังโหลดข้อมูลลูกค้า {hn}…
           </div>
         )}
 
-        {!(hn && !c && !err) && (
+        {!((hn || ccId) && !c && !err) && (
         <div className="card shadow-sm hf-doc">
           <div className="card-body p-4" style={{ fontSize: 14.5, lineHeight: 2.1 }}>
             {/* หัวเอกสาร */}
@@ -60,6 +76,7 @@ function HistoryFormInner() {
               <div className="ms-auto border border-dark rounded px-3 py-1 fw-bold">{c?.HN_number || "HN. …………………"}</div>
             </div>
             <div className="text-center fw-bold" style={{ fontSize: 16 }}>ประวัติผู้ใช้บริการ / ข้อมูลสุขภาพ</div>
+            {rec && <div className="text-center small text-muted">ประจำคอร์ส: {ccDoc?.course_snapshot?.name || ccDoc?.course_ID} (บันทึกครั้งแรกของคอร์ส)</div>}
             <div className="text-center small text-muted mb-2" style={{ lineHeight: 1.5 }}>
               {company?.name || ""}
               {(company?.address || company?.phone) && (
@@ -111,8 +128,8 @@ function HistoryFormInner() {
 
             <div className="text-end mt-4" style={{ lineHeight: 1.6 }}>
               <div className="d-inline-block text-center">
-                {c?.history_signature
-                  ? <img src={c.history_signature} alt="ลายเซ็น" style={{ height: 60, display: "block", margin: "0 auto" }} />
+                {signatureImg
+                  ? <img src={signatureImg} alt="ลายเซ็น" style={{ height: 60, display: "block", margin: "0 auto" }} />
                   : <div style={{ height: 40 }} />}
                 <div>ลงชื่อ ……………………………………… ผู้ใช้บริการ</div>
                 <div>( {c ? `${c.prefix ? c.prefix + " " : ""}${c.full_name} ${c.sure_name || ""}`.trim() : "………………………………………"} )</div>

@@ -9,6 +9,7 @@ import { api } from "@/lib/client";
 import InfoBox from "@/components/InfoBox";
 import SignaturePad from "@/components/SignaturePad";
 import ConsentAgreement from "@/components/ConsentAgreement";
+import { HEALTH_ITEMS } from "@/lib/healthItems";
 
 const money = (n) => Number(n || 0).toLocaleString("th-TH");
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -268,6 +269,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
   const [priceOv, setPriceOv] = useState("");
   const [signMode, setSignMode] = useState(false);
   const [viewConsent, setViewConsent] = useState(null);
+  const [healthMode, setHealthMode] = useState(false); // modal ประวัติสุขภาพประจำคอร์ส (ครั้งแรก)
   const [customer, setCustomer] = useState(null); // ใช้เติมข้อมูลในหนังสือยินยอม
   const [company, setCompany] = useState(null);
   const [reserve, setReserve] = useState(null); // มัดจำที่วางไว้ตอนจอง (ใช้จ่ายคอร์สได้)
@@ -317,6 +319,8 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
   const paid = hasCourse && (cc.balance_due || 0) <= 0;
   const paidReady = hasCourse && paid;
   const hasConsent = (opd.consents || []).length > 0;
+  const hasHealth = !!cc?.health_record?.signature; // ประวัติสุขภาพประจำคอร์ส (บังคับครั้งแรก)
+  const needHealth = firstVisit && hasCourse && !hasHealth;
 
   const stockNeed = (snap?.products || []).map((p) => {
     const row = stockRows.find((r) => r.product?.product_ID === p.product_ID);
@@ -408,6 +412,11 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
     await api(`/opd/${opd_ID}/consent`, { method: "POST", body: { kind: "signature", file: dataURL, filename: `signature-${opd.HN_number}.png`, mime: "image/png" } });
     toast.success("บันทึกลายเซ็นแล้ว"); setSignMode(false); reload();
   };
+  const saveHealthRecord = async (health_info, signature) => {
+    await api(`/customer-courses/${cc.customer_course_ID}/health-record`, { method: "POST", body: { health_info, signature } });
+    toast.success("บันทึกประวัติสุขภาพประจำคอร์สแล้ว"); setHealthMode(false); reload();
+    api(`/customers/${encodeURIComponent(opd.HN_number)}`).then((r) => setCustomer(r.customer)).catch(() => {});
+  };
 
   // vitals validation
   const vErr = {};
@@ -422,6 +431,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
     { at: opd.created_at, ico: "bi-folder-plus", color: "primary", label: `เปิดเคส · ครั้งที่ ${opd.session_no}` },
     opd.opd_data?.measured_at && { at: opd.opd_data.measured_at, ico: "bi-rulers", color: "info", label: `วัดตัว (โดย ${userMap[opd.opd_data.measured_by] || opd.opd_data.measured_by || "-"})` },
     ...(opd.consents || []).map((c) => ({ at: c.uploaded_at, ico: c.kind === "signature" ? "bi-pen" : "bi-file-earmark-check", color: "success", label: c.kind === "signature" ? "เซ็นใบยินยอมบนจอ" : `แนบใบยินยอม (${c.filename || "ไฟล์"})` })),
+    firstVisit && cc?.health_record?.signed_at && { at: cc.health_record.signed_at, ico: "bi-heart-pulse", color: "danger", label: "บันทึกประวัติสุขภาพประจำคอร์ส (ลูกค้าเซ็นรับรอง)" },
     opd.closed_at && { at: opd.closed_at, ico: "bi-lock", color: "dark", label: "ปิดเคส" },
   ].filter(Boolean).sort((a, b) => new Date(a.at) - new Date(b.at));
 
@@ -430,6 +440,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
     { k: "open", l: "เปิดเคส", on: true },
     { k: "measure", l: "วัดตัว", on: measured },
     { k: "pay", l: "คอร์ส+ชำระ", on: paidReady },
+    ...(firstVisit && hasCourse ? [{ k: "health", l: "ประวัติสุขภาพ", on: hasHealth }] : []),
     { k: "consent", l: "ใบยินยอม", on: hasConsent },
     ...(hasBT ? [{ k: "bt", l: "BT", on: btDone }] : []),
     ...(hasDr ? [{ k: "dr", l: "หมอ", on: drDone }] : []),
@@ -663,6 +674,43 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
       {/* add-on ครั้งแรก ติดใต้ชำระเงิน */}
       {firstVisit && !isClosed && hasCourse && addonCard}
 
+      {/* 3.5 ประวัติสุขภาพประจำคอร์ส — บังคับครั้งแรกของคอร์ส (session 1) */}
+      {firstVisit && hasCourse && (
+        <StepCard no={stepNo("health")} ico="bi-heart-pulse" title="ประวัติสุขภาพ (เริ่มคอร์สครั้งแรก)"
+                  borderColor={needHealth && !isClosed ? "warning" : undefined}
+                  badge={hasHealth
+                    ? <span className="badge text-bg-success">ลูกค้าเซ็นรับรองแล้ว ✓</span>
+                    : <span className="badge text-bg-warning">ยังไม่บันทึก — บังคับก่อนปิดเคส</span>}>
+          <div className="text-muted small mb-2">
+            เอกสาร "ประวัติผู้ใช้บริการ / ข้อมูลสุขภาพ" ประจำคอร์สนี้ — ทวนข้อมูลสุขภาพ 9 ข้อกับลูกค้า แล้วให้เซ็นชื่อรับรองบนจอ (iPad)
+          </div>
+          {hasHealth ? (
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              <img src={cc.health_record.signature} alt="ลายเซ็น" style={{ height: 46, background: "#fff", border: "1px solid var(--bs-border-color)", borderRadius: 6 }} />
+              <span className="small text-muted">เซ็นเมื่อ {new Date(cc.health_record.signed_at).toLocaleString("th-TH")}</span>
+              <a className="btn btn-outline-secondary btn-sm ms-auto" target="_blank" rel="noreferrer"
+                 href={`/app/history-form?cc=${cc.customer_course_ID}`}>
+                <i className="bi bi-file-earmark-person me-1" />ดูเอกสาร / พิมพ์
+              </a>
+              {!isClosed && (
+                <button className="btn btn-outline-primary btn-sm" onClick={() => setHealthMode(true)}>
+                  <i className="bi bi-arrow-repeat me-1" />บันทึกใหม่
+                </button>
+              )}
+            </div>
+          ) : !isClosed && (
+            <button className="btn btn-primary btn-sm" onClick={() => setHealthMode(true)}>
+              <i className="bi bi-pen me-1" /> ทวนข้อมูล + ให้ลูกค้าเซ็น (iPad)
+            </button>
+          )}
+        </StepCard>
+      )}
+
+      {healthMode && !isClosed && (
+        <HealthRecordModal customer={customer} courseName={snap?.name || cc?.course_ID}
+                           onSave={saveHealthRecord} onClose={() => setHealthMode(false)} toast={toast} />
+      )}
+
       {/* 4. ใบยินยอม (V3 — บังคับก่อนปิดเคส ทุกเคส) */}
       <StepCard no={stepNo("consent")} ico="bi-file-earmark-medical" title="ใบยินยอมการทำหัตถการ"
                 borderColor={!hasConsent && !isClosed ? "warning" : undefined}
@@ -736,7 +784,13 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
                 <button className="btn-close" onClick={() => setViewConsent(null)} />
               </div>
               <div className="modal-body text-center" style={{ maxHeight: "75vh", overflow: "auto" }}>
-                {viewConsent.mime === "application/pdf"
+                {viewConsent.kind === "signature" ? (
+                  <div className="text-start bg-white text-dark rounded p-3">
+                    <ConsentAgreement customer={customer} procedure={snap?.name || ""} company={company}
+                                      date={(viewConsent.uploaded_at || "").slice ? String(viewConsent.uploaded_at).slice(0, 10) : undefined}
+                                      signature={viewConsent.file} />
+                  </div>
+                ) : viewConsent.mime === "application/pdf"
                   ? <iframe src={viewConsent.file} title="consent" style={{ width: "100%", height: "70vh", border: 0 }} />
                   : <img src={viewConsent.file} alt="consent" style={{ maxWidth: "100%" }} />}
               </div>
@@ -853,6 +907,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
               { ok: paidReady, label: "เลือกคอร์ส + ชำระครบ" },
               { ok: stockOk, label: "สต๊อกเพียงพอ" },
               { ok: hasConsent, label: "แนบใบยินยอมแล้ว" },
+              ...(firstVisit && hasCourse ? [{ ok: hasHealth, label: "ประวัติสุขภาพ (ครั้งแรกของคอร์ส)" }] : []),
             ].map((c) => (
               <li key={c.label} className={`mb-1 ${c.ok ? "text-success" : "text-danger"}`}>
                 <i className={`bi me-2 ${c.ok ? "bi-check-circle-fill" : "bi-x-circle"}`} />{c.label}
@@ -860,7 +915,7 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
             ))}
           </ul>
           <div className="d-flex">
-            <ABtn className="btn btn-primary ms-auto px-4" disabled={!measured || !canTreat || !hasConsent} toast={toast} onClick={doClose}>
+            <ABtn className="btn btn-primary ms-auto px-4" disabled={!measured || !canTreat || !hasConsent || needHealth} toast={toast} onClick={doClose}>
               <i className="bi bi-lock me-1" /> ปิดเคส
             </ABtn>
           </div>
@@ -885,6 +940,92 @@ function CaseEditor({ opd_ID, auth, toast, onChanged, onClose }) {
           ))}
         </ul>
       </StepCard>
+    </div>
+  );
+}
+
+// ── modal ประวัติสุขภาพประจำคอร์ส (ครั้งแรก) — 9 ข้อตามเอกสาร + ลูกค้าเซ็นมือบนจอ ──
+function HealthRecordModal({ customer, courseName, onSave, onClose, toast }) {
+  const [health, setHealth] = useState(() => {
+    const base = customer?.health_info || {};
+    return Object.fromEntries(HEALTH_ITEMS.map(({ key }) => [key, { has: base[key]?.has ?? null, detail: base[key]?.detail || "" }]));
+  });
+  const [signature, setSignature] = useState("");
+  const [busy, setBusy] = useState(false);
+  const setH = (key, patch) => setHealth((p) => ({ ...p, [key]: { ...p[key], ...patch } }));
+  const unanswered = HEALTH_ITEMS.filter(({ key }) => health[key].has === null).length;
+
+  const submit = async () => {
+    setBusy(true);
+    try { await onSave(health, signature); }
+    catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="modal fade show d-block" style={{ background: "rgba(0,0,0,.5)" }}>
+      <div className="modal-dialog modal-lg modal-dialog-scrollable">
+        <div className="modal-content">
+          <div className="modal-header py-2">
+            <b><i className="bi bi-heart-pulse me-2 text-danger" />ประวัติผู้ใช้บริการ / ข้อมูลสุขภาพ — คอร์ส {courseName}</b>
+            <button className="btn-close" onClick={onClose} />
+          </div>
+          <div className="modal-body">
+            <div className="alert alert-light border small py-2 mb-3">
+              <i className="bi bi-info-circle me-1 text-primary" />
+              ทวนข้อมูลกับลูกค้าก่อนเริ่มคอร์สครั้งแรก (ดึงจากประวัติเดิมให้แล้ว — แก้ได้ถ้ามีเปลี่ยนแปลง)
+              แล้วให้ลูกค้าเซ็นชื่อรับรองด้านล่าง
+            </div>
+            {HEALTH_ITEMS.map(({ key, label }, i) => {
+              const h = health[key];
+              return (
+                <div className="d-flex align-items-center gap-2 py-2 border-bottom flex-wrap" key={key} style={{ borderStyle: "dashed" }}>
+                  <span className="small" style={{ minWidth: 250 }}>{i + 1}. {label}</span>
+                  <div className="btn-group" role="group">
+                    <button type="button" className={`btn btn-sm px-3 ${h.has === false ? "btn-success" : "btn-outline-secondary"}`}
+                            onClick={() => setH(key, { has: false, detail: "" })}>ไม่มี</button>
+                    <button type="button" className={`btn btn-sm px-3 ${h.has === true ? "btn-warning" : "btn-outline-secondary"}`}
+                            onClick={() => setH(key, { has: true })}>มี</button>
+                  </div>
+                  {h.has === true && (
+                    <input className="form-control form-control-sm" style={{ flex: 1, minWidth: 160 }} placeholder="ระบุ…"
+                           value={h.detail} onChange={(e) => setH(key, { detail: e.target.value })} />
+                  )}
+                </div>
+              );
+            })}
+            {unanswered > 0 && <div className="text-warning small mt-2"><i className="bi bi-exclamation-triangle me-1" />ยังไม่ได้ตอบ {unanswered} ข้อ</div>}
+
+            <div className="border rounded-3 p-3 bg-body-tertiary mt-3">
+              <div className="small mb-2">
+                ผู้ใช้บริการขอยืนยันว่าข้อมูลทั้งหมดเป็นความจริง หากมีการปกปิดหรือให้ข้อมูลเท็จ ข้าพเจ้ารับผิดชอบต่อความเสียหายทั้งหมดแต่เพียงผู้เดียว
+                และยินยอมเปิดเผยข้อมูลข้างต้นแก่ผู้ให้บริการ คลินิก และแพทย์
+              </div>
+              {signature ? (
+                <div className="d-flex align-items-center gap-3">
+                  <img src={signature} alt="ลายเซ็น" style={{ height: 64, background: "#fff", border: "1px solid var(--bs-border-color)", borderRadius: 6 }} />
+                  <div className="small">
+                    <div className="text-success"><i className="bi bi-check-circle me-1" />ลูกค้าเซ็นแล้ว</div>
+                    <button className="btn btn-outline-secondary btn-sm mt-1" onClick={() => setSignature("")}>เซ็นใหม่</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ maxWidth: 480 }}>
+                  <div className="text-muted small mb-1"><i className="bi bi-pen me-1" />ให้ลูกค้าเซ็นชื่อ (ผู้ใช้บริการ) ในกรอบ แล้วกด "ใช้ลายเซ็นนี้"</div>
+                  <SignaturePad height={140} onConfirm={setSignature} />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="modal-footer py-2">
+            <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>ยกเลิก</button>
+            <button className="btn btn-primary px-4" disabled={!signature || busy} onClick={submit}>
+              {busy && <span className="spinner-border spinner-border-sm me-1" />}
+              บันทึกประวัติสุขภาพ
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

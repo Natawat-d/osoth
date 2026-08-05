@@ -100,6 +100,9 @@ async function doCloseCase({ opd_ID, closed_by, session }) {
   // V3: ต้องแนบใบยินยอมอย่างน้อย 1 ใบก่อนปิดเคส (ทุกเคส แม้คอร์สเดิม)
   if (!opd.consents || opd.consents.length === 0)
     throw httpError(400, "ต้องแนบใบยินยอมการทำหัตถการก่อนปิดเคส (อัปโหลด/เซ็นบนจอ)");
+  // V3.6: ครั้งแรกของคอร์ส (session 1) ต้องบันทึกประวัติสุขภาพประจำคอร์ส + ลูกค้าเซ็นชื่อ
+  if (opd.session_no === 1 && !cc.health_record?.signature)
+    throw httpError(400, "ครั้งแรกของคอร์สต้องบันทึกประวัติสุขภาพ + ให้ลูกค้าเซ็นชื่อก่อนปิดเคส");
 
   // ---- 1. รวมความต้องการตัด stock ต่อสินค้า (สูตร course + add-on) ----
   const needs = new Map(); // product_ID → cc รวม
