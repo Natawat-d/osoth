@@ -55,7 +55,11 @@ export const GET = apiHandler(async (req) => {
       .filter((o) => o.sale_ID === s.user_ID && (o.date || "").slice(0, 7) === month)
       .reduce((a, o) => a + (o.add_ons || []).filter((x) => x.first_visit).reduce((s2, x) => s2 + (x.price || 0), 0), 0);
     const salesBase = courseSales + firstAddonBill;
-    const tier = computeTier(salesBase, tiers, mode);
+    // ขั้นบันได "รายคน" (Setup > Sale incentive — field rate) มาก่อน · ไม่ตั้ง = ใช้ขั้นรวมของสาขา
+    const personalTiers = (s.incentive_tiers || [])
+      .filter((t) => Number.isFinite(Number(t.rate)))
+      .map((t) => ({ min_sales: Number(t.min_sales) || 0, percent: Number(t.rate) || 0 }));
+    const tier = computeTier(salesBase, personalTiers.length ? personalTiers : tiers, mode);
     const addon = earnings
       .filter((e) => e.user_ID === s.user_ID && (e.date || "").slice(0, 7) === month)
       .reduce((a, e) => a + (e.amount || 0), 0);
@@ -63,6 +67,7 @@ export const GET = apiHandler(async (req) => {
       user_ID: s.user_ID, name: s.full_name,
       course_sales: courseSales, first_addon_bill: firstAddonBill, sales_base: salesBase,
       tier_percent: tier.percent, tier_commission: tier.commission,
+      personal_tiers: personalTiers.length > 0, // ใช้ขั้นส่วนตัวจาก Setup > Sale incentive
       addon_commission: addon, total: tier.commission + addon,
     };
   });

@@ -73,6 +73,19 @@ must(await api("owner", "/commission-settings", {
     ],
   },
 }), "ตั้ง incentive tiers");
+// ขั้นบันได "รายคน" (Setup > Sale incentive) — แต่ละคนตั้งไม่เท่ากัน (มาก่อนขั้นรวมของสาขา)
+const PERSONAL_TIERS = [
+  ["เซล", [{ min_sales: 0, rate: 3 }, { min_sales: 200000, rate: 5 }, { min_sales: 500000, rate: 8 }]],
+  ["ส้ม", [{ min_sales: 0, rate: 2 }, { min_sales: 100000, rate: 4 }, { min_sales: 300000, rate: 6 }]],
+  ["เฟิร์น", [{ min_sales: 0, rate: 2 }, { min_sales: 50000, rate: 3.5 }, { min_sales: 150000, rate: 5 }]],
+];
+{
+  const allSales = (await api("owner", "/users?role=sale")).data;
+  for (const [nick, tiersP] of PERSONAL_TIERS) {
+    const u = allSales.find((x) => x.nick_name === nick || x.full_name.startsWith(nick));
+    if (u) { await api("owner", `/users/${u.user_ID}`, { method: "PUT", body: { incentive_tiers: tiersP } }); count("ตั้งขั้น incentive รายคน"); }
+  }
+}
 
 // ── 3. จัดซื้อ + จัดสต๊อก ──
 for (const s of ["บ.เมดิคอลพลัส", "หจก.บิวตี้ซัพพลาย", "บ.ดีฟาร์มา", "ร้านเวชภัณฑ์รวมใจ"]) {

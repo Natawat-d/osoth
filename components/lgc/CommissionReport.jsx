@@ -56,7 +56,7 @@ export default function CommissionPage() {
                 <td>{money(r.course_sales)}฿</td>
                 <td>{money(r.first_addon_bill)}฿</td>
                 <td><b>{money(r.sales_base)}฿</b></td>
-                <td>{r.tier_percent}%</td>
+                <td>{r.tier_percent}%{r.personal_tiers && <span className="pill" style={{ marginLeft: 4, fontSize: 10 }} title="ใช้ขั้นบันไดส่วนตัว (Setup > Sale incentive)">ส่วนตัว</span>}</td>
                 <td>{money(r.tier_commission)}฿</td>
                 <td>{money(r.addon_commission)}฿</td>
                 <td><b>{money(r.total)}฿</b></td>
