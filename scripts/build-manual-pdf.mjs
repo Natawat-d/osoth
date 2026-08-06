@@ -21,7 +21,7 @@ await page.pdf({
   headerTemplate: "<span></span>",
   footerTemplate: `
     <div style="width:100%; font-size:9px; color:#94a3b8; padding:0 13mm; display:flex; font-family:'Sarabun',sans-serif;">
-      <span>คู่มือการใช้งานระบบ OSOTH · ฉบับ 1.0</span>
+      <span>คู่มือการใช้งานระบบ OSOTH · ฉบับ 1.1</span>
       <span style="margin-left:auto;">หน้า <span class="pageNumber"></span> / <span class="totalPages"></span></span>
     </div>`,
 });
